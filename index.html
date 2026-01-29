@@ -364,9 +364,9 @@
                     </div>
                 </div>
 
-                <input type="email" id="l-email" placeholder="EMAIL" required
+                <input type="text" id="l-username" placeholder="OPERATIVE NAME" required autocomplete="username"
                     class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:border-blue-500 outline-none">
-                <input type="password" id="l-password" placeholder="PASSKEY" required
+                <input type="password" id="l-password" placeholder="PASSKEY" required autocomplete="current-password"
                     class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:border-blue-500 outline-none">
                 <button type="submit"
                     class="w-full py-3 bg-blue-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-500 transition shadow-[0_0_20px_rgba(37,99,235,0.3)]">Access
@@ -388,11 +388,11 @@
                     </div>
                 </div>
 
-                <input type="text" id="r-username" placeholder="OPERATIVE NAME" required
+                <input type="text" id="r-username" placeholder="OPERATIVE NAME" required autocomplete="username"
                     class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:border-blue-500 outline-none">
-                <input type="email" id="r-email" placeholder="EMAIL" required
+                <input type="email" id="r-email" placeholder="EMAIL" required autocomplete="email"
                     class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:border-blue-500 outline-none">
-                <input type="password" id="r-password" placeholder="CREATE PASSKEY" required
+                <input type="password" id="r-password" placeholder="CREATE PASSKEY" required autocomplete="new-password"
                     class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:border-blue-500 outline-none">
                 <button type="submit"
                     class="w-full py-3 bg-blue-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-500 transition shadow-[0_0_20px_rgba(37,99,235,0.3)]">Initialize
@@ -406,7 +406,7 @@
         </div>
     </div>
 
-    <script src="/js/landing.js"></script>
+    <script src="public/js/landing.js"></script>
     <script>
         // Inline simple modal logic if js/landing.js fails or differs
         const modal = document.getElementById('auth-modal');
