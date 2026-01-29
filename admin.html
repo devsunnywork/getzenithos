@@ -9,7 +9,7 @@
         // Note: Real security happens on backend APIs, but this prevents UI access.
         // Also fetch profile to verify if not strictly stored?
         // We will fetch profile to be sure.
-        fetch('/api/auth/profile', {
+        fetch(API_BASE_URL + '/api/auth/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => {
             if (!res.ok) return window.location.href = '/';
@@ -29,6 +29,7 @@
     <title>Z-ADMIN // COMMAND CENTER v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="public/js/config.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -234,7 +235,7 @@
         async function init() {
             try {
                 // Verify admin status first
-                const userRes = await fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+                const userRes = await fetch(API_BASE_URL + '/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!userRes.ok) {
                     const err = await userRes.json();
                     alert("SECURITY BREACH: " + (err.message || "AUTHENTICATION FAILED").toUpperCase());
@@ -268,13 +269,13 @@
         async function sync() {
             try {
                 const results = await Promise.all([
-                    fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/admin/courses', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/explore/placement/jobs', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/explore/placement/prep/6979d99d28ff47f9e031d81b', { headers: { 'Authorization': `Bearer ${token}` } }) // Dummy fetch for prep
+                    fetch(API_BASE_URL + '/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/admin/courses', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/explore/placement/jobs', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(API_BASE_URL + '/api/explore/placement/prep/6979d99d28ff47f9e031d81b', { headers: { 'Authorization': `Bearer ${token}` } }) // Dummy fetch for prep
                 ]);
 
                 // Check all responses

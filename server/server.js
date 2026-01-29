@@ -69,6 +69,18 @@ app.get('/index.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../index.html'));
 });
 
+app.get('/user.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../user.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../admin.html'));
+});
+
+app.get('/explore-tree.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../explore-tree.html'));
+});
+
 // Define Routes
 app.use(require('./middleware/activityMiddleware')); // Track global activity
 app.use('/api/auth', require('./routes/authRoutes'));
