@@ -544,7 +544,7 @@ window.renderComments = async function () {
         canvas.innerHTML = `
             <div class="space-y-8">
                 <div class="flex gap-4">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.username}" class="w-12 h-12 rounded-full border-2 border-white/10">
+                    <img src="${state.user.profile?.avatar && state.user.profile.avatar.startsWith('/uploads') ? API_BASE_URL + state.user.profile.avatar : (state.user.profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.username}`)}" class="w-12 h-12 rounded-full border-2 border-white/10">
                     <div class="flex-grow space-y-3">
                         <textarea id="comment-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" rows="3" placeholder="Share your thoughts..."></textarea>
                         <div class="flex justify-end">
@@ -558,9 +558,11 @@ window.renderComments = async function () {
                 <div class="h-px bg-white/10"></div>
 
                 <div class="space-y-6">
-                    ${comments.map(c => `
+                    ${comments.map(c => {
+            let avatarUrl = (c.user.profile?.avatar && c.user.profile.avatar.startsWith('/uploads')) ? API_BASE_URL + c.user.profile.avatar : (c.user.profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.user.username}`);
+            return `
                         <div class="flex gap-4 group">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${c.user.username}" class="w-12 h-12 rounded-full border-2 border-white/10">
+                            <img src="${avatarUrl}" class="w-12 h-12 rounded-full border-2 border-white/10">
                             <div class="flex-grow">
                                 <div class="flex items-center gap-3 mb-2">
                                     <span class="font-bold text-sm">${c.user.username}</span>
@@ -569,7 +571,8 @@ window.renderComments = async function () {
                                 <p class="text-sm text-slate-300 leading-relaxed">${c.text}</p>
                             </div>
                         </div>
-                    `).join('')}
+                    `;
+        }).join('')}
                     ${comments.length === 0 ? `
                         <div class="text-center py-12 text-slate-600">
                             <i class="fas fa-comments text-3xl mb-3 opacity-20"></i>

@@ -21,11 +21,12 @@ const state = {
 async function startExploreTree() {
     if (!token) return window.top.location.href = '/index.html';
 
+    ZLoader.show("Initializing Career Protocol...");
     // Simulate high-tech loading delay for effect
     setTimeout(async () => {
         await loadData();
         initPanZoom(); // Initialize panning system
-        document.getElementById('loader').classList.add('hidden');
+        ZLoader.hide();
         document.getElementById('app-interface').classList.remove('hidden');
     }, 1500);
 }

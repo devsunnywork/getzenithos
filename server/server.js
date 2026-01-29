@@ -58,7 +58,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(path.join(__dirname, '../public'))); // Serve static frontend files from root public
+app.use('/public', express.static(path.join(__dirname, '../public'))); // Serve static frontend files from root public
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'))); // Serve uploads statically
 
 // Basic Routes - Serve index.html for both / and /index.html
 app.get('/', (req, res) => {

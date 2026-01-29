@@ -17,9 +17,29 @@
 // Example: 'https://zenith-os-backend.railway.app'
 // ========================================
 
-const API_BASE_URL = 'https://getzenithos.onrender.com';
+const API_BASE_URL = 'https://zenithos-production.up.railway.app';
+
+// Z-LOADER SYSTEM v1.0
+const ZLoader = {
+    show: (msg = "Syncing Intelligence...") => {
+        const loader = document.getElementById('zenith-loader');
+        if (loader) {
+            const msgEl = loader.querySelector('.loader-msg');
+            if (msgEl) msgEl.innerText = msg.toUpperCase();
+            loader.classList.remove('opacity-0', 'pointer-events-none');
+            loader.classList.add('opacity-100');
+        }
+    },
+    hide: () => {
+        const loader = document.getElementById('zenith-loader');
+        if (loader) {
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            loader.classList.remove('opacity-100');
+        }
+    }
+};
 
 // Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { API_BASE_URL };
+    module.exports = { API_BASE_URL, ZLoader };
 }

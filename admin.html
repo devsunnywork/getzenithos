@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+<script src="public/js/config.js"></script>
 <script>
     (function checkAdmin() {
         const token = localStorage.getItem('token');
         if (!token) return window.location.href = '/';
 
-        // Optimistic check from localStorage first (for speed)
-        // Note: Real security happens on backend APIs, but this prevents UI access.
-        // Also fetch profile to verify if not strictly stored?
-        // We will fetch profile to be sure.
+        // Use the global API_BASE_URL from config.js
         fetch(API_BASE_URL + '/api/auth/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => {
@@ -29,7 +27,6 @@
     <title>Z-ADMIN // COMMAND CENTER v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="public/js/config.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -116,6 +113,23 @@
 </head>
 
 <body class="antialiased flex h-screen overflow-hidden">
+
+    <!-- Zenith Loader -->
+    <div id="zenith-loader"
+        class="fixed inset-0 z-[9999] bg-[#020202] flex flex-col items-center justify-center transition-all duration-700 pointer-events-none opacity-0">
+        <div class="relative">
+            <div class="absolute inset-0 bg-red-600/20 rounded-full blur-3xl animate-pulse scale-150"></div>
+            <div class="w-24 h-24 border-2 border-red-500/10 rounded-full flex items-center justify-center">
+                <div class="w-16 h-16 border-t-2 border-red-600 rounded-full animate-spin"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center font-black text-xs syne text-red-500">Z</div>
+        </div>
+        <div class="mt-8 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.5em] text-red-500/50 mb-2">Neural Link Active</div>
+            <div class="loader-msg text-xs text-white font-black uppercase tracking-[0.2em] animate-pulse">Syncing
+                Intelligence...</div>
+        </div>
+    </div>
 
     <!-- Sidebar -->
     <aside class="w-80 admin-sidebar flex flex-col h-full z-[60]">
@@ -228,31 +242,58 @@
 
     <script>
         const token = localStorage.getItem('token');
-        if (!token) window.location.href = '/';
+        if (!token) {
+            window.location.replace('/');
+        }
+
+        // Inject Styles for Smooth Interaction
+        (function () {
+            const style = document.createElement('style');
+            style.innerHTML = `
+                button, a, .sidebar-item, .glass-card, [onclick] {
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                }
+                button:active, a:active, .sidebar-item:active, .glass-card:active {
+                    transform: scale(0.97) !important;
+                    filter: brightness(0.9) !important;
+                }
+                .page-transition {
+                    animation: pageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                @keyframes pageFadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        })();
 
         let state = { users: [], courses: [], skills: [], settings: {}, stats: {} };
 
         async function init() {
+            ZLoader.show("Securing Uplink...");
             try {
                 // Verify admin status first
                 const userRes = await fetch(API_BASE_URL + '/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!userRes.ok) {
                     const err = await userRes.json();
                     alert("SECURITY BREACH: " + (err.message || "AUTHENTICATION FAILED").toUpperCase());
-                    window.location.href = '/';
+                    window.location.replace('/');
                     return;
                 }
 
                 const userData = await userRes.json();
                 if (userData.role !== 'admin') {
                     alert("ACCESS DENIED: LEVEL 4 CLEARANCE REQUIRED.");
-                    window.location.href = '/';
+                    window.location.replace('/');
                     return;
                 }
 
                 await sync();
                 showTab('dashboard');
+                ZLoader.hide();
             } catch (e) {
+                ZLoader.hide();
                 console.error("Initialization Failed", e);
                 // Instead of redirecting immediately, let's show an error on the screen if possible
                 document.getElementById('content-area').innerHTML = `
@@ -307,6 +348,11 @@
             document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
             const nav = document.getElementById(`nav-${tab}`);
             if (nav) nav.classList.add('active');
+
+            const content = document.getElementById('content-area');
+            content.classList.remove('page-transition');
+            void content.offsetWidth;
+            content.classList.add('page-transition');
 
             const titles = {
                 dashboard: "Strategic Intel",
@@ -367,7 +413,7 @@
 
         async function fetchDashboardTxs() {
             try {
-                const res = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(API_BASE_URL + '/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!res.ok) throw new Error("Failed to fetch transactions");
                 const txs = await res.json();
                 const container = document.getElementById('dashboard-txs');
@@ -444,7 +490,7 @@
         async function viewUserDetail(id) {
             openModal();
             document.getElementById('modal-content').innerHTML = `<div class="p-20 text-center animate-pulse uppercase font-black tracking-widest text-slate-500">Accessing operative data tunnel...</div>`;
-            const res = await fetch(`/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + `/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
             const { user, transactions } = await res.json();
 
             document.getElementById('modal-content').innerHTML = `
@@ -691,7 +737,7 @@
 
         async function openProductionStudio(id) {
             openModal();
-            const res = await fetch(`/api/courses/${id}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + `/api/courses/${id}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
             const course = await res.json();
             window.activeCourse = course;
 
@@ -761,7 +807,7 @@
             document.getElementById('unit-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('u-title').value;
-                const res = await fetch(`/api/admin/courses/${window.activeCourse._id}/units`, {
+                const res = await fetch(API_BASE_URL + `/api/admin/courses/${window.activeCourse._id}/units`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title })
@@ -831,12 +877,12 @@
             };
         }
 
-        async function deleteUnit(id) { if (confirm("PURGE TACTICAL UNIT?")) { await fetch(`/api/admin/units/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("UNIT PURGED.", "success"); openProductionStudio(window.activeCourse._id); } }
-        async function deleteLecture(id) { if (confirm("REMOVE SUB-SYSTEM?")) { await fetch(`/api/admin/lectures/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("SUB-SYSTEM REMOVED.", "success"); openProductionStudio(window.activeCourse._id); } }
+        async function deleteUnit(id) { if (confirm("PURGE TACTICAL UNIT?")) { await fetch(API_BASE_URL + `/api/admin/units/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("UNIT PURGED.", "success"); openProductionStudio(window.activeCourse._id); } }
+        async function deleteLecture(id) { if (confirm("REMOVE SUB-SYSTEM?")) { await fetch(API_BASE_URL + `/api/admin/lectures/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("SUB-SYSTEM REMOVED.", "success"); openProductionStudio(window.activeCourse._id); } }
 
         // --- PAYMENTS ---
         async function renderPayments() {
-            const res = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + '/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
             const txs = await res.json();
             document.getElementById('content-area').innerHTML = `
                 <div class="glass-card rounded-[4rem] overflow-hidden">
@@ -914,11 +960,11 @@
             const qr = document.getElementById('s-qr').value;
 
             await Promise.all([
-                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemName', value: name }) }),
-                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemVersion', value: version }) }),
-                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'accent', value: accent }) }),
-                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'upiId', value: upi }) }),
-                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'qrCodeUrl', value: qr }) })
+                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemName', value: name }) }),
+                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemVersion', value: version }) }),
+                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'accent', value: accent }) }),
+                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'upiId', value: upi }) }),
+                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'qrCodeUrl', value: qr }) })
             ]);
             showToast("IDENTITY & CONFIG DEPLOYED.", "success");
             init();
@@ -973,7 +1019,7 @@
             if (!pwd) return;
 
             try {
-                const res = await fetch('/api/admin/reset-system', {
+                const res = await fetch(API_BASE_URL + '/api/admin/reset-system', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pwd })
@@ -1034,7 +1080,7 @@
                 // We'll reuse the generic PUT /courses/:id endpoint but we need to ensure backend accepts adConfig.
                 // Backend schema validation might strip it if not present. I'll need to check the Course model.
                 // For now let's try sending it.
-                await fetch(`/api/admin/courses/${courseId}`, {
+                await fetch(API_BASE_URL + `/api/admin/courses/${courseId}`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ adConfig: newConfig })
@@ -1789,7 +1835,7 @@
             });
 
             try {
-                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ topics: sanitizedTopics })
@@ -1811,7 +1857,7 @@
 
         async function deleteSkill(id) {
             if (confirm("PURGE THIS SKILL NODE? ALL USER PROGRESS WILL BE LOST.")) {
-                await fetch(`/api/explore/admin/skills/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                await fetch(API_BASE_URL + `/api/explore/admin/skills/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
                 showToast("SKILL PURGED.", "success");
                 sync().then(renderSkillsManager);
             }
@@ -1821,7 +1867,7 @@
             if (confirm("PURGE THIS NEURAL LAYER?")) {
                 const skill = window.activeSkill;
                 const updatedTopics = skill.topics.filter(t => t._id !== topicId);
-                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ topics: updatedTopics })
@@ -1836,7 +1882,7 @@
         async function renderSupport() {
             const container = document.getElementById('content-area');
             container.innerHTML = `<div class="p-20 text-center animate-pulse uppercase font-black text-slate-700 tracking-[0.5em]">Interrogating Ticket database...</div>`;
-            const res = await fetch('/api/admin/support', { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + '/api/admin/support', { headers: { 'Authorization': `Bearer ${token}` } });
             const tickets = await res.json();
 
             container.innerHTML = `
@@ -1873,7 +1919,7 @@
 
         async function resolveRequest(id, status, type) {
             const userBalanceAction = type === 'topup' && status === 'resolved';
-            const res = await fetch(`/api/admin/support/${id}/resolve`, {
+            const res = await fetch(API_BASE_URL + `/api/admin/support/${id}/resolve`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status, userBalanceAction })
@@ -1953,7 +1999,7 @@
                 // Fetch questions for all skills to show a master list
                 const allQs = [];
                 for (const skill of state.skills) {
-                    const res = await fetch(`/api/explore/placement/prep/${skill._id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const res = await fetch(API_BASE_URL + `/api/explore/placement/prep/${skill._id}`, { headers: { 'Authorization': `Bearer ${token}` } });
                     if (res.ok) {
                         const qs = await res.json();
                         allQs.push(...qs.map(q => ({ ...q, skillName: skill.name })));
@@ -2145,7 +2191,7 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
-            const res = await fetch('/api/explore/admin/placement/questions', {
+            const res = await fetch(API_BASE_URL + '/api/explore/admin/placement/questions', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -2163,7 +2209,7 @@
 
         async function deleteJob(id) {
             if (confirm("PURGE THIS OPPORTUNITY NODE?")) {
-                await fetch(`/api/explore/admin/placement/jobs/${id}`, {
+                await fetch(API_BASE_URL + `/api/explore/admin/placement/jobs/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -2174,7 +2220,7 @@
 
         async function deleteQuestion(id) {
             if (confirm("PURGE THIS INTELLIGENCE LAYER?")) {
-                await fetch(`/api/explore/admin/placement/questions/${id}`, {
+                await fetch(API_BASE_URL + `/api/explore/admin/placement/questions/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -2270,7 +2316,7 @@
             };
 
             try {
-                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates)
@@ -2295,12 +2341,12 @@
         // --- HELPER WRAPPERS ---
         function openModal() { document.getElementById('hyper-modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
         function closeModal() { document.getElementById('hyper-modal').style.display = 'none'; document.body.style.overflow = 'auto'; }
-        async function deleteCourse(id) { if (confirm("PURGE ENTIRE PRODUCTION UNIT?")) { await fetch(`/api/admin/courses/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("COURSE PURGED.", "success"); sync().then(renderCourses); } }
+        async function deleteCourse(id) { if (confirm("PURGE ENTIRE PRODUCTION UNIT?")) { await fetch(API_BASE_URL + `/api/admin/courses/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("COURSE PURGED.", "success"); sync().then(renderCourses); } }
         function logout() { localStorage.removeItem('token'); window.location.href = '/index.html'; }
 
         init();
     </script>
-    <script src="/js/admin-topics.js"></script>
+    <script src="public/js/admin-topics.js"></script>
 </body>
 
 </html>

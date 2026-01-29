@@ -11,7 +11,14 @@ if (!fs.existsSync(uploadDir)) {
 // Storage Configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, uploadDir);
+        let finalPath = uploadDir;
+        if (file.fieldname === 'avatar') {
+            finalPath = path.join(uploadDir, 'avatars');
+        }
+        if (!fs.existsSync(finalPath)) {
+            fs.mkdirSync(finalPath, { recursive: true });
+        }
+        cb(null, finalPath);
     },
     filename: function (req, file, cb) {
         // High-fidelity naming: course-timestamp-original

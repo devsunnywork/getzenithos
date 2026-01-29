@@ -3,7 +3,17 @@
 // API Base URL is loaded from public/js/config.js
 // ========================================
 
+// Check if already logged in
+(function () {
+    const token = localStorage.getItem('token');
+    if (token) {
+        // Simple sanity check or just redirect
+        window.location.replace('/user.html');
+    }
+})();
+
 async function fetchBranding() {
+    ZLoader.show("Syncing Branding...");
     try {
         const res = await fetch(`${API_BASE_URL}/api/settings/branding`);
         const data = await res.json();
@@ -15,7 +25,23 @@ async function fetchBranding() {
             const el = document.getElementById('ver-text');
             if (el) el.innerText = data.systemVersion;
         }
-    } catch (e) { }
+
+        // Inject Smooth Interaction Styles
+        const style = document.createElement('style');
+        style.innerHTML = `
+            button, a, .glass-card, [onclick] {
+                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            button:active, a:active, .glass-card:active {
+                transform: scale(0.97) !important;
+                filter: brightness(0.9) !important;
+            }
+        `;
+        document.head.appendChild(style);
+    } catch (e) {
+    } finally {
+        ZLoader.hide();
+    }
 }
 fetchBranding();
 
@@ -44,6 +70,7 @@ async function handleAuth(event, mode) {
     const originalText = submitBtn.innerText;
     submitBtn.innerText = "PROCESSING...";
     submitBtn.disabled = true;
+    ZLoader.show(mode === 'login' ? "Authenticating Identity..." : "Initializing Neural Link...");
 
     const payload = {};
     let endpoint = '';
@@ -75,9 +102,9 @@ async function handleAuth(event, mode) {
 
             // Redirect based on role
             if (data.user && data.user.role === 'admin') {
-                window.location.href = '/admin.html';
+                window.location.replace('/admin.html');
             } else {
-                window.location.href = '/user.html';
+                window.location.replace('/user.html');
             }
         } else {
             // Show error below form
@@ -89,6 +116,7 @@ async function handleAuth(event, mode) {
     } finally {
         submitBtn.innerText = originalText;
         submitBtn.disabled = false;
+        ZLoader.hide();
     }
 }
 

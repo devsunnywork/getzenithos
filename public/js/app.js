@@ -14,12 +14,15 @@ const state = {
     enrolledCourses: [],
     goals: [],
     profileTab: 'identity',
-    learningTab: 'insights',
-    supportTab: 'topup',
     settings: {}
 };
 
+// ========================================
+// CORE INITIALIZATION
+// ========================================
+
 async function init() {
+    ZLoader.show("Initializing Neural Link...");
     initToastSystem(); // Initialize notifications
     await fetchUser();
     await fetchCourses(); // Fetch full course data for stats
@@ -28,6 +31,7 @@ async function init() {
     applyTheme();
     loadPage('dashboard');
     lucide.createIcons();
+    ZLoader.hide();
 }
 
 async function fetchCourses() {
@@ -118,7 +122,7 @@ function initToastSystem() {
     `;
     document.body.appendChild(container);
 
-    // Inject Styles for Animation
+    // Inject Styles for Animation & Smooth Interaction
     const style = document.createElement('style');
     style.innerHTML = `
         @keyframes slideInToast {
@@ -134,6 +138,25 @@ function initToastSystem() {
         }
         .zenith-toast.hiding {
             animation: fadeOutToast 0.3s ease-in forwards;
+        }
+
+        /* Smooth Interactive System */
+        button, a, .sidebar-item, .glass-card, [onclick] {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        
+        button:active, a:active, .sidebar-item:active, .glass-card:active {
+            transform: scale(0.97) !important;
+            filter: brightness(0.9) !important;
+        }
+
+        .page-transition {
+            animation: pageFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     `;
     document.head.appendChild(style);
@@ -248,7 +271,11 @@ async function fetchUser() {
         const initials = state.user.username.substring(0, 2).toUpperCase();
         const initialEl = document.getElementById('user-initials');
         if (state.user.profile?.avatar) {
-            initialEl.innerHTML = `<img src="${state.user.profile.avatar}" class="w-full h-full object-cover rounded-xl">`;
+            let avatarUrl = state.user.profile.avatar;
+            if (avatarUrl.startsWith('/uploads')) {
+                avatarUrl = API_BASE_URL + avatarUrl;
+            }
+            initialEl.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover rounded-xl">`;
             initialEl.classList.remove('bg-blue-600/10', 'border', 'border-blue-500/20', 'text-blue-500'); // Remove default style to show image cleanly
             initialEl.classList.add('p-0', 'overflow-hidden');
         } else {
@@ -282,7 +309,7 @@ async function fetchUser() {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
-    window.location.href = '/index.html';
+    window.location.replace('/index.html');
 }
 
 const PAGE_META = {
@@ -321,12 +348,12 @@ async function loadPage(page, subTab = null) {
 
     // Smooth transition
     const content = document.getElementById('app-content');
-    content.style.opacity = 0;
-    setTimeout(() => {
-        renderView(page, content);
-        content.style.opacity = 1;
-        lucide.createIcons();
-    }, 200);
+    content.classList.remove('page-transition');
+    void content.offsetWidth; // Trigger reflow
+    content.classList.add('page-transition');
+
+    renderView(page, content);
+    lucide.createIcons();
 }
 
 function renderView(page, container) {

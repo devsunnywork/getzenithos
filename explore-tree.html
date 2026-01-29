@@ -280,14 +280,22 @@
 
 <body class="text-white h-screen w-screen flex flex-col p-6"> <!-- Added padding for iframe fit -->
 
-    <!-- LOADING OVERLAY -->
-    <div id="loader" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-        <div class="relative w-24 h-24 mb-6">
-            <div class="absolute inset-0 border-4 border-blue-600/20 rounded-full animate-pulse"></div>
-            <div class="absolute inset-0 border-t-4 border-blue-500 rounded-full animate-spin"></div>
+    <!-- Zenith Loader -->
+    <div id="zenith-loader"
+        class="fixed inset-0 z-[9999] bg-[#020202] flex flex-col items-center justify-center transition-all duration-700 pointer-events-none opacity-0">
+        <div class="relative">
+            <div class="absolute inset-0 bg-blue-600/20 rounded-full blur-3xl animate-pulse scale-150"></div>
+            <div class="w-24 h-24 border-2 border-blue-500/10 rounded-full flex items-center justify-center">
+                <div class="w-16 h-16 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center font-black text-xs syne text-blue-500">Z</div>
         </div>
-        <h2 class="text-2xl font-black syne uppercase tracking-wider text-white">Initializing Neural Pathway...</h2>
-        <p class="text-xs text-slate-500 font-mono mt-2 animate-pulse">DECRYPTING CAREER PROTOCOLS</p>
+        <div class="mt-8 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/50 mb-2">Neural Link Active
+            </div>
+            <div class="loader-msg text-xs text-white font-black uppercase tracking-[0.2em] animate-pulse">Syncing
+                Intelligence...</div>
+        </div>
     </div>
 
     <!-- MAIN INTERFACE (Hidden initially) -->
