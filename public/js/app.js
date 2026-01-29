@@ -1,9 +1,6 @@
 // Zenith OS Core Logic — Intelligence Hub v5.0
 
-// ========================================
-// API Configuration - Change this for deployment
-// ========================================
-const API_BASE_URL = 'https://getzenithos.onrender.com'; // Render Backend (Production)
+// API Base URL is loaded from public/js/config.js
 // ========================================
 
 const token = localStorage.getItem('token');
@@ -35,14 +32,14 @@ async function init() {
 
 async function fetchCourses() {
     try {
-        const res = await fetch('/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + '/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
         state.courses = await res.json();
     } catch (e) { console.error("Course Matrix Offline"); }
 }
 
 async function fetchTasks() {
     try {
-        const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + '/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } });
         state.tasks = await res.json();
     } catch (e) { state.tasks = []; }
 }
@@ -195,7 +192,7 @@ window.alert = function (msg) {
 
 async function fetchSettings() {
     try {
-        const res = await fetch('/api/settings/branding');
+        const res = await fetch(API_BASE_URL + '/api/settings/branding');
         state.settings = await res.json();
     } catch (e) { }
 }
@@ -231,7 +228,7 @@ function toggleSidebar() {
 
 async function fetchUser() {
     try {
-        const res = await fetch('/api/auth/profile', {
+        const res = await fetch(API_BASE_URL + '/api/auth/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error();
@@ -739,7 +736,7 @@ async function renderRecentDashboard() {
     }
 
     try {
-        const res = await fetch('/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + '/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
         const courses = await res.json();
         const recent = courses.filter(c => state.enrolledCourses.includes(c._id)).pop();
 
@@ -768,7 +765,7 @@ async function fetchRecentCourse() {
         return;
     }
     try {
-        const res = await fetch(`/api/courses`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + `/api/courses`, { headers: { 'Authorization': `Bearer ${token}` } });
         const courses = await res.json();
         const recent = courses.find(c => state.enrolledCourses.includes(c._id));
         if (recent) {
@@ -815,7 +812,7 @@ async function renderStoreCatalog(container) {
     container.innerHTML = `<div id="course-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"></div>`;
     const list = document.getElementById('course-list');
     try {
-        const res = await fetch('/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + '/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
         const courses = await res.json();
         list.innerHTML = courses.map(c => {
             const isEnrolled = state.enrolledCourses.includes(c._id);
@@ -843,7 +840,7 @@ async function renderStoreCatalog(container) {
 async function promptEnroll(id, title, price) {
     if (confirm(`AUTHORIZE FINANCIAL TRANSACTION: Acquire ${title.toUpperCase()} for ₹${price}?`)) {
         try {
-            const res = await fetch(`/api/courses/${id}/enroll`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) { await fetchUser(); loadPage(state.activePage); }
             else { const d = await res.json(); alert(d.message.toUpperCase()); }
         } catch (e) { alert('SYNC FAILURE.'); }
@@ -998,7 +995,7 @@ async function updateProfile() {
     };
 
     try {
-        const res = await fetch('/api/auth/profile', {
+        const res = await fetch(API_BASE_URL + '/api/auth/profile', {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -1036,7 +1033,7 @@ async function updateAvatar(file) {
     formData.append('avatar', file);
 
     try {
-        const res = await fetch('/api/auth/profile', {
+        const res = await fetch(API_BASE_URL + '/api/auth/profile', {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }, // Content-Type is auto-set with FormData
             body: formData
@@ -1059,7 +1056,7 @@ async function renderLeaderboard(container) {
     container.innerHTML = `<div class="p-20 text-center"><p class="text-slate-500 font-bold uppercase tracking-widest animate-pulse">Establishing Global Uplink...</p></div>`;
 
     try {
-        const res = await fetch('/api/auth/leaderboard');
+        const res = await fetch(API_BASE_URL + '/api/auth/leaderboard');
         const leaders = await res.json();
 
         container.innerHTML = `
@@ -1240,7 +1237,7 @@ async function submitRequest(type) {
 
     if (!data.subject || (type === 'topup' && !data.amount)) return alert("INCOMPLETE DATA STREAM.");
 
-    const res = await fetch('/api/support/request', {
+    const res = await fetch(API_BASE_URL + '/api/support/request', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token} `, 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -1252,7 +1249,7 @@ async function submitRequest(type) {
 }
 
 async function fetchMyRequests() {
-    const res = await fetch('/api/support/my-requests', { headers: { 'Authorization': `Bearer ${token} ` } });
+    const res = await fetch(API_BASE_URL + '/api/support/my-requests', { headers: { 'Authorization': `Bearer ${token} ` } });
     const data = await res.json();
     const container = document.getElementById('request-history');
     if (!container) return;
@@ -1293,7 +1290,7 @@ async function openPlayer(courseId) {
     modal.innerHTML = `<div class="p-20 text-center"><i class="fas fa-spin fa-spinner text-4xl text-blue-500"></i></div>`;
 
     try {
-        const res = await fetch(`/api/courses/${courseId}/content`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/content`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1580,7 +1577,7 @@ function renderMediaAsset(lec) {
 async function renderComments(lecId) {
     const feed = document.getElementById('comment-feed');
     try {
-        const res = await fetch(`/api/courses/lectures/${lecId}/comments`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${lecId}/comments`, { headers: { 'Authorization': `Bearer ${token}` } });
         const comments = await res.json();
 
         if (!comments.length) {
@@ -1612,7 +1609,7 @@ async function postComment(lecId) {
     const input = document.getElementById('comment-input');
     if (!input.value.trim()) return;
     try {
-        const res = await fetch(`/api/courses/lectures/${lecId}/comments`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${lecId}/comments`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: input.value })
@@ -1627,7 +1624,7 @@ async function postComment(lecId) {
 async function deleteComment(id, lecId) {
     if (!confirm('PURGE TRANSMISSION?')) return;
     try {
-        await fetch(`/api/courses/comments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        await fetch(API_BASE_URL + `/api/courses/comments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
         renderComments(lecId);
     } catch (e) { }
 }
@@ -1655,7 +1652,7 @@ async function toggleLectureComplete(lecId, courseId) {
     }
 
     try {
-        const res = await fetch(`/api/courses/${courseId}/progress/mark-complete`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/progress/mark-complete`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ lectureId: lecId, completed: isNowComplete })
@@ -1686,7 +1683,7 @@ function startTelemetry(courseId) {
         try {
             const localSecs = pendingWatchTime;
             pendingWatchTime = 0; // Reset local counter
-            await fetch(`/api/courses/${courseId}/telemetry/sync`, {
+            await fetch(API_BASE_URL + `/api/courses/${courseId}/telemetry/sync`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seconds: localSecs })
@@ -1756,7 +1753,7 @@ async function renderMissionControl(container) {
     `;
 
     try {
-        const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + '/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } });
         const tasks = await res.json();
 
         const cols = {
@@ -1857,7 +1854,7 @@ async function handleDrop(e, status) {
 
     // Update Backend
     try {
-        await fetch(`/api/tasks/${draggedTaskId}`, {
+        await fetch(API_BASE_URL + `/api/tasks/${draggedTaskId}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })
@@ -1903,7 +1900,7 @@ async function submitNewMission() {
     if (!title) return showToast("OBJECTIVE REQUIRED", "error");
 
     try {
-        const res = await fetch('/api/tasks', {
+        const res = await fetch(API_BASE_URL + '/api/tasks', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, priority: selectedPriority, xpReward: 50 })
@@ -1921,7 +1918,7 @@ async function submitNewMission() {
 async function deleteTask(id) {
     if (!confirm("ABORT MISSION?")) return;
     try {
-        await fetch(`/api/tasks/${id}`, {
+        await fetch(API_BASE_URL + `/api/tasks/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });

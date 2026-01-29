@@ -33,9 +33,9 @@ async function startExploreTree() {
 async function loadData() {
     try {
         const [profileRes, progressRes, skillsRes] = await Promise.all([
-            fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('/api/explore/careermode/my-progress', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(API_BASE_URL + '/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(API_BASE_URL + '/api/explore/careermode/my-progress', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(API_BASE_URL + '/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         const profile = await profileRes.json();
@@ -561,7 +561,7 @@ async function completeCurrentNode() {
 
         console.log(`[Zenith System] Initializing Sync: Skill=${skillId}, Topic=${topicId}`);
 
-        const res = await fetch(`/api/explore/skills/${skillId}/topics/${topicId}/complete`, {
+        const res = await fetch(API_BASE_URL + `/api/explore/skills/${skillId}/topics/${topicId}/complete`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -694,7 +694,7 @@ function openCareerSelector() {
 
 async function selectCareer(skillId, action) {
     try {
-        const res = await fetch('/api/explore/careermode/select', {
+        const res = await fetch(API_BASE_URL + '/api/explore/careermode/select', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ skillId, action })

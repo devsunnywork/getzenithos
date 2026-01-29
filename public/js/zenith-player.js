@@ -37,7 +37,7 @@ window.ImmersiveEngine = {
 window.openCoursePlayer = async function (courseId) {
     ImmersiveEngine.open(`<div class="flex items-center justify-center h-screen bg-black"><div class="text-white">Loading...</div></div>`);
     try {
-        const res = await fetch(`/api/courses/${courseId}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
         const course = await res.json();
         window.activeCourseContent = course;
         window.renderCourseTree(course);
@@ -539,7 +539,7 @@ window.renderComments = async function () {
     const canvas = document.getElementById('tab-canvas');
     canvas.innerHTML = `<div class="flex justify-center py-12"><div class="w-8 h-8 border-2 border-slate-700 border-t-blue-600 rounded-full animate-spin"></div></div>`;
     try {
-        const res = await fetch(`/api/courses/lectures/${activeLectureId}/comments`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${activeLectureId}/comments`, { headers: { 'Authorization': `Bearer ${token}` } });
         const comments = await res.json();
         canvas.innerHTML = `
             <div class="space-y-8">
@@ -611,7 +611,7 @@ async function pollChat() {
         const stream = document.getElementById('chat-stream');
         if (!stream) { clearInterval(chatInterval); return; }
         try {
-            const res = await fetch(`/api/courses/lectures/${activeLectureId}/chats`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(API_BASE_URL + `/api/courses/lectures/${activeLectureId}/chats`, { headers: { 'Authorization': `Bearer ${token}` } });
             const chats = await res.json();
             stream.innerHTML = chats.slice(-25).reverse().map(c => `
                 <div class="text-sm">
@@ -629,7 +629,7 @@ async function pollChat() {
 window.postComment = async function () {
     const input = document.getElementById('comment-input');
     if (!input.value.trim()) return;
-    await fetch(`/api/courses/lectures/${activeLectureId}/comments`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text: input.value }) });
+    await fetch(API_BASE_URL + `/api/courses/lectures/${activeLectureId}/comments`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text: input.value }) });
     input.value = ''; renderComments();
 };
 
@@ -637,7 +637,7 @@ window.postChat = async function () {
     const input = document.getElementById('chat-input');
     if (!input.value.trim()) return;
     const text = input.value; input.value = '';
-    await fetch(`/api/courses/lectures/${activeLectureId}/chats`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    await fetch(API_BASE_URL + `/api/courses/lectures/${activeLectureId}/chats`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
 };
 
 window.toggleLectureComplete = async function (lecId, courseId) {
@@ -669,7 +669,7 @@ window.toggleLectureComplete = async function (lecId, courseId) {
     }
 
     try {
-        const res = await fetch(`/api/courses/${courseId}/progress/mark-complete`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ lectureId: lecId, completed: !isDone }) });
+        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/progress/mark-complete`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ lectureId: lecId, completed: !isDone }) });
         const result = await res.json();
 
         // Update user XP
@@ -691,7 +691,7 @@ window.toggleLectureComplete = async function (lecId, courseId) {
 
         // Refetch user to sync with database
         try {
-            const userRes = await fetch('/api/auth/profile', {
+            const userRes = await fetch(API_BASE_URL + '/api/auth/profile', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (userRes.ok) {
@@ -850,7 +850,7 @@ function convertDriveLink(url) {
 // Load lecture stats (likes, shares) on player load
 window.loadLectureStats = async function (lecId) {
     try {
-        const res = await fetch(`/api/courses/lectures/${lecId}/stats`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${lecId}/stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const stats = await res.json();
@@ -879,7 +879,7 @@ window.loadLectureStats = async function (lecId) {
 // Toggle Like
 window.toggleLike = async function (lecId) {
     try {
-        const res = await fetch(`/api/courses/lectures/${lecId}/like`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${lecId}/like`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -927,7 +927,7 @@ window.toggleLike = async function (lecId) {
 window.shareLecture = async function (lecId) {
     try {
         // Increment share count
-        const res = await fetch(`/api/courses/lectures/${lecId}/share`, {
+        const res = await fetch(API_BASE_URL + `/api/courses/lectures/${lecId}/share`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

@@ -202,7 +202,7 @@ function resetLectureInputs() {
 async function saveSkillChanges(skill) {
     const token = localStorage.getItem('token');
     try {
-        const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+        const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ topics: skill.topics })

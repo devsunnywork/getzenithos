@@ -1,9 +1,6 @@
 // Zenith OS Landing Logic
 
-// ========================================
-// API Configuration - Change this for deployment
-// ========================================
-const API_BASE_URL = 'https://getzenithos.onrender.com'; // Render Backend (Production)
+// API Base URL is loaded from public/js/config.js
 // ========================================
 
 async function fetchBranding() {
