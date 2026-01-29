@@ -17,7 +17,7 @@
 // Example: 'https://zenith-os-backend.railway.app'
 // ========================================
 
-const API_BASE_URL = 'https://zenithos-production.up.railway.app';
+const API_BASE_URL = 'https://getzenithos.onrender.com';
 
 // Z-LOADER SYSTEM v1.0
 const ZLoader = {
