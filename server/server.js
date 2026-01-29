@@ -33,7 +33,8 @@ const app = express();
 const allowedOrigins = [
     'http://localhost:5000',           // Local development
     'http://127.0.0.1:5000',           // Local development (alternative)
-    'https://getzenithos.netlify.app'  // Production frontend (Netlify)
+    'https://getzenithos.netlify.app', // Netlify frontend
+    'https://getzenithos.vercel.app'   // Vercel frontend
 ];
 
 const corsOptions = {

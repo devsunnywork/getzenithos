@@ -3,7 +3,7 @@
 // ========================================
 // API Configuration - Change this for deployment
 // ========================================
-const API_BASE_URL = 'https://zenithos-production.up.railway.app'; // Railway Backend (Production)
+const API_BASE_URL = 'https://getzenithos.onrender.com'; // Render Backend (Production)
 // ========================================
 
 async function fetchBranding() {

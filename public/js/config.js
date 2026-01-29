@@ -17,7 +17,7 @@
 // Example: 'https://zenith-os-backend.railway.app'
 // ========================================
 
-const API_BASE_URL = 'https://zenithos-production.up.railway.app';
+const API_BASE_URL = 'https://getzenithos.onrender.com';
 
 // Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
