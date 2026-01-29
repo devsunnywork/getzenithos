@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Syne:wght@800&display=swap');
+
+:root {
+    --bg-black: #000000;
+    --zinc-950: #060608;
+    --zinc-900: #0f0f13;
+    --zenith-blue: #2563eb;
+    --blue-600: var(--zenith-blue);
+    --blue-500: var(--zenith-blue);
+    --cyan-400: #22d3ee;
+
+    --text-pure: #ffffff;
+    --text-dim: #71717a;
+
+    --border-glass: rgba(255, 255, 255, 0.04);
+    --border-bright: rgba(59, 130, 246, 0.2);
+
+    --font-heading: 'Syne', sans-serif;
+    --font-body: 'Inter', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-black);
+    color: white;
+    font-family: var(--font-body);
+    overflow: hidden;
+}
+
+/* Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    background: radial-gradient(circle at 0% 0%, #101018 0%, #000 100%);
+}
+
+.sidebar {
+    width: 320px;
+    background: var(--zinc-950);
+    border-right: 1px solid var(--border-glass);
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+}
+
+.main-wrapper {
+    flex: 1;
+    padding: 4rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+/* Zenith Bento Boxes */
+.glass-box {
+    background: rgba(15, 15, 19, 0.4);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: 2.5rem;
+    padding: 3rem;
+    position: relative;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-box:hover {
+    transform: translateY(-8px);
+    border-color: var(--border-bright);
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(37, 99, 235, 0.1);
+}
+
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(180px, auto);
+    gap: 2rem;
+}
+
+.bento-large {
+    grid-column: span 2;
+    grid-row: span 2;
+}
+
+.bento-wide {
+    grid-column: span 2;
+}
+
+.bento-tall {
+    grid-row: span 2;
+}
+
+/* Navigation */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+    color: var(--text-dim);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: 0.4s;
+    font-style: italic;
+}
+
+.nav-item:hover {
+    color: white;
+    transform: translateX(10px);
+}
+
+.nav-item.active {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--blue-500);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+/* Typography */
+h2 {
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    font-style: italic;
+    letter-spacing: -3px;
+    text-transform: uppercase;
+    line-height: 0.9;
+}
+
+.text-gradient {
+    background: linear-gradient(to right, var(--blue-600), var(--cyan-400));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.label-pill {
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--blue-500);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* Dashboard Specific HUD */
+.hud-progress {
+    height: 6px;
+    background: var(--zinc-900);
+    border-radius: 999px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.hud-fill {
+    height: 100%;
+    background: linear-gradient(to right, var(--blue-600), var(--cyan-400));
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.8);
+}
+
+.stat-value {
+    font-size: 3.5rem;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: -2px;
+}
+
+/* Inputs */
+.zenith-input {
+    width: 100%;
+    background: var(--zinc-900);
+    border: 1px solid var(--border-glass);
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.zenith-input:focus {
+    outline: none;
+    border-color: var(--blue-500);
+}
+
+.btn-start {
+    background: var(--blue-600);
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4);
+    transition: 0.3s;
+}
+
+.btn-start:hover {
+    background: var(--blue-500);
+    transform: translateY(-2px);
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.stat-card .value {
+    font-size: 4rem;
+    font-weight: 950;
+    font-family: var(--font-heading);
+    font-style: italic;
+    letter-spacing: -3px;
+    line-height: 1;
+    margin-top: 1rem;
+    background: linear-gradient(to bottom, #fff, #444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.card {
+    background: rgba(25, 25, 30, 0.5);
+    border: 1px solid var(--border-glass);
+    padding: 2.5rem;
+    border-radius: 2rem;
+}

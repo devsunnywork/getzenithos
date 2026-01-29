@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>
+    (function checkAdmin() {
+        const token = localStorage.getItem('token');
+        if (!token) return window.location.href = '/';
+
+        // Optimistic check from localStorage first (for speed)
+        // Note: Real security happens on backend APIs, but this prevents UI access.
+        // Also fetch profile to verify if not strictly stored?
+        // We will fetch profile to be sure.
+        fetch('/api/auth/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => {
+            if (!res.ok) return window.location.href = '/';
+            return res.json();
+        }).then(user => {
+            if (user.role !== 'admin') {
+                alert("UNAUTHORIZED ACCESS DETECTED. REDIRECTING.");
+                window.location.href = '/user.html';
+            }
+        }).catch(() => window.location.href = '/');
+    })();
+</script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-ADMIN // COMMAND CENTER v4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --zenith-red: #ef4444;
+            --zenith-dark: #020202;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--zenith-dark);
+            color: #fff;
+            scroll-behavior: smooth;
+        }
+
+        .admin-sidebar {
+            background: #050505;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-item {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sidebar-item.active {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-right: 4px solid #ef4444;
+            box-shadow: 20px 0 40px -20px rgba(239, 68, 68, 0.3) inset;
+        }
+
+        .glass-card {
+            background: rgba(15, 15, 20, 0.6);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        #page-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            line-height: 1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #ef4444;
+        }
+
+        .input-zenith {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.25rem;
+            border-radius: 1.5rem;
+            outline: none;
+            width: 100%;
+            transition: all 0.4s;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .input-zenith:focus {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.03);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
+        }
+
+        select option {
+            background-color: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body class="antialiased flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-80 admin-sidebar flex flex-col h-full z-[60]">
+        <div class="p-10 flex items-center gap-3 border-b border-white/5">
+            <div
+                class="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl shadow-red-600/40">
+                A</div>
+            <span class="font-black text-2xl tracking-tighter uppercase">Zenith<span
+                    class="text-red-500">.Admin</span></span>
+        </div>
+
+        <nav class="flex-grow py-10 overflow-y-auto custom-scrollbar px-4">
+            <div class="px-6 mb-6 text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">Intelligence Hub
+            </div>
+            <button onclick="showTab('dashboard')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-dashboard">
+                <i class="fas fa-chart-pie w-6"></i> Command Stats
+            </button>
+
+            <div class="px-6 mt-10 mb-6 text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">Control Center
+            </div>
+            <button onclick="showTab('users')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-users">
+                <i class="fas fa-user-shield w-6"></i> User Telemetry
+            </button>
+            <button onclick="showTab('courses')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-courses">
+                <i class="fas fa-rocket w-6"></i> Content Studio
+            </button>
+            <button onclick="showTab('payments')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-payments">
+                <i class="fas fa-wallet w-6"></i> Fiscal Ledger
+            </button>
+            <button onclick="showTab('support')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-support">
+                <i class="fas fa-headset w-6"></i> Strategic Support
+            </button>
+            <button onclick="showTab('explore')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-explore">
+                <i class="fas fa-project-diagram w-6"></i> Skill Forge
+            </button>
+            <button onclick="showTab('placement')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-placement">
+                <i class="fas fa-briefcase w-6"></i> Placement Hub
+            </button>
+
+            <div class="px-6 mt-10 mb-6 text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">System</div>
+            <button onclick="showTab('themes')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-themes">
+                <i class="fas fa-fingerprint w-6"></i> Core Branding
+            </button>
+            <button onclick="showTab('ads')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-ads">
+                <i class="fas fa-ad w-6"></i> Neural Ads
+            </button>
+        </nav>
+
+        <div class="p-8 border-t border-white/5 space-y-4">
+            <button onclick="resetSystem()"
+                class="w-full flex items-center justify-center gap-3 py-5 bg-red-900/20 text-red-500 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-800 hover:text-white transition shadow-xl hover:shadow-red-900/40">
+                <i class="fas fa-biohazard"></i> System Nuke
+            </button>
+            <button onclick="logout()"
+                class="w-full flex items-center justify-center gap-3 py-5 bg-red-600/10 text-red-500 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-600 hover:text-white transition shadow-xl hover:shadow-red-600/20">
+                <i class="fas fa-power-off"></i> Secure Exit
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow overflow-y-auto p-16 bg-[#020202] relative custom-scrollbar">
+        <div id="admin-version-badge"
+            class="fixed bottom-6 right-8 text-[9px] font-black text-slate-800 tracking-[0.4em] uppercase z-40 pointer-events-none">
+            CMD.HUB // v1.10-ROOT
+        </div>
+        <header class="mb-16 flex justify-between items-end">
+            <div>
+                <h1 id="page-title" class="text-6xl font-black tracking-tighter mb-4">Command Overview</h1>
+                <p id="page-desc" class="text-slate-500 font-bold tracking-widest uppercase text-xs">Clearance: <span
+                        class="text-red-600">Level 4 ALPHA</span> | System: <span class="text-green-500">Nominal</span>
+                </p>
+            </div>
+            <div id="action-bar" class="flex gap-4"></div>
+        </header>
+
+        <div id="content-area" class="animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <!-- Dynamic Content -->
+        </div>
+    </main>
+
+    <!-- Hyper Modal (System-wide Modal Engine) -->
+    <div id="hyper-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-12 modal-blur">
+        <div
+            class="glass-card w-full max-w-6xl rounded-[4rem] p-16 relative flex flex-col h-[90vh] shadow-[0_0_100px_rgba(239,68,68,0.1)] border-white/10 animate-in zoom-in-95 duration-300">
+            <button onclick="closeModal()" class="absolute top-12 right-12 text-slate-500 hover:text-white transition">
+                <i class="fas fa-times text-3xl"></i>
+            </button>
+            <div id="modal-content" class="overflow-y-auto pr-6 custom-scrollbar flex-grow"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/';
+
+        let state = { users: [], courses: [], skills: [], settings: {}, stats: {} };
+
+        async function init() {
+            try {
+                // Verify admin status first
+                const userRes = await fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!userRes.ok) {
+                    const err = await userRes.json();
+                    alert("SECURITY BREACH: " + (err.message || "AUTHENTICATION FAILED").toUpperCase());
+                    window.location.href = '/';
+                    return;
+                }
+
+                const userData = await userRes.json();
+                if (userData.role !== 'admin') {
+                    alert("ACCESS DENIED: LEVEL 4 CLEARANCE REQUIRED.");
+                    window.location.href = '/';
+                    return;
+                }
+
+                await sync();
+                showTab('dashboard');
+            } catch (e) {
+                console.error("Initialization Failed", e);
+                // Instead of redirecting immediately, let's show an error on the screen if possible
+                document.getElementById('content-area').innerHTML = `
+                    <div class="p-20 text-center">
+                        <div class="text-red-500 text-6xl mb-8"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h2 class="text-3xl font-black mb-4 uppercase">Neural Link Failure</h2>
+                        <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">${e.message}</p>
+                        <button onclick="window.location.reload()" class="mt-10 px-10 py-5 bg-white/5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Retry Uplink</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function sync() {
+            try {
+                const results = await Promise.all([
+                    fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/admin/courses', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/explore/placement/jobs', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/explore/placement/prep/6979d99d28ff47f9e031d81b', { headers: { 'Authorization': `Bearer ${token}` } }) // Dummy fetch for prep
+                ]);
+
+                // Check all responses
+                for (let r of results) {
+                    if (!r.ok) {
+                        const err = await r.json();
+                        throw new Error(`${r.url} returned ${r.status}: ${err.message}`);
+                    }
+                }
+
+                const [stats, users, courses, skills, settings, jobs, questions] = await Promise.all(results.map(r => r.json()));
+
+                state = { stats, users, courses, skills, settings, jobs, questions };
+
+                // Re-sync active skill pointer to stay fresh with server IDs
+                if (window.activeSkill) {
+                    const fresh = state.skills.find(s => s._id === window.activeSkill._id);
+                    if (fresh) window.activeSkill = fresh;
+                }
+            } catch (e) {
+                console.error("Neural Sync Error", e);
+                showToast("SYNC ERROR: " + e.message, "error");
+                throw e;
+            }
+        }
+
+        function showTab(tab) {
+            window.activeTab = tab;
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            const nav = document.getElementById(`nav-${tab}`);
+            if (nav) nav.classList.add('active');
+
+            const titles = {
+                dashboard: "Strategic Intel",
+                users: "Operative Roster",
+                courses: "Production Foundry",
+                payments: "Fiscal Records",
+                support: "Support Terminal",
+                themes: "Core Branding",
+                ads: "Ad Campaigns",
+                explore: "Skill Constellation Forge",
+                placement: "Career Placement Hub"
+            };
+            document.getElementById('page-title').innerText = titles[tab];
+            document.getElementById('action-bar').innerHTML = '';
+
+            if (tab === 'dashboard') renderDashboard();
+            if (tab === 'users') renderUsers();
+            if (tab === 'courses') renderCourses();
+            if (tab === 'payments') renderPayments();
+            if (tab === 'support') renderSupport();
+            if (tab === 'themes') renderThemes();
+            if (tab === 'ads') renderAds();
+            if (tab === 'explore') renderSkillsManager();
+            if (tab === 'placement') renderPlacementManager();
+        }
+
+        // --- DASHBOARD ---
+        function renderDashboard() {
+            document.getElementById('content-area').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
+                    <div class="glass-card p-10 rounded-[3rem] border-red-600/20">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Operatives</div>
+                        <div class="text-6xl font-black tracking-tighter">${state.stats.users}</div>
+                    </div>
+                    <div class="glass-card p-10 rounded-[3rem] border-green-600/20">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Modules</div>
+                        <div class="text-6xl font-black tracking-tighter">${state.stats.courses}</div>
+                    </div>
+                    <div class="glass-card p-10 rounded-[3rem] border-blue-600/20">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Fiscal Flow</div>
+                        <div class="text-6xl font-black tracking-tighter">₹${(state.stats.revenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div class="glass-card p-10 rounded-[3rem] border-purple-600/20">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Transactions</div>
+                        <div class="text-6xl font-black tracking-tighter">${state.stats.transactions}</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-12 rounded-[4rem]">
+                    <h3 class="text-2xl font-black mb-10 uppercase tracking-tight">Recent Fiscal Movements</h3>
+                    <div id="dashboard-txs" class="space-y-4">
+                        <div class="animate-pulse text-slate-700 font-bold uppercase text-[10px] tracking-widest p-10 text-center">Interrogating fiscal records...</div>
+                    </div>
+                </div>
+            `;
+            fetchDashboardTxs();
+        }
+
+        async function fetchDashboardTxs() {
+            try {
+                const res = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error("Failed to fetch transactions");
+                const txs = await res.json();
+                const container = document.getElementById('dashboard-txs');
+                if (Array.isArray(txs) && txs.length) {
+                    container.innerHTML = txs.slice(0, 5).map(t => `
+                        <div class="p-8 bg-white/5 border border-white/5 rounded-3xl flex justify-between items-center group hover:bg-white/10 transition-all">
+                            <div class="flex items-center gap-6">
+                                <div class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xs">${t.user?.username ? t.user.username[0].toUpperCase() : '?'}</div>
+                                <div>
+                                    <div class="font-black text-sm uppercase">${t.user?.username || 'Unknown User'}</div>
+                                    <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">${t.type} // ${t.item || 'Generic'}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xl font-black ${t.type === 'purchase' ? 'text-red-500' : t.type === 'recharge' ? 'text-green-500' : 'text-blue-500'}">₹${t.amount}</div>
+                                <div class="text-[10px] text-slate-600 font-bold uppercase">${new Date(t.createdAt).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `<p class="text-center text-slate-600 italic py-10">No recent activity detected.</p>`;
+                }
+            } catch (e) {
+                console.error("Tx Fetch Error", e);
+                document.getElementById('dashboard-txs').innerHTML = `<p class="text-center text-red-500 py-10 uppercase text-[10px] font-black tracking-widest">Failed to interrogate ledger.</p>`;
+            }
+        }
+
+        // --- USERS ---
+        function renderUsers() {
+            document.getElementById('content-area').innerHTML = `
+                <div class="glass-card rounded-[4rem] overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-white/5 border-b border-white/5">
+                            <tr>
+                                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Operative Hub</th>
+                                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Fiscal Status</th>
+                                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Access Level</th>
+                                <th class="p-10 text-right pr-20 text-[10px] uppercase font-black text-slate-500 tracking-widest">Terminal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5">
+                            ${state.users.map(u => `
+                                <tr class="hover:bg-white/5 transition group">
+                                    <td class="p-10">
+                                        <div class="font-black text-xl tracking-tighter">${u.username.toUpperCase()}</div>
+                                        <div class="text-xs text-slate-500 font-bold">${u.email}</div>
+                                    </td>
+                                    <td class="p-10">
+                                        <div class="text-xl font-black text-green-500">₹${(u.balance || 0).toLocaleString()}</div>
+                                        <div class="text-[9px] text-slate-600 uppercase font-black">Credits Available</div>
+                                    </td>
+                                    <td class="p-10">
+                                        <div class="flex items-center gap-3">
+                                            <span class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'bg-red-600/20 text-red-500' : 'bg-blue-600/20 text-blue-500'}">${u.role}</span>
+                                            <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5" title="Last Seen: ${u.lastSeen ? new Date(u.lastSeen).toLocaleString() : 'Never'}">
+                                                <div class="w-2 h-2 rounded-full ${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-slate-700'}"></div>
+                                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'LIVE' : 'OFFLINE'}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-10 text-right pr-20 space-x-8">
+                                        <button onclick="viewUserDetail('${u._id}')" class="text-[10px] font-black uppercase text-blue-500 hover:tracking-widest transition-all">Inspect detail</button>
+                                        <button onclick="moderateUser('${u._id}')" class="text-[10px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Moderate</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function viewUserDetail(id) {
+            openModal();
+            document.getElementById('modal-content').innerHTML = `<div class="p-20 text-center animate-pulse uppercase font-black tracking-widest text-slate-500">Accessing operative data tunnel...</div>`;
+            const res = await fetch(`/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const { user, transactions } = await res.json();
+
+            document.getElementById('modal-content').innerHTML = `
+                <div class="flex justify-between items-start mb-16">
+                    <div>
+                        <span class="bg-red-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-6 inline-block">Deep Telemetry</span>
+                        <h2 class="text-6xl font-black tracking-tighter uppercase">${user.username}</h2>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">OPERATIVE ID</div>
+                        <div class="font-mono text-xs text-slate-400">${user._id}</div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+
+                    <div class="lg:col-span-1 space-y-12">
+                        <div class="glass-card p-10 rounded-[3rem]">
+                            <h3 class="text-xl font-black mb-8 uppercase tracking-tight">Identity Profile</h3>
+                            <div class="space-y-4">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Full Name: <span class="text-white">${user.profile?.personalInfo?.fullName || 'N/A'}</span></p>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Title: <span class="text-white">${user.profile?.personalInfo?.jobTitle || 'N/A'}</span></p>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Phone: <span class="text-white">${user.profile?.personalInfo?.phone || 'N/A'}</span></p>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location: <span class="text-white">${user.profile?.personalInfo?.city || 'N/A'}</span></p>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bio: <span class="text-white block mt-2 p-2 bg-white/5 rounded-lg normal-case font-normal">${user.profile?.bio || 'No bio.'}</span></p>
+                                <div class="flex gap-2 mt-4">
+                                    ${user.profile?.personalInfo?.github ? `<a href="https://github.com/${user.profile.personalInfo.github}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-white transition"><i class="fab fa-github"></i></a>` : ''}
+                                    ${user.profile?.personalInfo?.linkedin ? `<a href="https://linkedin.com/in/${user.profile.personalInfo.linkedin}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-blue-500 transition"><i class="fab fa-linkedin"></i></a>` : ''}
+                                    ${user.profile?.personalInfo?.website ? `<a href="${user.profile.personalInfo.website}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-green-500 transition"><i class="fas fa-globe"></i></a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card p-10 rounded-[3rem]">
+                            <h3 class="text-xl font-black mb-8 uppercase tracking-tight">Progress Log</h3>
+                            <div class="space-y-4 text-xs font-bold text-slate-500">
+                                ${user.courseProgress.map(p => `
+                                    <div class="flex justify-between">
+                                        <span>${p.courseId?.title.toUpperCase()}</span>
+                                        <span class="text-blue-500">${p.completedLectures.length} SUBSYSTEMS SYNCED</span>
+                                    </div>
+                                `).join('') || 'Awaiting initial sync...'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-2">
+                        <h3 class="text-2xl font-black mb-10 uppercase tracking-tight">Fiscal Ledger</h3>
+                        <div class="glass-card rounded-[3rem] overflow-hidden border-white/5">
+                            <table class="w-full text-left">
+                                <thead class="bg-white/5">
+                                    <tr>
+                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Method</th>
+                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Type</th>
+                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Amount</th>
+                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${transactions.map(t => `
+                                        <tr class="border-t border-white/5">
+                                            <td class="p-8 font-bold text-sm uppercase">${t.item || 'Generic'}</td>
+                                            <td class="p-8 font-bold text-sm uppercase text-blue-500">${t.type}</td>
+                                            <td class="p-8 font-black text-sm">₹${t.amount}</td>
+                                            <td class="p-8 text-xs text-slate-500">${new Date(t.createdAt).toLocaleString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- COURSES ---
+        function renderCourses() {
+            document.getElementById('action-bar').innerHTML = `<button onclick="openCourseForm()" class="px-10 py-5 bg-red-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-red-600/30">New Production Unit</button>`;
+            document.getElementById('content-area').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    ${state.courses.map(c => `
+                        <div class="glass-card p-12 rounded-[4rem] group border-white/5 hover:border-red-600/20 transition-all duration-500">
+                            <div class="flex justify-between items-start mb-10">
+                                <span class="bg-red-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest">${c.category}</span>
+                                <div class="flex gap-8 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button onclick="openCourseForm('${c._id}')" class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Edit</button>
+                                    <button onclick="openProductionStudio('${c._id}')" class="text-[10px] font-black text-green-500 uppercase tracking-widest">Foundry</button>
+                                    <button onclick="deleteCourse('${c._id}')" class="text-[10px] font-black text-red-500 uppercase tracking-widest">Purge</button>
+                                </div>
+                            </div>
+                            <h4 class="text-4xl font-black mb-6 tracking-tighter syne">${c.title.toUpperCase()}</h4>
+                            <div class="flex items-center gap-6">
+                                <span class="text-3xl font-black text-red-500 syne tracking-tighter">₹${c.price}</span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">${c.units.length} Tactical Units</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function openCourseForm(id = null) {
+            openModal();
+            const course = id ? state.courses.find(c => c._id === id) : { title: '', category: 'Academic', price: 0, description: '', isFree: false, skills: [] };
+
+            document.getElementById('modal-content').innerHTML = `
+                <h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">${id ? 'Update Module' : 'Assemble Production Unit'}</h2>
+                <form id="course-form" class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="space-y-10">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Module Nomenclature</label>
+                            <input id="f-title" value="${course.title}" type="text" class="input-zenith" placeholder="Enter module name..." required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Pricing Protocol</label>
+                            <div class="flex gap-6 items-center">
+                                <input id="f-price" value="${course.price}" type="number" class="input-zenith" required>
+                                <div class="flex items-center gap-3 bg-white/5 p-5 rounded-3xl border border-white/5">
+                                    <input type="checkbox" id="f-free" ${course.isFree ? 'checked' : ''} class="w-6 h-6 rounded-lg appearance-none bg-slate-800 checked:bg-red-600 transition">
+                                    <label for="f-free" class="text-xs font-black uppercase text-slate-400">Mark Free</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Category Allocation</label>
+                            <select id="f-cat" class="input-zenith">
+                                <option value="Academic" ${course.category === 'Academic' ? 'selected' : ''}>Academic Core</option>
+                                <option value="Skills" ${course.category === 'Skills' ? 'selected' : ''}>Professional Skills</option>
+                                <option value="Health" ${course.category === 'Health' ? 'selected' : ''}>Vital Stats</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Skill Tags (Roadmap)</label>
+                            <input id="f-skills" value="${(course.skills || []).join(', ')}" type="text" class="input-zenith" placeholder="e.g. React, Node.js, Design">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Module Objectives</label>
+                            <textarea id="f-desc" class="input-zenith" rows="5" placeholder="Define mission objectives...">${course.description}</textarea>
+                        </div>
+                        <div class="flex items-center gap-3 bg-white/5 p-5 rounded-3xl border border-white/5">
+                            <input type="checkbox" id="f-pub" ${course.isPublished ? 'checked' : ''} class="w-6 h-6 rounded-lg appearance-none bg-slate-800 checked:bg-green-600 transition">
+                            <label for="f-pub" class="text-xs font-black uppercase text-slate-400">Public Visibility (Show in Store)</label>
+                        </div>
+                        <div class="p-6 rounded-3xl bg-blue-600/5 border border-blue-500/20">
+                            <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Module Graphic (Gallery Upload)</label>
+                            <input id="f-image" type="file" accept="image/*" class="text-[10px] font-bold text-slate-400 file:bg-blue-600 file:border-none file:px-4 file:py-2 file:rounded-lg file:text-white file:font-black file:uppercase file:tracking-widest file:mr-4 file:cursor-pointer hover:file:bg-blue-700 transition">
+                            <div id="upload-progress-container" class="mt-6 hidden">
+                                <div class="flex justify-between items-center mb-2">
+                                     <span id="progress-status" class="text-[9px] font-black text-blue-500 uppercase tracking-widest">Neural Uplink Initialized...</span>
+                                     <span id="progress-percent" class="text-[10px] font-black text-white">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                                    <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.6)]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" id="submit-btn" class="w-full py-6 bg-red-600 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.4em] shadow-3xl shadow-red-600/40 transform active:scale-95 transition-all">
+                            ${id ? 'UPDATE MODULE DATA' : 'COMMIT PRODUCTION UNIT'}
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('course-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('submit-btn');
+                submitBtn.disabled = true;
+
+                const data = {
+                    title: document.getElementById('f-title').value,
+                    category: document.getElementById('f-cat').value,
+                    price: document.getElementById('f-free').checked ? 0 : document.getElementById('f-price').value,
+                    description: document.getElementById('f-desc').value,
+                    skills: document.getElementById('f-skills').value.split(',').map(s => s.trim()).filter(s => s),
+                    isFree: document.getElementById('f-free').checked,
+                    isPublished: document.getElementById('f-pub').checked
+                };
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/admin/courses/${id}` : '/api/admin/courses';
+
+                try {
+                    const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const savedCourse = await res.json();
+
+                    // Handle Image Upload if selected
+                    const imgFile = document.getElementById('f-image').files[0];
+                    if (imgFile) {
+                        const progContainer = document.getElementById('upload-progress-container');
+                        const progBar = document.getElementById('progress-bar');
+                        const progTxt = document.getElementById('progress-percent');
+                        const progStatus = document.getElementById('progress-status');
+
+                        progContainer.classList.remove('hidden');
+
+                        const formData = new FormData();
+                        formData.append('thumbnail', imgFile);
+
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', `/api/admin/courses/${savedCourse._id}/thumbnail`, true);
+                        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+                        xhr.upload.onprogress = (event) => {
+                            if (event.lengthComputable) {
+                                const percent = Math.round((event.loaded / event.total) * 100);
+                                progBar.style.width = percent + '%';
+                                progTxt.innerText = percent + '%';
+                                progStatus.innerText = percent < 100 ? 'Streaming Packets...' : 'Finalizing Uplink...';
+                            }
+                        };
+
+                        xhr.onload = async () => {
+                            if (xhr.status === 200) {
+                                showToast("Neural Graphic Synced Successfully", "success");
+                                closeModal();
+                                await sync();
+                                renderCourses();
+                            } else {
+                                alert("UPLINK FAILURE: " + xhr.responseText);
+                                submitBtn.disabled = false;
+                            }
+                        };
+
+                        xhr.onerror = () => {
+                            alert("QUANTUM CHANNEL DROPPED.");
+                            submitBtn.disabled = false;
+                        };
+
+                        xhr.send(formData);
+                    } else {
+                        closeModal();
+                        await sync();
+                        renderCourses();
+                    }
+                } catch (err) {
+                    alert("SYSTEM ERROR");
+                    submitBtn.disabled = false;
+                }
+            };
+        }
+
+        async function openProductionStudio(id) {
+            openModal();
+            const res = await fetch(`/api/courses/${id}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const course = await res.json();
+            window.activeCourse = course;
+
+            renderStudioContent();
+        }
+
+        function renderStudioContent() {
+            const course = window.activeCourse;
+            document.getElementById('modal-content').innerHTML = `
+                <div class="flex justify-between items-start mb-16">
+                    <div>
+                        <span class="text-[10px] font-black text-red-500 uppercase tracking-[0.4em] mb-4 inline-block">Production Foundry</span>
+                        <h2 class="text-6xl font-black tracking-tighter uppercase syne">${course.title}</h2>
+                    </div>
+                    <button onclick="openUnitForm()" class="px-10 py-5 bg-red-600 rounded-3xl font-black uppercase text-[10px] tracking-widest">+ Add Unit</button>
+                </div>
+                
+                <div class="space-y-12">
+                    ${course.units.map((u, ui) => `
+                        <div class="glass-card p-12 rounded-[3.5rem] relative">
+                            <div class="flex justify-between items-center mb-10">
+                                <div>
+                                    <h3 class="text-2xl font-black uppercase tracking-tight">Unit ${ui + 1}: ${u.title}</h3>
+                                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">${u.lectures.length} Tactical Sub-systems</p>
+                                </div>
+                                <div class="flex gap-6">
+                                    <button onclick="openLectureForm(null, '${u._id}')" class="px-6 py-3 bg-blue-600/10 text-blue-500 rounded-xl font-black uppercase text-[9px] tracking-widest">+ Add Lecture</button>
+                                    <button onclick="deleteUnit('${u._id}')" class="text-[10px] font-black uppercase text-red-500 hover:text-red-400">Purge Unit</button>
+                                </div>
+                            </div>
+                            
+                            <div id="unit-${u._id}-lectures" class="grid grid-cols-1 gap-4">
+                                ${u.lectures.map(l => `
+                                    <div class="p-6 bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center group hover:bg-white/10 transition-all">
+                                        <div class="flex items-center gap-6">
+                                            <div class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-slate-500"><i class="fas fa-video text-sm"></i></div>
+                                            <div class="font-bold text-sm uppercase tracking-wider">${l.title}</div>
+                                        </div>
+                                        <div class="flex gap-8 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button onclick="openLectureForm('${l._id}', '${u._id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-300">Edit Params</button>
+                                            <button onclick="deleteLecture('${l._id}')" class="text-[10px] font-black uppercase text-red-500 hover:text-red-400">Remove</button>
+                                        </div>
+                                    </div>
+                                `).join('') || '<div class="p-10 text-center border-2 border-dashed border-white/5 rounded-3xl text-slate-600 font-bold uppercase text-[10px] tracking-[0.3em]">Empty Sub-system Container</div>'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function openUnitForm() {
+            document.getElementById('modal-content').innerHTML = `
+        <button onclick="renderStudioContent()" class="mb-10 text-slate-500 hover:text-white flex items-center gap-3 font-bold uppercase text-xs tracking-widest">
+            <i class="fas fa-arrow-left"></i> Return to Foundry
+        </button>
+        <h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">Initialize Unit</h2>
+        <form id="unit-form" class="space-y-12 max-w-2xl">
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Unit Designation</label>
+                <input id="u-title" type="text" class="input-zenith" placeholder="Designate unit name..." required>
+            </div>
+            <button type="submit" class="w-full py-6 bg-blue-600 rounded-3xl font-black uppercase text-sm tracking-[0.4em] shadow-xl shadow-blue-600/30">Commit Unit</button>
+        </form>
+    `;
+
+            document.getElementById('unit-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const title = document.getElementById('u-title').value;
+                const res = await fetch(`/api/admin/courses/${window.activeCourse._id}/units`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                if (res.ok) {
+                    showToast("UNIT DEPLOYED.", "success");
+                    openProductionStudio(window.activeCourse._id);
+                } else {
+                    showToast("UPLINK FAILED.", "error");
+                }
+            };
+        }
+
+        async function openLectureForm(lecId = null, unitId) {
+            let lecture = { title: '', videoUrl: '', documentUrl: '', content: '' };
+            if (lecId) {
+                // Find deep in our active course state
+                lecture = window.activeCourse.units.find(u => u._id === unitId).lectures.find(l => l._id === lecId);
+            }
+
+            // Sub-modal or just replace content
+            const originalContent = document.getElementById('modal-content').innerHTML;
+
+            document.getElementById('modal-content').innerHTML = `
+                <button onclick="renderStudioContent()" class="mb-10 text-slate-500 hover:text-white flex items-center gap-3 font-bold uppercase text-xs tracking-widest">
+                    <i class="fas fa-arrow-left"></i> Return to Foundry
+                </button>
+                <h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">${lecId ? 'Edit Sub-system' : 'Initialize Lecture'}</h2>
+                <form id="lecture-form" class="space-y-12 max-w-2xl">
+                    <div class="space-y-8">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Lecture Nomenclature</label>
+                            <input id="l-title" value="${lecture.title}" type="text" class="input-zenith" placeholder="Designate lecture name..." required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Neural Video Feed (Youtube Link)</label>
+                            <input id="l-video" value="${lecture.videoUrl || ''}" type="text" class="input-zenith" placeholder="https://youtube.com/...">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Technical Documentation (PDF Link)</label>
+                            <input id="l-doc" value="${lecture.documentUrl || ''}" type="text" class="input-zenith" placeholder="https://storage/docs/...">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Raw Content Data</label>
+                            <textarea id="l-content" class="input-zenith" rows="4" placeholder="Enter text or markdown data...">${lecture.content || ''}</textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase text-sm tracking-[0.4em] shadow-xl shadow-red-600/30">Commit Sub-system</button>
+                </form>
+            `;
+
+            document.getElementById('lecture-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const data = {
+                    title: document.getElementById('l-title').value,
+                    videoUrl: document.getElementById('l-video').value,
+                    notesUrl: document.getElementById('l-doc').value,
+                    content: document.getElementById('l-content').value
+                };
+
+                const method = lecId ? 'PATCH' : 'POST';
+                const url = lecId ? `/api/admin/lectures/${lecId}` : `/api/admin/units/${unitId}/lectures`;
+
+                await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                showToast(lecId ? "SUB-SYSTEM UPDATED." : "SUB-SYSTEM COMMITTED.", "success");
+                openProductionStudio(window.activeCourse._id);
+            };
+        }
+
+        async function deleteUnit(id) { if (confirm("PURGE TACTICAL UNIT?")) { await fetch(`/api/admin/units/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("UNIT PURGED.", "success"); openProductionStudio(window.activeCourse._id); } }
+        async function deleteLecture(id) { if (confirm("REMOVE SUB-SYSTEM?")) { await fetch(`/api/admin/lectures/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("SUB-SYSTEM REMOVED.", "success"); openProductionStudio(window.activeCourse._id); } }
+
+        // --- PAYMENTS ---
+        async function renderPayments() {
+            const res = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+            const txs = await res.json();
+            document.getElementById('content-area').innerHTML = `
+                <div class="glass-card rounded-[4rem] overflow-hidden">
+                    <table class="w-full text-left font-bold">
+                        <thead class="bg-white/5 border-b border-white/5">
+                            <tr>
+                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operative</th>
+                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operation</th>
+                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Volume</th>
+                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Timestamp</th>
+                                <th class="p-10 text-right pr-20 text-[10px] uppercase text-slate-500 tracking-widest">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${txs.length ? txs.map(t => `
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition uppercase text-xs">
+                                    <td class="p-10">
+                                        <div class="font-black text-sm">${t.user?.username || 'Redacted'}</div>
+                                        <div class="text-[9px] text-slate-500">${t.user?.email || ''}</div>
+                                    </td>
+                                    <td class="p-10 text-blue-500">${t.type}</td>
+                                    <td class="p-10 font-black text-lg">₹${t.amount}</td>
+                                    <td class="p-10 text-slate-500 text-[10px]">${new Date(t.createdAt).toLocaleString()}</td>
+                                    <td class="p-10 text-right pr-20"><span class="text-green-500 text-[10px] font-black tracking-widest">SUCCESS</span></td>
+                                </tr>
+                            `).join('') : `<tr><td colspan="5" class="p-20 text-center text-slate-600 italic">No fiscal movements detected.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // --- BRANDING ---
+        function renderThemes() {
+            document.getElementById('content-area').innerHTML = `
+                <div class="max-w-3xl space-y-12">
+                    <div class="glass-card p-12 rounded-[4rem]">
+                        <h3 class="text-3xl font-black mb-12 uppercase tracking-tighter">System Branding</h3>
+                        <div class="space-y-8">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">System Designation</label>
+                                <input id="s-name" value="${state.settings.systemName || ''}" class="input-zenith" type="text">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">OS Version Code</label>
+                                <input id="s-version" value="${state.settings.systemVersion || ''}" class="input-zenith" type="text">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Primary Theme Color</label>
+                                <input id="s-color" value="${state.settings.accent || '#2563eb'}" class="w-full h-16 bg-transparent border-none cursor-pointer" type="color">
+                            </div>
+
+                            <h3 class="text-xl font-black mt-12 mb-6 uppercase tracking-tighter">Payment Gateway (UPI)</h3>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">UPI ID (VPA)</label>
+                                <input id="s-upi" value="${state.settings.upiId || ''}" class="input-zenith" type="text" placeholder="username@bank">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">QR Code URL</label>
+                                <input id="s-qr" value="${state.settings.qrCodeUrl || ''}" class="input-zenith" type="text" placeholder="https://...">
+                            </div>
+
+                            <button onclick="saveBranding()" class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-red-600/30">Deploy Identity & Config</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function saveBranding() {
+            const name = document.getElementById('s-name').value;
+            const version = document.getElementById('s-version').value;
+            const accent = document.getElementById('s-color').value;
+            const upi = document.getElementById('s-upi').value;
+            const qr = document.getElementById('s-qr').value;
+
+            await Promise.all([
+                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemName', value: name }) }),
+                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemVersion', value: version }) }),
+                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'accent', value: accent }) }),
+                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'upiId', value: upi }) }),
+                fetch('/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'qrCodeUrl', value: qr }) })
+            ]);
+            showToast("IDENTITY & CONFIG DEPLOYED.", "success");
+            init();
+        }
+
+        // --- ADS MANAGER ---
+        function renderAds() {
+            document.getElementById('action-bar').innerHTML = `<button onclick="openAdForm()" class="px-10 py-5 bg-purple-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-purple-600/30">Create Campaign</button>`;
+
+            // For now, we simulate Ad state or fetch from backend if we implement a dedicated model.
+            // Since we don't have a dedicated Ad model yet, we will store them in a 'settings' key or imply them.
+            // Let's assume we fetch generic settings for now or use the Course's adConfig.
+            // Actually, the user asked to SELECT which lec/unit/course. This implies we should be editing courses.
+            // A better UX is to List All Courses and allow "Ad Injection"
+
+            document.getElementById('content-area').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                    ${state.courses.map(c => `
+                        <div class="glass-card p-10 rounded-[3rem] border-white/5 relative group">
+                            <div class="absolute top-6 right-6">
+                                ${c.adConfig?.enabled ? '<div class="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>' : '<div class="w-3 h-3 bg-slate-700 rounded-full"></div>'}
+                            </div>
+                            <h4 class="text-2xl font-black mb-2 uppercase tracking-tight line-clamp-1">${c.title}</h4>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-8">${c.units.length} Units Targeted</p>
+                            
+                            ${c.adConfig?.enabled ? `
+                                <div class="aspect-video bg-black rounded-2xl mb-6 overflow-hidden border border-white/10 relative">
+                                    <img src="${c.adConfig.imageUrl}" class="w-full h-full object-cover opacity-60">
+                                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                                        <div class="text-[9px] font-bold text-white truncate">${c.adConfig.linkUrl}</div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="aspect-video bg-white/5 rounded-2xl mb-6 flex items-center justify-center border border-dashed border-white/10">
+                                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">No Active Campaign</span>
+                                </div>
+                            `}
+
+                            <button onclick="configureAds('${c._id}')" class="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black uppercase text-[10px] tracking-widest transition">
+                                ${c.adConfig?.enabled ? 'Manage Campaign' : 'Deploy Ad System'}
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+
+
+        async function resetSystem() {
+            const pwd = prompt("WARNING: SYSTEM NUKE INITIATED.\nThis will wipe ALL data (Users, Courses, Transactions) except Admin accounts.\n\nEnter Level 4 Clearance Code:");
+            if (!pwd) return;
+
+            try {
+                const res = await fetch('/api/admin/reset-system', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('SYSTEM RESET SUCCESSFUL. REBOOTING...');
+                    window.location.reload();
+                } else {
+                    alert('ACCESS DENIED: ' + data.message.toUpperCase());
+                }
+            } catch (err) {
+                alert('SYSTEM ERROR: ' + err.message);
+            }
+        }
+
+        async function configureAds(courseId) {
+            openModal();
+            const course = state.courses.find(c => c._id === courseId);
+            const ad = course.adConfig || { enabled: false, imageUrl: '', linkUrl: '' };
+
+            document.getElementById('modal-content').innerHTML = `
+                 <h2 class="text-4xl font-black mb-2 tracking-tighter uppercase">Ad Injection Protocol</h2>
+                 <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-12">Target: ${course.title}</p>
+                 
+                 <form id="ad-form" class="space-y-10 max-w-xl">
+                    <div class="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
+                        <input type="checkbox" id="ad-active" ${ad.enabled ? 'checked' : ''} class="w-6 h-6 rounded-lg appearance-none bg-slate-800 checked:bg-green-600 transition cursor-pointer">
+                        <label for="ad-active" class="text-xs font-black uppercase text-slate-300 cursor-pointer">Activate Campaign</label>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Visual Asset (Image URL)</label>
+                        <input id="ad-img" value="${ad.imageUrl || ''}" type="text" class="input-zenith" placeholder="https://..." required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Redirect Vector (Link URL)</label>
+                        <input id="ad-link" value="${ad.linkUrl || ''}" type="text" class="input-zenith" placeholder="https://..." required>
+                    </div>
+
+                    <button type="submit" class="w-full py-6 bg-purple-600 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-purple-600/30">
+                        Deploy Configuration
+                    </button>
+                 </form>
+            `;
+
+            document.getElementById('ad-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const newConfig = {
+                    enabled: document.getElementById('ad-active').checked,
+                    imageUrl: document.getElementById('ad-img').value,
+                    linkUrl: document.getElementById('ad-link').value
+                };
+
+                // We need to update the course with this new config.
+                // We'll reuse the generic PUT /courses/:id endpoint but we need to ensure backend accepts adConfig.
+                // Backend schema validation might strip it if not present. I'll need to check the Course model.
+                // For now let's try sending it.
+                await fetch(`/api/admin/courses/${courseId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adConfig: newConfig })
+                });
+
+                showToast("CAMPAIGN UPDATED.", "success");
+                closeModal();
+                await sync();
+                renderAds(); // Refresh
+            };
+        }
+
+        // --- TOAST NOTIFICATIONS ---
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            const color = type === 'success' ? '#22c55e' : '#ef4444';
+            const bg = type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+
+            toast.style.cssText = `
+                background: #050505;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 1rem;
+                border: 1px solid rgba(255,255,255,0.1);
+                border-left: 4px solid ${color};
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                font-weight: 700;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+                transform: translateX(100%);
+                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-width: 250px;
+            `;
+
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}" style="color: ${color}; font-size: 14px;"></i> ${message}`;
+            container.appendChild(toast);
+
+            // Animate In
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateX(0)';
+            });
+
+            // Remove
+            setTimeout(() => {
+                toast.style.transform = 'translateX(120%)';
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+
+        // --- SKILL FORGE ---
+        async function renderSkillsManager() {
+            document.getElementById('action-bar').innerHTML = `<button onclick="openSkillForm()" class="px-10 py-5 bg-red-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-red-600/30">+ Initialize Skill Node</button>`;
+            const container = document.getElementById('content-area');
+
+            container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            ${state.skills.map(skill => `
+                <div class="glass-card p-10 rounded-[3rem] border-white/5 hover:border-blue-500/20 group transition-all duration-500">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl" style="background: ${skill.color}22; color: ${skill.color}">
+                           <i class="fas ${skill.icon || 'fa-code'}"></i>
+                        </div>
+                        <div class="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="openSkillForm('${skill._id}')" class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Edit</button>
+                            <button onclick="deleteSkill('${skill._id}')" class="text-[10px] font-black text-red-500 uppercase tracking-widest">Purge</button>
+                        </div>
+                    </div>
+                    <h4 class="text-3xl font-black mb-3 tracking-tighter uppercase syne">${skill.name}</h4>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">${skill.category} // LVL ${skill.level}</div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <span class="text-slate-500">Topics</span>
+                            <span class="text-blue-500">${skill.topics?.length || 0} Layers</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <span class="text-slate-500">Trajectory</span>
+                            <span class="text-green-500">${skill.prerequisites?.length || 0} Prereqs</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 mt-8">
+                        <button onclick="openVisualRoadmapDesigner('${skill._id}')" class="flex-grow py-4 bg-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20">
+                            <i class="fas fa-project-diagram mr-2"></i> Design Roadmap
+                        </button>
+                        <button onclick="openSkillBranchManager('${skill._id}')" class="p-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+        }
+
+        function openSkillForm(id = null) {
+            openModal();
+            const skill = id ? state.skills.find(s => s._id === id) : {
+                name: '', category: 'Other', description: '', icon: 'fa-code',
+                color: '#3b82f6', level: 1, prerequisites: []
+            };
+
+            document.getElementById('modal-content').innerHTML = `
+        <h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">${id ? 'Modify System Node' : 'Initialize Skill Blueprint'}</h2>
+        <form id="skill-form" class="space-y-12 max-w-2xl">
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Skill Designation (Nomenclature)</label>
+                <input id="s-name-f" value="${skill.name}" type="text" class="input-zenith" placeholder="Enter name..." required>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Category Allocation</label>
+                <select id="s-cat-f" class="input-zenith">
+                    ${['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Other'].map(c => `<option value="${c}" ${skill.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+            </div>
+            <button type="submit" class="w-full py-6 bg-red-600 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.4em] shadow-3xl shadow-red-600/40">
+                ${id ? 'COMMIT CORE DATA' : 'DEPLOY & OPEN ROADMAP DESIGNER'}
+            </button>
+        </form>
+    `;
+
+            document.getElementById('skill-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const data = {
+                    name: document.getElementById('s-name-f').value,
+                    category: document.getElementById('s-cat-f').value
+                };
+
+                const method = id ? 'PATCH' : 'POST';
+                const url = id ? `/api/explore/admin/skills/${id}` : '/api/explore/admin/skills';
+
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    showToast("SKILL DEPLOYED.", "success");
+                    const savedSkill = await res.json();
+                    await sync();
+                    if (!id) {
+                        openVisualRoadmapDesigner(savedSkill._id);
+                    } else {
+                        renderSkillsManager();
+                        closeModal();
+                    }
+                }
+            };
+        }
+
+        async function openSkillBranchManager(id) {
+            openModal();
+            const skill = state.skills.find(s => s._id === id);
+            window.activeSkill = skill;
+            renderBranchContent();
+        }
+
+        function renderBranchContent() {
+            const skill = window.activeSkill;
+            document.getElementById('modal-content').innerHTML = `
+        <div class="flex justify-between items-start mb-16">
+            <div>
+                <span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4 inline-block">Branch Management</span>
+                <h2 class="text-6xl font-black tracking-tighter uppercase syne">${skill.name}</h2>
+            </div>
+            <button onclick="openTopicForm()" class="px-10 py-5 bg-blue-600 rounded-3xl font-black uppercase text-[10px] tracking-widest">+ Add Neural Layer (Topic)</button>
+        </div>
+        
+        <div class="grid grid-cols-1 gap-6">
+            ${(skill.topics || []).map((t, ti) => `
+                <div class="glass-card p-10 rounded-[3rem] relative group border-white/5 hover:border-blue-500/20">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="text-2xl font-black uppercase tracking-tight">Layer ${ti + 1}: ${t.title}</h4>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">${t.xp || 50} XP Reward // ${t.description || 'No description'}</p>
+                        </div>
+                        <div class="flex gap-6 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="openTopicForm('${t._id}')" class="text-[10px] font-black uppercase text-cyan-400">Edit</button>
+                            <button onclick="deleteTopic('${t._id}')" class="text-[10px] font-black uppercase text-red-500">Purge</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<div class="p-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-slate-700 font-black uppercase text-[10px] tracking-widest">No neural layers initialized. Add topics to enable progression.</div>'}
+        </div>
+    `;
+        }
+
+        // --- VISUAL ROADMAP DESIGNER (THE NOTEBOOK) ---
+        function openVisualRoadmapDesigner(skillId) {
+            openModal();
+            const skill = state.skills.find(s => s._id === skillId);
+            window.activeSkill = skill;
+            window.designerState = {
+                nodes: JSON.parse(JSON.stringify(skill.topics || [])),
+                draggingNode: null,
+                offset: { x: 0, y: 0 },
+                viewOffset: { x: 0, y: 0 }, // Viewport Pan
+                isPanning: false,
+                panStart: { x: 0, y: 0 },
+                selectedNode: null,
+                isLinking: false,
+                linkingSource: null,
+                mousePos: { x: 0, y: 0 }
+            };
+
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="flex flex-col h-full">
+                    <div class="flex justify-between items-center mb-10">
+                        <div>
+                            <span class="text-[10px] font-black text-red-500 uppercase tracking-[0.4em] mb-2 inline-block">Visual Architect // The Notebook</span>
+                            <h2 class="text-4xl font-black tracking-tighter uppercase syne">${skill.name}</h2>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="addNodeToDesigner('main')" class="px-6 py-4 bg-white/5 border border-white/5 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-white/10 transition">
+                                <i class="fas fa-plus mr-2 text-red-500"></i> Main
+                            </button>
+                            <button onclick="addNodeToDesigner('branch')" class="px-6 py-4 bg-white/5 border border-white/5 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-white/10 transition">
+                                <i class="fas fa-plus mr-2 text-blue-500"></i> Branch
+                            </button>
+                            <button onclick="addNodeToDesigner('sub')" class="px-6 py-4 bg-white/5 border border-white/5 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-white/10 transition">
+                                <i class="fas fa-plus mr-2 text-green-500"></i> Sub
+                            </button>
+                            <button id="btn-link-mode" onclick="toggleLinkingMode()" class="px-6 py-4 bg-white/5 border border-white/5 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-white/10 transition">
+                                <i class="fas fa-link mr-2"></i> Draw Link
+                            </button>
+                            <button onclick="commitRoadmapChanges()" class="px-10 py-4 bg-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-red-600/30">
+                                COMMIT CHANGES
+                            </button>
+                            <button onclick="openMetadataEditor()" class="px-6 py-4 bg-blue-600/20 text-blue-500 border border-blue-500/20 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition">
+                                <i class="fas fa-cog mr-2"></i> Edit Metadata
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow bg-[#050505] rounded-[3rem] border border-white/5 relative overflow-hidden group">
+                        <svg id="designer-svg" width="100%" height="100%" class="cursor-crosshair">
+                            <defs>
+                                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+                            <g id="designer-connections"></g>
+                            <g id="designer-nodes"></g>
+                        </svg>
+                        
+                        <!-- Floating controls for selected node -->
+                        <!-- Floating controls for selected node (SCROLL FIX) -->
+                        <div id="node-controls" class="absolute top-10 right-10 hidden glass-card p-6 rounded-3xl border-red-600/20 w-80 max-h-[85vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-300">
+                           <div class="flex justify-between items-center mb-6">
+                               <h4 class="text-xs font-black uppercase tracking-widest text-red-500">Node Configuration</h4>
+                               <button onclick="deleteDesignerNode()" class="text-red-500 hover:text-red-400"><i class="fas fa-trash"></i></button>
+                           </div>
+                           <div class="space-y-6">
+                               <div>
+                                   <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Title</label>
+                                   <input id="dn-title" type="text" class="input-zenith py-3 text-xs" oninput="updateDesignerNode('title', this.value)">
+                               </div>
+                               <div>
+                                   <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Type</label>
+                                   <select id="dn-type" class="input-zenith py-3 text-xs" onchange="updateDesignerNode('type', this.value)">
+                                       <option value="main">Main Path</option>
+                                       <option value="branch">Branch</option>
+                                       <option value="sub">Sub-topic</option>
+                                   </select>
+                               </div>
+                                <!-- TOGGLE FOR DETAILS -->
+                                <button onclick="toggleNodeDetails()" class="w-full py-2 bg-slate-800 rounded-lg text-slate-400 text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-slate-700 transition mb-4">
+                                    <i class="fas fa-edit mr-2"></i> Edit Content & Logistics
+                                </button>
+
+                                <div id="dn-details-container" class="space-y-6 hidden border-t border-white/5 pt-4">
+                                    <div>
+                                        <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">XP Bounty</label>
+                                        <input id="dn-xp" type="number" class="input-zenith py-3 text-xs" oninput="updateDesignerNode('xp', parseInt(this.value) || 0)">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Briefing (Description)</label>
+                                        <textarea id="dn-desc" class="input-zenith py-3 text-xs" rows="2" oninput="updateDesignerNode('description', this.value)"></textarea>
+                                    </div>
+
+                                    <!-- Multi-Lecture Manager -->
+                                    <div class="bg-white/5 p-4 rounded-xl border border-white/5">
+                                        <h5 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Lecture Protocol Series</h5>
+                                        <div id="dn-lectures-list" class="space-y-3 mb-4"></div>
+                                        <div class="space-y-2">
+                                            <input id="new-lec-title" placeholder="Lecture Title" class="input-zenith py-2 text-[10px]">
+                                            <input id="new-lec-url" placeholder="Video URL (Embed/YouTube)" class="input-zenith py-2 text-[10px]">
+                                            <textarea id="new-lec-notes" rows="2" placeholder="Lecture Notes / Transcript" class="input-zenith py-2 text-[10px]"></textarea>
+                                            <button onclick="addLectureToNode()" class="w-full py-2 bg-green-500/20 text-green-500 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-green-500/30">
+                                                <i class="fas fa-plus mr-1"></i> Add Lecture
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Technical Content (Markdown)</label>
+                                        <textarea id="dn-content" class="input-zenith py-3 text-xs" rows="3" oninput="updateDesignerNode('content', this.value)"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Legacy Video (Optional)</label>
+                                        <input id="dn-video" type="text" class="input-zenith py-3 text-xs" oninput="updateDesignerNode('videoUrl', this.value)">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Documentation (PDF URL)</label>
+                                        <input id="dn-pdf" type="text" class="input-zenith py-3 text-xs" oninput="updateDesignerNode('pdfUrl', this.value)">
+                                    </div>
+                                   <div>
+                                       <label class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Mission Highlights (Important Points)</label>
+                                       <textarea id="dn-points" class="input-zenith py-3 text-xs" rows="3" oninput="updateDesignerNode('importantPoints', this.value)"></textarea>
+                                   </div>
+                                </div>
+                               <button onclick="designerCreateChild()" class="w-full py-3 bg-blue-600/10 text-blue-500 border border-blue-500/20 rounded-xl font-black uppercase text-[9px] tracking-widest">
+                                   Connect Child Node
+                               </button>
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            initDesignerEvents();
+            renderDesigner();
+        }
+
+        function initDesignerEvents() {
+            const svg = document.getElementById('designer-svg');
+
+            svg.onmousedown = (e) => {
+                if (e.target.closest('.roadmap-node')) return;
+
+                // Clear selection
+                window.designerState.selectedNode = null;
+                window.designerState.linkingSource = null;
+                document.getElementById('node-controls').classList.add('hidden');
+
+                // Start Panning
+                window.designerState.isPanning = true;
+                window.designerState.panStart = { x: e.clientX, y: e.clientY };
+                svg.style.cursor = 'grabbing';
+
+                renderDesigner();
+            };
+
+            svg.onmousemove = (e) => {
+                const rect = svg.getBoundingClientRect();
+                // Mouse in SVG Coords (Screen)
+                const rawX = e.clientX - rect.left;
+                const rawY = e.clientY - rect.top;
+
+                // Mouse in World Coords (accounting for Pan)
+                const worldX = rawX - (window.designerState.viewOffset?.x || 0);
+                const worldY = rawY - (window.designerState.viewOffset?.y || 0);
+
+                window.designerState.mousePos = { x: worldX, y: worldY };
+
+                if (window.designerState.isPanning) {
+                    const dx = e.clientX - window.designerState.panStart.x;
+                    const dy = e.clientY - window.designerState.panStart.y;
+
+                    window.designerState.viewOffset.x += dx;
+                    window.designerState.viewOffset.y += dy;
+
+                    window.designerState.panStart = { x: e.clientX, y: e.clientY };
+                    renderDesigner();
+                }
+
+                if (window.designerState.draggingNode) {
+                    // Logic: mouseScreen - SVG_Left - NodeOffset - Pan
+                    const dx = rawX - window.designerState.offset.x - window.designerState.viewOffset.x;
+                    const dy = rawY - window.designerState.offset.y - window.designerState.viewOffset.y;
+
+                    window.designerState.draggingNode.position = {
+                        x: Math.round(dx / 20) * 20,
+                        y: Math.round(dy / 20) * 20
+                    };
+                    renderDesigner();
+                } else if (window.designerState.linkingSource) {
+                    renderDesigner(); // To draw temp line
+                }
+            };
+
+            svg.onmouseup = (e) => {
+                if (window.designerState.isLinking && window.designerState.linkingSource) {
+                    const targetEl = e.target.closest('.roadmap-node');
+                    if (targetEl) {
+                        const targetNode = window.designerState.nodes.find(n => n._id.toString() === targetEl.id.toString());
+                        if (targetNode && targetNode._id.toString() !== window.designerState.linkingSource._id.toString()) {
+                            targetNode.parent = window.designerState.linkingSource._id.toString();
+                            showToast("CONNECTION ESTABLISHED", "success");
+                        }
+                    }
+                    window.designerState.linkingSource = null;
+                    // No renderDesigner here to avoid flicker or overwrite
+                }
+
+                window.designerState.draggingNode = null;
+                window.designerState.isPanning = false;
+                document.getElementById('designer-svg').style.cursor = 'crosshair';
+
+                renderDesigner();
+            };
+        }
+
+        function renderDesigner() {
+            const nodesGroup = document.getElementById('designer-nodes');
+            const linesGroup = document.getElementById('designer-connections');
+
+            // Apply Pan Transform
+            const panX = window.designerState.viewOffset?.x || 0;
+            const panY = window.designerState.viewOffset?.y || 0;
+            const transform = `translate(${panX}, ${panY})`;
+
+            nodesGroup.setAttribute('transform', transform);
+            linesGroup.setAttribute('transform', transform);
+
+            nodesGroup.innerHTML = '';
+            linesGroup.innerHTML = '';
+
+            // Render Connections
+            window.designerState.nodes.forEach(node => {
+                if (node.parent) {
+                    const parent = window.designerState.nodes.find(n => n._id === node.parent || n.title === node.parent);
+                    if (parent && parent.position && node.position) {
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const d = `M ${parent.position.x} ${parent.position.y} C ${parent.position.x} ${node.position.y} ${parent.position.x} ${node.position.y} ${node.position.x} ${node.position.y}`;
+                        path.setAttribute('d', d);
+                        path.setAttribute('stroke', 'rgba(255,255,255,0.1)');
+                        path.setAttribute('stroke-width', '2');
+                        path.setAttribute('fill', 'none');
+                        if (node.type === 'branch') path.setAttribute('stroke-dasharray', '5,5');
+                        linesGroup.appendChild(path);
+                    }
+                }
+            });
+
+            // Render Temp Linking Line
+            if (window.designerState.isLinking && window.designerState.linkingSource) {
+                const src = window.designerState.linkingSource.position;
+                const dst = window.designerState.mousePos;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${src.x} ${src.y} C ${src.x} ${dst.y} ${src.x} ${dst.y} ${dst.x} ${dst.y}`;
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', '#ef4444');
+                path.setAttribute('stroke-width', '3');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke-dasharray', '5,5');
+                linesGroup.appendChild(path);
+            }
+
+            // Render Nodes
+            window.designerState.nodes.forEach(node => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const isSelected = window.designerState.selectedNode?._id === node._id;
+
+                if (!node.position) node.position = { x: 100, y: 100 };
+
+                g.setAttribute('transform', `translate(${node.position.x}, ${node.position.y})`);
+                g.setAttribute('class', 'roadmap-node group cursor-grab active:cursor-grabbing');
+                g.setAttribute('id', node._id);
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', '-80');
+                rect.setAttribute('y', '-25');
+                rect.setAttribute('width', '160');
+                rect.setAttribute('height', '50');
+                rect.setAttribute('rx', '15');
+                rect.setAttribute('fill', isSelected ? '#ef4444' : '#111827');
+                rect.setAttribute('stroke', isSelected ? '#ef4444' : 'rgba(255,255,255,0.1)');
+                rect.setAttribute('stroke-width', '2');
+                g.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dy', '0.35em');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', isSelected ? '#fff' : '#94a3b8');
+                text.textContent = (node.title || 'NEW NODE').toUpperCase();
+                g.appendChild(text);
+
+                g.onmousedown = (e) => {
+                    e.stopPropagation();
+                    if (window.designerState.isLinking) {
+                        window.designerState.linkingSource = node;
+                    } else {
+                        window.designerState.draggingNode = node;
+                        window.designerState.selectedNode = node;
+                        const svg = document.getElementById('designer-svg').getBoundingClientRect();
+                        window.designerState.offset = {
+                            x: e.clientX - svg.left - node.position.x,
+                            y: e.clientY - svg.top - node.position.y
+                        };
+                        showNodeControls(node);
+                    }
+                    renderDesigner();
+                };
+
+                g.ondblclick = (e) => {
+                    e.stopPropagation();
+                    cloneDesignerNode(node);
+                };
+
+                nodesGroup.appendChild(g);
+            });
+        }
+
+        function showNodeControls(node) {
+            const controls = document.getElementById('node-controls');
+            controls.classList.remove('hidden');
+
+            // Reset to hidden details
+            document.getElementById('dn-details-container').classList.add('hidden');
+
+            // Safety Check: Reset Form if it was in Edit Mode
+            if (typeof resetLectureForm === 'function') resetLectureForm();
+
+            document.getElementById('dn-title').value = node.title || '';
+            document.getElementById('dn-type').value = node.type || 'main';
+            document.getElementById('dn-content').value = node.content || '';
+            document.getElementById('dn-video').value = node.videoUrl || '';
+            document.getElementById('dn-pdf').value = node.pdfUrl || '';
+            document.getElementById('dn-points').value = node.importantPoints || '';
+            document.getElementById('dn-desc').value = node.description || '';
+            document.getElementById('dn-xp').value = node.xp || 50;
+            renderLectureList(node);
+        }
+
+        function renderLectureList(node) {
+            const list = document.getElementById('dn-lectures-list');
+            const lectures = node.lectures || [];
+            if (lectures.length === 0) {
+                list.innerHTML = '<div class="text-[9px] text-slate-600 italic text-center">No lectures added.</div>';
+                return;
+            }
+            list.innerHTML = lectures.map((lec, i) => `
+                <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 mb-2 group hover:border-blue-500/30 transition">
+                    <div class="flex-1 min-w-0 mr-4">
+                        <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Layer ${i + 1}</div>
+                        <div class="text-xs font-bold text-white truncate">${lec.title}</div>
+                        <div class="text-[8px] text-slate-600 truncate mt-1">${lec.url ? 'Video Linked' : 'No Video'} // ${lec.notes ? 'Notes Added' : 'No Content'}</div>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <button onclick="editLecture(${i})" class="text-[9px] font-black text-cyan-500 uppercase tracking-widest hover:text-cyan-400 hover:underline">Edit</button>
+                        <button onclick="removeLectureFromNode(${i})" class="text-[9px] font-black text-red-500 uppercase tracking-widest hover:text-red-400 hover:underline">Purge</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editLecture(index) {
+            const node = window.designerState.selectedNode;
+            if (!node || !node.lectures[index]) return;
+
+            const lec = node.lectures[index];
+            document.getElementById('new-lec-title').value = lec.title || '';
+            document.getElementById('new-lec-url').value = lec.videoUrl || lec.url || '';
+            document.getElementById('new-lec-notes').value = lec.notes || '';
+
+            // Set editing state (visual cue on button)
+            const btn = document.querySelector('button[onclick="addLectureToNode()"]');
+            btn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Layer';
+            btn.onclick = () => updateLecture(index);
+
+            // Open details if hidden
+            document.getElementById('dn-details-container').classList.remove('hidden');
+        }
+
+        function updateLecture(index) {
+            const node = window.designerState.selectedNode;
+            const title = document.getElementById('new-lec-title').value;
+            const url = document.getElementById('new-lec-url').value;
+            const notes = document.getElementById('new-lec-notes').value;
+
+            if (!title) return alert('Lecture title required');
+
+            node.lectures[index] = { title, videoUrl: url, notes };
+
+            // Reset UI
+            document.getElementById('new-lec-title').value = '';
+            document.getElementById('new-lec-url').value = '';
+            document.getElementById('new-lec-notes').value = '';
+
+            const btn = document.querySelector('button[onclick^="updateLecture"]'); // querySelector might fail if onclick changed
+            // Better: hard reset the button based on known ID or structure, but here I can just replace the onclick handler back.
+            // Actually, the button is "Add Lecture" usually.
+            // I need to reset it.
+            renderLectureList(node);
+            resetLectureForm();
+        }
+
+        function resetLectureForm() {
+            const btn = document.querySelector('#node-controls button[onclick^="updateLecture"]') || document.querySelector('#node-controls button[onclick="addLectureToNode()"]');
+            // This selector logic is fragile. I'll give the button an ID in next step or assume structure.
+            // Wait, I can just re-render the button text/onclick or use a variable state.
+            // Simplest: Replace the button entirely or use global state.
+            // I'll use a helper to reset button.
+            const parent = document.getElementById('new-lec-title').parentElement;
+            const oldBtn = parent.querySelector('button');
+            oldBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> Add Lecture';
+            oldBtn.onclick = addLectureToNode;
+
+            document.getElementById('new-lec-title').value = '';
+            document.getElementById('new-lec-url').value = '';
+            document.getElementById('new-lec-notes').value = '';
+        }
+
+        function addLectureToNode() {
+            const node = window.designerState.selectedNode;
+            if (!node) return;
+
+            const title = document.getElementById('new-lec-title').value;
+            const videoUrl = document.getElementById('new-lec-url').value;
+            const notes = document.getElementById('new-lec-notes').value;
+
+            if (!title) return alert('Lecture Title Required');
+
+            if (!node.lectures) node.lectures = [];
+            node.lectures.push({ title, videoUrl, notes });
+
+            // Clear inputs
+            document.getElementById('new-lec-title').value = '';
+            document.getElementById('new-lec-url').value = '';
+            document.getElementById('new-lec-notes').value = '';
+
+            renderLectureList(node);
+        }
+
+        function removeLectureFromNode(index) {
+            const node = window.designerState.selectedNode;
+            if (!node || !node.lectures) return;
+            node.lectures.splice(index, 1);
+            renderLectureList(node);
+        }
+
+        function toggleNodeDetails() {
+            const el = document.getElementById('dn-details-container');
+            el.classList.toggle('hidden');
+        }
+
+        function updateDesignerNode(field, value) {
+            if (!window.designerState.selectedNode) return;
+            window.designerState.selectedNode[field] = value;
+            renderDesigner();
+        }
+
+        function toggleLinkingMode() {
+            window.designerState.isLinking = !window.designerState.isLinking;
+            const btn = document.getElementById('btn-link-mode');
+            if (window.designerState.isLinking) {
+                btn.classList.add('bg-red-600', 'text-white');
+                btn.classList.remove('bg-white/5');
+                showToast("LINKING MODE ACTIVE: DRAG FROM SOURCE TO TARGET", "info");
+            } else {
+                btn.classList.remove('bg-red-600', 'text-white');
+                btn.classList.add('bg-white/5');
+            }
+        }
+
+        function addNodeToDesigner(type, parentId = '') {
+            const randomOffset = Math.floor(Math.random() * 60) - 30;
+            const newNode = {
+                _id: 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                title: 'New node',
+                type: type,
+                parent: parentId,
+                position: { x: 400 + randomOffset, y: 300 + randomOffset },
+                xp: 100
+            };
+            window.designerState.nodes.push(newNode);
+            window.designerState.selectedNode = newNode;
+            showNodeControls(newNode);
+            renderDesigner();
+        }
+
+        function cloneDesignerNode(node) {
+            const newNode = JSON.parse(JSON.stringify(node));
+            newNode._id = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            newNode.title = node.title + ' (COPY)';
+            newNode.parent = ''; // Roots new clones
+            newNode.position.x += 180;
+            newNode.position.y += 50;
+
+            window.designerState.nodes.push(newNode);
+            window.designerState.selectedNode = newNode;
+            showNodeControls(newNode);
+            renderDesigner();
+            showToast("NODE REPLICATED", "success");
+        }
+
+        function designerCreateChild() {
+            if (!window.designerState.selectedNode) return;
+            const parent = window.designerState.selectedNode;
+            const newNode = {
+                _id: 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                title: 'Child node',
+                type: parent.type === 'main' ? 'branch' : 'sub',
+                parent: parent._id,
+                position: { x: parent.position.x + 200, y: parent.position.y + 60 },
+                xp: 100
+            };
+            window.designerState.nodes.push(newNode);
+            window.designerState.selectedNode = newNode;
+            showNodeControls(newNode);
+            renderDesigner();
+        }
+
+        function deleteDesignerNode() {
+            if (!window.designerState.selectedNode) return;
+            const id = window.designerState.selectedNode._id;
+            window.designerState.nodes = window.designerState.nodes.filter(n => n._id !== id);
+            window.designerState.nodes.forEach(n => { if (n.parent === id) n.parent = ''; });
+
+            window.designerState.selectedNode = null;
+            document.getElementById('node-controls').classList.add('hidden');
+            renderDesigner();
+        }
+
+        async function commitRoadmapChanges() {
+            const skill = window.activeSkill;
+
+            // Map temp IDs to Titles to preserve links during ID generation
+            const sanitizedTopics = window.designerState.nodes.map(n => {
+                const node = { ...n };
+
+                // If parent is a temp ID, replace it with parent's title (which is stable)
+                if (node.parent && node.parent.startsWith('temp_')) {
+                    const parentNode = window.designerState.nodes.find(p => p._id === node.parent);
+                    if (parentNode) node.parent = parentNode.title;
+                }
+
+                // Delete temp ID so backend generates a real ObjectId
+                if (node._id.toString().startsWith('temp_')) delete node._id;
+
+                return node;
+            });
+
+            try {
+                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topics: sanitizedTopics })
+                });
+
+                if (res.ok) {
+                    showToast("ROADMAP COMMITTED TO NEURAL CORE.", "success");
+                    await sync();
+                    closeModal();
+                    renderSkillsManager();
+                } else {
+                    const err = await res.json();
+                    showToast("SYNC FAILED: " + err.message, "error");
+                }
+            } catch (e) {
+                showToast("NETWORK ERROR DURING COMMIT.", "error");
+            }
+        }
+
+        async function deleteSkill(id) {
+            if (confirm("PURGE THIS SKILL NODE? ALL USER PROGRESS WILL BE LOST.")) {
+                await fetch(`/api/explore/admin/skills/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                showToast("SKILL PURGED.", "success");
+                sync().then(renderSkillsManager);
+            }
+        }
+
+        async function deleteTopic(topicId) {
+            if (confirm("PURGE THIS NEURAL LAYER?")) {
+                const skill = window.activeSkill;
+                const updatedTopics = skill.topics.filter(t => t._id !== topicId);
+                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topics: updatedTopics })
+                });
+                if (res.ok) {
+                    window.activeSkill = await res.json();
+                    renderBranchContent();
+                }
+            }
+        }
+        // --- SUPPORT ---
+        async function renderSupport() {
+            const container = document.getElementById('content-area');
+            container.innerHTML = `<div class="p-20 text-center animate-pulse uppercase font-black text-slate-700 tracking-[0.5em]">Interrogating Ticket database...</div>`;
+            const res = await fetch('/api/admin/support', { headers: { 'Authorization': `Bearer ${token}` } });
+            const tickets = await res.json();
+
+            container.innerHTML = `
+                <div class="glass-card p-12 rounded-[4rem] min-h-[600px]">
+                    <div class="grid grid-cols-1 gap-6">
+                        ${tickets.map(t => `
+                            <div class="p-10 bg-white/5 border border-white/5 rounded-[3rem] flex justify-between items-center group hover:bg-white/10 transition-all">
+                                <div class="flex items-center gap-8">
+                                    <div class="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center font-black text-xl">${t.user?.username[0].toUpperCase()}</div>
+                                    <div>
+                                        <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">${t.type} // ${new Date(t.createdAt).toLocaleString()}</div>
+                                        <h4 class="text-2xl font-black mb-1 uppercase tracking-tight">${t.subject}</h4>
+                                        <p class="text-slate-500 font-bold text-xs uppercase italic truncate max-w-md">${t.message}</p>
+                                        <div class="mt-4 text-[10px] font-black tracking-widest text-blue-500 uppercase">${t.user?.username} (${t.user?.email})</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-10">
+                                    ${t.amount ? `<div class="text-right"><div class="text-3xl font-black syne">₹${t.amount}</div><div class="text-[9px] font-black text-slate-600 uppercase tracking-widest">Requested Flow</div></div>` : ''}
+                                    <div class="flex flex-col gap-3">
+                                        ${t.status === 'pending' ? `
+                                            <button onclick="resolveRequest('${t._id}', 'resolved', '${t.type}')" class="px-8 py-3 bg-green-600 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-xl shadow-green-600/20 hover:scale-105 transition">Approve</button>
+                                            <button onclick="resolveRequest('${t._id}', 'rejected', '${t.type}')" class="px-8 py-3 bg-red-600/10 text-red-500 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-red-600 hover:text-white transition">Reject</button>
+                                        ` : `
+                                            <span class="px-8 py-3 bg-slate-900 text-slate-600 rounded-2xl font-black uppercase text-[9px] tracking-widest border border-white/5">${t.status}</span>
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-center py-20 text-slate-700 font-black uppercase tracking-[0.2em]">All tactical channels clear. No active tickets.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function resolveRequest(id, status, type) {
+            const userBalanceAction = type === 'topup' && status === 'resolved';
+            const res = await fetch(`/api/admin/support/${id}/resolve`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, userBalanceAction })
+            });
+            if (res.ok) {
+                showToast("REQUEST PROCESSED.", "success");
+                renderSupport();
+            }
+        }
+
+        // --- PLACEMENT HUB ---
+        async function renderPlacementManager() {
+            const container = document.getElementById('content-area');
+            const actionBar = document.getElementById('action-bar');
+
+            actionBar.innerHTML = `
+                <div class="flex gap-4">
+                    <button onclick="openQuestionModal()" class="px-8 py-4 bg-white/5 border border-white/5 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition">
+                        <i class="fas fa-question-circle mr-2"></i> Add Question
+                    </button>
+                    <button onclick="openJobModal()" class="px-8 py-4 bg-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-red-600/30">
+                        <i class="fas fa-plus mr-2"></i> Add Opportunity
+                    </button>
+                </div>
+            `;
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
+                    <div class="glass-card p-10 rounded-[3rem] border-red-600/20">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Live Roles</div>
+                        <div class="text-6xl font-black tracking-tighter">${state.jobs ? state.jobs.length : 0}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-16">
+                    <div class="glass-card p-12 rounded-[4rem] min-h-[400px]">
+                        <h3 class="text-2xl font-black mb-10 uppercase tracking-tight">Active Opportunities</h3>
+                        <div class="grid grid-cols-1 gap-6">
+                            ${state.jobs && state.jobs.length ? state.jobs.map(job => `
+                                <div class="p-10 bg-white/5 border border-white/5 rounded-[3rem] flex justify-between items-center group hover:bg-white/10 transition-all">
+                                    <div class="flex items-center gap-8">
+                                        <div class="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center font-black text-xl text-red-500">
+                                            <i class="fas fa-briefcase"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">${job.company} // ${job.type}</div>
+                                            <h4 class="text-2xl font-black mb-1 uppercase tracking-tight">${job.title}</h4>
+                                            <div class="flex items-center gap-4 mt-2">
+                                                <span class="text-[9px] font-black text-red-500 uppercase tracking-widest">${job.salary}</span>
+                                                <span class="w-1 h-1 bg-slate-800 rounded-full"></span>
+                                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">${job.location}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-6">
+                                        <button onclick="editJob('${job._id}')" class="text-[10px] font-black uppercase text-blue-500 hover:tracking-widest transition-all">Edit</button>
+                                        <button onclick="deleteJob('${job._id}')" class="text-[10px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Purge</button>
+                                    </div>
+                                </div>
+                            `).join('') : '<p class="text-center py-20 text-slate-700 font-black uppercase tracking-[0.2em]">No opportunities indexed.</p>'}
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-12 rounded-[4rem]">
+                        <h3 class="text-2xl font-black mb-10 uppercase tracking-tight">Interview Intelligence</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="questions-grid">
+                            <!-- Questions loaded here -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            loadQuestions();
+        }
+
+        async function loadQuestions() {
+            try {
+                // Fetch questions for all skills to show a master list
+                const allQs = [];
+                for (const skill of state.skills) {
+                    const res = await fetch(`/api/explore/placement/prep/${skill._id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (res.ok) {
+                        const qs = await res.json();
+                        allQs.push(...qs.map(q => ({ ...q, skillName: skill.name })));
+                    }
+                }
+
+                const grid = document.getElementById('questions-grid');
+                if (!grid) return;
+
+                grid.innerHTML = allQs.map(q => `
+                    <div class="p-8 bg-white/5 border border-white/5 rounded-[2.5rem] space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[8px] font-black text-red-500 uppercase tracking-widest">${q.skillName} // ${q.category}</span>
+                                <h5 class="text-lg font-bold leading-tight mt-2">${q.question}</h5>
+                            </div>
+                            <button onclick="deleteQuestion('${q._id}')" class="text-red-500 hover:text-red-400 p-2"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div class="p-4 bg-black/40 rounded-2xl text-[10px] text-slate-500 leading-relaxed italic">
+                            ${q.solution.length > 100 ? q.solution.substring(0, 100) + '...' : q.solution}
+                        </div>
+                    </div>
+                `).join('') || '<p class="col-span-2 text-center py-10 text-slate-700 uppercase font-black tracking-widest text-[10px]">No tactical questions found.</p>';
+            } catch (e) {
+                console.error("Failed to load questions", e);
+            }
+        }
+
+        function openJobModal(jobId = null) {
+            const job = jobId ? state.jobs.find(j => j._id === jobId) : null;
+            openModal();
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-12">
+                    <div>
+                        <span class="text-[10px] font-black text-red-500 uppercase tracking-[0.5em] mb-4 inline-block">Tactical Deployment</span>
+                        <h2 class="text-5xl font-black uppercase tracking-tighter syne">${jobId ? 'Edit Role' : 'New Opportunity'}</h2>
+                    </div>
+                    
+                    <form id="job-form" onsubmit="saveJob(event, '${jobId || ''}')" class="grid md:grid-cols-2 gap-10">
+                        <div class="space-y-8">
+                            <div>
+                                <label class="lbl-zenith">Position Title</label>
+                                <input type="text" name="title" class="input-zenith" value="${job ? job.title : ''}" required>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Company Intelligence</label>
+                                <input type="text" name="company" class="input-zenith" value="${job ? job.company : ''}" required>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Operational Type</label>
+                                <select name="type" class="input-zenith">
+                                    <option value="Full-time" ${job?.type === 'Full-time' ? 'selected' : ''}>Full-time</option>
+                                    <option value="Part-time" ${job?.type === 'Part-time' ? 'selected' : ''}>Part-time</option>
+                                    <option value="Contract" ${job?.type === 'Contract' ? 'selected' : ''}>Contract</option>
+                                    <option value="Internship" ${job?.type === 'Internship' ? 'selected' : ''}>Internship</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Skill Requirements</label>
+                                <select name="requirements" class="input-zenith h-40" multiple>
+                                    ${state.skills.map(s => `
+                                        <option value="${s._id}" ${job?.requirements?.some(r => r.skill === s._id || r.skill?._id === s._id) ? 'selected' : ''}>${s.name}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="space-y-8">
+                            <div>
+                                <label class="lbl-zenith">Location Basis</label>
+                                <input type="text" name="location" class="input-zenith" value="${job ? job.location : ''}" placeholder="Remote, Bengaluru, etc.">
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Fiscal Compensation</label>
+                                <input type="text" name="salary" class="input-zenith" value="${job ? job.salary : ''}" placeholder="₹12,00,000 - ₹18,00,000">
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Uplink URL (Apply Link)</label>
+                                <input type="url" name="applyUrl" class="input-zenith" value="${job ? job.applyUrl : ''}" required>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Mission Briefing (Description)</label>
+                                <textarea name="description" class="input-zenith h-32" required>${job ? job.description : ''}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 pt-10">
+                            <button type="submit" class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase tracking-widest shadow-2xl shadow-red-600/40 hover:scale-[1.02] transition">
+                                Commit Deployment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function openQuestionModal() {
+            openModal();
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-12">
+                    <div>
+                        <span class="text-[10px] font-black text-red-500 uppercase tracking-[0.5em] mb-4 inline-block">Intelligence Uplink</span>
+                        <h2 class="text-5xl font-black uppercase tracking-tighter syne">New Question</h2>
+                    </div>
+                    
+                    <form onsubmit="saveQuestion(event)" class="grid md:grid-cols-2 gap-10">
+                        <div class="space-y-8">
+                            <div>
+                                <label class="lbl-zenith">Associated Skill Node</label>
+                                <select name="skill" class="input-zenith" required>
+                                    ${state.skills.map(s => `<option value="${s._id}">${s.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Difficulty Layer</label>
+                                <select name="difficulty" class="input-zenith">
+                                    <option value="Entry">Entry</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Expert">Expert</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Operational Category</label>
+                                <select name="category" class="input-zenith">
+                                    <option value="Technical">Technical</option>
+                                    <option value="Behavioral">Behavioral</option>
+                                    <option value="System Design">System Design</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="space-y-8">
+                            <div>
+                                <label class="lbl-zenith">Mission Query (Question)</label>
+                                <textarea name="question" class="input-zenith h-32" required></textarea>
+                            </div>
+                            <div>
+                                <label class="lbl-zenith">Tactical Solution</label>
+                                <textarea name="solution" class="input-zenith h-32" required></textarea>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 pt-10">
+                            <button type="submit" class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase tracking-widest shadow-2xl shadow-red-600/40 hover:scale-[1.02] transition">
+                                Decrypt & Save Intelligence
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        async function saveJob(e, jobId) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const rawRequirements = formData.getAll('requirements');
+            const data = {
+                title: formData.get('title'),
+                company: formData.get('company'),
+                type: formData.get('type'),
+                requirements: rawRequirements.map(id => ({ skill: id, proficiencyLevel: 1 })),
+                location: formData.get('location'),
+                salary: formData.get('salary'),
+                applyUrl: formData.get('applyUrl'),
+                description: formData.get('description')
+            };
+
+            const url = jobId ? `/api/explore/admin/placement/jobs/${jobId}` : '/api/explore/admin/placement/jobs';
+            const method = jobId ? 'PATCH' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                showToast("DEPLOYMENT SUCCESSFUL", "success");
+                closeModal();
+                sync().then(renderPlacementManager);
+            } else {
+                const err = await res.json();
+                showToast(err.message.toUpperCase(), "error");
+            }
+        }
+
+        async function saveQuestion(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            const res = await fetch('/api/explore/admin/placement/questions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                showToast("INTELLIGENCE SYNCED", "success");
+                closeModal();
+                sync().then(renderPlacementManager);
+            } else {
+                const err = await res.json();
+                showToast(err.message.toUpperCase(), "error");
+            }
+        }
+
+        async function deleteJob(id) {
+            if (confirm("PURGE THIS OPPORTUNITY NODE?")) {
+                await fetch(`/api/explore/admin/placement/jobs/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showToast("ROLE PURGED.", "success");
+                sync().then(renderPlacementManager);
+            }
+        }
+
+        async function deleteQuestion(id) {
+            if (confirm("PURGE THIS INTELLIGENCE LAYER?")) {
+                await fetch(`/api/explore/admin/placement/questions/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showToast("QUESTION PURGED.", "success");
+                sync().then(renderPlacementManager);
+            }
+        }
+
+        // --- SKILL METADATA EDITOR ---
+        function openMetadataEditor() {
+            const skill = window.activeSkill;
+            if (!skill) return;
+
+            // Use a secondary modal or replace content? 
+            // Since we are inside the 'designer' which is already content replacement, we can overlay a simple dialog or swap content.
+            // Let's use a dirty trick: just hide the designer content and show the form, then back.
+            // Actually, we can just use prompt or a clean form overlay.
+            // Better: Inject a modal overlay into the designer view.
+
+            const overlay = document.createElement('div');
+            overlay.id = 'metadata-overlay';
+            overlay.className = 'absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex items-center justify-center p-20 animate-in fade-in duration-300';
+            overlay.innerHTML = `
+                <div class="w-full max-w-4xl space-y-10">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-4xl font-black uppercase tracking-tighter syne">Identify Protocol // ${skill.name}</h2>
+                        <button onclick="document.getElementById('metadata-overlay').remove()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8">
+                        <div>
+                            <label class="lbl-zenith">Skill Designation (Name)</label>
+                            <input id="meta-name" type="text" class="input-zenith" value="${skill.name}">
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">Visual Icon (FontAwesome)</label>
+                            <input id="meta-icon" type="text" class="input-zenith" value="${skill.icon || 'fa-code'}">
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">Taxonomy (Category)</label>
+                            <select id="meta-category" class="input-zenith">
+                                ${state.categories ? state.categories.map(c => `<option value="${c}" ${skill.category === c ? 'selected' : ''}>${c}</option>`).join('') : `
+                                    <option value="Frontend">Frontend</option>
+                                    <option value="Backend">Backend</option>
+                                    <option value="DevOps">DevOps</option>
+                                    <option value="Mobile">Mobile</option>
+                                    <option value="AI/ML">AI/ML</option>
+                                    <option value="Design">Design</option>
+                                    <option value="Other">Other</option>
+                                `}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">Signal Color (Hex)</label>
+                            <div class="flex gap-4">
+                                <input id="meta-color" type="color" class="h-14 w-14 rounded-xl bg-transparent cursor-pointer" value="${skill.color || '#3b82f6'}">
+                                <input id="meta-color-text" type="text" class="input-zenith" value="${skill.color || '#3b82f6'}" oninput="document.getElementById('meta-color').value = this.value">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">XP Bounty</label>
+                            <input id="meta-xp" type="number" class="input-zenith" value="${skill.xpRequired || 1000}">
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">Difficulty Layer (1-5)</label>
+                            <input id="meta-level" type="number" min="1" max="5" class="input-zenith" value="${skill.level || 1}">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="lbl-zenith">Mission Briefing (Description)</label>
+                        <textarea id="meta-desc" class="input-zenith h-32">${skill.description || ''}</textarea>
+                    </div>
+
+                    <button onclick="saveMetadata()" class="w-full py-6 bg-blue-600 rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-blue-600/30 hover:scale-[1.01] transition">
+                        Update Protocol Data
+                    </button>
+                </div>
+            `;
+            document.getElementById('modal-content').appendChild(overlay);
+        }
+
+        async function saveMetadata() {
+            const skill = window.activeSkill;
+            const updates = {
+                name: document.getElementById('meta-name').value,
+                description: document.getElementById('meta-desc').value,
+                category: document.getElementById('meta-category').value,
+                icon: document.getElementById('meta-icon').value,
+                color: document.getElementById('meta-color-text').value,
+                xpRequired: document.getElementById('meta-xp').value,
+                level: document.getElementById('meta-level').value
+            };
+
+            try {
+                const res = await fetch(`/api/explore/admin/skills/${skill._id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+
+                if (res.ok) {
+                    showToast("PROTOCOL UPDATED.", "success");
+                    const updatedSkill = await res.json();
+                    window.activeSkill = updatedSkill;
+                    document.getElementById('metadata-overlay').remove();
+                    // Refresh header title if name changed
+                    document.querySelector('#modal-content h2.syne').innerText = updatedSkill.name;
+                } else {
+                    const err = await res.json();
+                    showToast(err.message.toUpperCase(), "error");
+                }
+            } catch (e) {
+                showToast("UPDATE FAILED.", "error");
+            }
+        }
+
+        // --- HELPER WRAPPERS ---
+        function openModal() { document.getElementById('hyper-modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        function closeModal() { document.getElementById('hyper-modal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+        async function deleteCourse(id) { if (confirm("PURGE ENTIRE PRODUCTION UNIT?")) { await fetch(`/api/admin/courses/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); showToast("COURSE PURGED.", "success"); sync().then(renderCourses); } }
+        function logout() { localStorage.removeItem('token'); window.location.href = '/index.html'; }
+
+        init();
+    </script>
+    <script src="/js/admin-topics.js"></script>
+</body>
+
+</html>

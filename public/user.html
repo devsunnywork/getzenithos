@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith OS — Unified Command</title>
+    <!-- Assets -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@800&display=swap');
+
+        :root {
+            --zenith-blue: #0070ff;
+            --zenith-dark: #000814;
+            --card-bg: rgba(10, 20, 40, 0.7);
+            --sidebar-width: 320px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--zenith-dark);
+            color: #f8fafc;
+            overflow-x: hidden;
+            font-size: 14px;
+        }
+
+        html {
+            background-color: var(--zenith-dark);
+            /* Fix white scrollbar track */
+        }
+
+        /* Layout Engine v6.1 */
+        aside {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(0, 5, 13, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 50;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        main {
+            min-height: 100vh;
+            position: relative;
+            background: #00050d;
+            margin-left: 21rem;
+            /* 336px to match w-84 + gap */
+            transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ===== MOBILE RESPONSIVE SYSTEM ===== */
+
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(0, 5, 13, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+            padding: 0 24px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mobile-header .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0070ff 0%, #00c6ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .mobile-header .hamburger-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 112, 255, 0.15);
+            border: 1px solid rgba(0, 112, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-header .hamburger-btn:hover,
+        .mobile-header .hamburger-btn:active {
+            background: rgba(0, 112, 255, 0.3);
+            border-color: rgba(0, 112, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .mobile-header .hamburger-btn i {
+            color: #0070ff;
+            font-size: 22px;
+        }
+
+        /* Mobile Navigation Overlay */
+        .mobile-nav-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            z-index: 150;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-nav-overlay.active {
+            opacity: 1;
+        }
+
+        /* Mobile Navigation Menu */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 85%;
+            max-width: 320px;
+            height: 100vh;
+            background: rgba(0, 5, 13, 0.98);
+            backdrop-filter: blur(40px);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 200;
+            overflow-y: auto;
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 80px 0 40px 0;
+        }
+
+        .mobile-nav.active {
+            right: 0;
+        }
+
+        .mobile-nav-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-nav-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .mobile-nav-close i {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .mobile-nav-item {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .mobile-nav-item:hover,
+        .mobile-nav-item.active {
+            background: rgba(0, 112, 255, 0.1);
+            color: #0070ff;
+            border-left-color: #0070ff;
+        }
+
+        .mobile-nav-item i {
+            font-size: 20px;
+            width: 24px;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+
+            /* Show mobile header */
+            .mobile-header {
+                display: flex;
+            }
+
+            /* Show mobile nav elements */
+            .mobile-nav-overlay,
+            .mobile-nav {
+                display: block;
+            }
+
+            /* Hide desktop sidebar */
+            aside {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+
+            /* Adjust main content */
+            main {
+                margin-left: 0 !important;
+                padding-top: 70px !important;
+            }
+
+            /* Hide balance from header on mobile */
+            header .flex.items-center.gap-6 {
+                display: none !important;
+            }
+
+            /* Fix header padding on mobile */
+            header.p-14 {
+                padding: 1.5rem !important;
+                padding-bottom: 0 !important;
+                margin-bottom: 1.5rem !important;
+            }
+
+            /* Fix content padding */
+            #app-content {
+                padding: 1.5rem !important;
+                padding-bottom: 2rem !important;
+            }
+
+            /* Responsive Typography - LARGER SIZES */
+            body {
+                font-size: 16px !important;
+            }
+
+            h1 {
+                font-size: 32px !important;
+            }
+
+            h2 {
+                font-size: 28px !important;
+            }
+
+            h3 {
+                font-size: 22px !important;
+            }
+
+            h4 {
+                font-size: 18px !important;
+            }
+
+            /* Page title specific */
+            #page-title {
+                font-size: 2.5rem !important;
+                line-height: 1.1 !important;
+            }
+
+            /* Reduce card padding */
+            .glass-card {
+                padding: 1.5rem !important;
+            }
+
+            /* Smaller grid gaps */
+            .grid {
+                gap: 1rem !important;
+            }
+
+            /* Stack grids on mobile */
+            .grid-cols-2,
+            .grid-cols-3,
+            .grid-cols-4 {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Responsive text sizes - LARGER */
+            .text-6xl {
+                font-size: 3rem !important;
+            }
+
+            .text-5xl {
+                font-size: 2.5rem !important;
+            }
+
+            .text-4xl {
+                font-size: 2rem !important;
+            }
+
+            .text-3xl {
+                font-size: 1.75rem !important;
+            }
+
+            .text-2xl {
+                font-size: 1.5rem !important;
+            }
+
+            .text-xl {
+                font-size: 1.25rem !important;
+            }
+
+            /* Smaller spacing */
+            .p-20 {
+                padding: 1.25rem !important;
+            }
+
+            .p-16 {
+                padding: 1rem !important;
+            }
+
+            .p-12 {
+                padding: 0.875rem !important;
+            }
+
+            .p-10 {
+                padding: 0.75rem !important;
+            }
+
+            .mb-20 {
+                margin-bottom: 1.25rem !important;
+            }
+
+            .mb-16 {
+                margin-bottom: 1rem !important;
+            }
+
+            .mb-12 {
+                margin-bottom: 0.875rem !important;
+            }
+
+            .mb-10 {
+                margin-bottom: 0.75rem !important;
+            }
+
+            /* Touch-friendly buttons */
+            button,
+            .btn,
+            a[class*="btn"] {
+                min-height: 48px;
+                padding: 14px 24px !important;
+                font-size: 16px !important;
+            }
+
+            /* Fix balance display */
+            #balance-display {
+                font-size: 18px !important;
+            }
+
+            /* Ensure scrolling works */
+            body {
+                overflow-y: auto !important;
+                height: auto !important;
+            }
+
+            main {
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+
+            /* Dashboard Cards - Better spacing and sizing */
+            .glass-card {
+                margin: 0.75rem !important;
+                padding: 2rem !important;
+                min-height: 180px !important;
+            }
+
+            /* Card text spacing */
+            .glass-card h3,
+            .glass-card h4 {
+                margin-bottom: 1rem !important;
+            }
+
+            .glass-card p {
+                line-height: 1.6 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            /* Extra small screens */
+            .mobile-header .logo {
+                font-size: 18px;
+            }
+
+            .mobile-nav {
+                width: 90%;
+            }
+
+            h1 {
+                font-size: 28px !important;
+            }
+
+            h2 {
+                font-size: 24px !important;
+            }
+
+            #page-title {
+                font-size: 2rem !important;
+            }
+
+            .text-6xl {
+                font-size: 2.5rem !important;
+            }
+
+            .text-5xl {
+                font-size: 2rem !important;
+            }
+
+            .text-4xl {
+                font-size: 1.75rem !important;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+
+            /* Tablet */
+            aside {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+
+            aside.mobile-active {
+                transform: translateX(0);
+            }
+
+            main {
+                margin-left: 0;
+            }
+        }
+
+        #zenith-immersive {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: #000;
+            overflow-y: auto;
+            display: none;
+            /* Zenith Scrollbar */
+        }
+
+        #zenith-immersive::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        #zenith-immersive::-webkit-scrollbar-thumb {
+            background: #0070ff;
+            border-radius: 10px;
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.6) 0%, rgba(2, 5, 10, 0.8) 100%);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Explore Tree Styles */
+        .skill-node {
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .skill-node:hover {
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5));
+            transform: scale(1.05);
+        }
+
+        .skill-node.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .skill-node.mastered {
+            filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+        }
+
+        .connection-line {
+            stroke: rgba(59, 130, 246, 0.15);
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 4;
+            animation: flow 20s linear infinite;
+        }
+
+        @keyframes flow {
+            from {
+                stroke-dashoffset: 200;
+            }
+
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .animate-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 112, 255, 0.3);
+            background: linear-gradient(135deg, rgba(15, 25, 50, 0.7) 0%, rgba(5, 10, 20, 0.9) 100%);
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), 0 18px 36px -18px rgba(0, 112, 255, 0.2);
+        }
+
+        .sidebar-item {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 1.5rem;
+            margin: 0.4rem 1.25rem;
+            padding: 1rem 1.75rem;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            opacity: 0.7;
+            color: #94a3b8;
+            width: calc(100% - 2.5rem);
+            text-align: left;
+        }
+
+        .sidebar-item:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .sidebar-item.active {
+            background: var(--zenith-blue);
+            color: white;
+            opacity: 1;
+            box-shadow: 0 10px 20px -5px rgba(0, 112, 255, 0.5);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(50px);
+        }
+
+        /* Fluid Typography */
+        #page-title {
+            font-size: clamp(2rem, 5vw, 4rem) !important;
+            line-height: 1;
+        }
+
+        /* GLOBAL SCROLLBAR OVERRIDE */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #020202;
+        }
+
+        .syne {
+            font-family: 'Syne', sans-serif;
+        }
+
+        @keyframes pulse-slow {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .animate-pulse-slow {
+            animation: pulse-slow 4s infinite ease-in-out;
+        }
+
+        /* Mobile Utility */
+        #mobile-nav-toggle {
+            display: none !important;
+            /* Hidden - using top header instead */
+            width: 50px;
+            height: 50px;
+            background: var(--zenith-blue);
+            color: white;
+            border-radius: 12px;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 112, 255, 0.3);
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1001;
+        }
+
+        @media (max-width: 1024px) {
+            #mobile-nav-toggle {
+                display: none !important;
+                /* Keep hidden */
+            }
+        }
+
+        /* Zenith Form Elements */
+        .input-zenith {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.25rem;
+            border-radius: 1rem;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-zenith:focus {
+            border-color: var(--zenith-blue);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .lbl-zenith {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+
+<body class="antialiased custom-scrollbar">
+
+    <div id="app-container">
+
+        <!-- Mobile Header -->
+        <header class="mobile-header">
+            <div class="logo">ZENITH OS</div>
+            <button class="hamburger-btn" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav-overlay" onclick="closeMobileMenu()"></div>
+
+        <!-- Mobile Navigation Menu -->
+        <nav class="mobile-nav">
+            <button class="mobile-nav-close" onclick="closeMobileMenu()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div style="padding: 0 24px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div
+                    style="font-size: 12px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+                    Navigation</div>
+            </div>
+
+            <!-- Balance Display in Mobile Menu -->
+            <div style="padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;">
+                <div
+                    style="background: rgba(0, 112, 255, 0.1); padding: 16px; border-radius: 16px; border: 1px solid rgba(0, 112, 255, 0.2);">
+                    <div
+                        style="font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; font-weight: 700;">
+                        Wallet Balance</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-wallet" style="color: #0070ff; font-size: 20px;"></i>
+                            <span id="mobile-balance-display"
+                                style="font-size: 24px; font-weight: 900; color: #0070ff;">₹0.00</span>
+                        </div>
+                        <button onclick="loadPage('helpdesk', 'topup'); closeMobileMenu();"
+                            style="width: 36px; height: 36px; background: #0070ff; border: none; border-radius: 10px; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('dashboard'); closeMobileMenu();">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('academic'); closeMobileMenu();">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Academic Core</span>
+            </a>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('skill'); closeMobileMenu();">
+                <i class="fas fa-code"></i>
+                <span>Skill-Based</span>
+            </a>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('explore'); closeMobileMenu();">
+                <i class="fas fa-project-diagram"></i>
+                <span>Explore Tree</span>
+            </a>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('transactions'); closeMobileMenu();">
+                <i class="fas fa-receipt"></i>
+                <span>Transactions</span>
+            </a>
+
+            <a href="#" class="mobile-nav-item" onclick="navigate('profile'); closeMobileMenu();">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+
+            <div style="padding: 24px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 24px;">
+                <button onclick="logout(); closeMobileMenu();"
+                    style="width: 100%; padding: 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; color: #ef4444; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <div id="dashboard" class="flex min-h-screen bg-[#00050d]">
+            <!-- Sidebar-toggle for mobile -->
+            <div id="mobile-nav-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </div>
+
+            <!-- Sidebar -->
+            <aside id="sidebar-main"
+                class="w-84 bg-[#00050d]/84 border-r border-slate-900 flex flex-col fixed inset-y-0 z-50 custom-scrollbar overflow-y-auto">
+                <div class="p-8 text-xl font-bold flex flex-col gap-1 mb-2">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xs shadow-xl shadow-blue-600/30">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <span class="syne tracking-tighter uppercase text-xl" id="logo-branding-text">Zenith<span
+                                class="text-blue-500">.OS</span></span>
+                    </div>
+                    <div class="pl-14 text-[9px] font-black text-slate-500 uppercase tracking-widest"
+                        id="sidebar-version">Initializing...
+                    </div>
+                </div>
+
+                <nav class="flex-grow py-8">
+                    <div class="px-12 mb-6 text-[10px] text-slate-600 font-bold tracking-[0.3em] uppercase">Core Intel
+                    </div>
+                    <button onclick="loadPage('dashboard')" class="sidebar-item" id="nav-dashboard">
+                        <i class="fas fa-microchip w-5"></i> Dashboard Hub
+                    </button>
+                    <button onclick="loadPage('academic')" class="sidebar-item" id="nav-academic">
+                        <i class="fas fa-university w-5"></i> Academic Core
+                    </button>
+                    <button onclick="loadPage('roadmap')" class="sidebar-item" id="nav-roadmap">
+                        <i class="fas fa-project-diagram w-5"></i> Dev Roadmaps
+                    </button>
+                    <button onclick="loadPage('missions')" class="sidebar-item" id="nav-missions">
+                        <i class="fas fa-tasks w-5"></i> Mission Control
+                    </button>
+                    <button onclick="loadPage('explore')" class="sidebar-item" id="nav-explore">
+                        <i class="fas fa-tree w-5"></i> Explore Tree
+                    </button>
+
+                    <div class="px-12 mt-12 mb-6 text-[10px] text-slate-600 font-bold tracking-[0.3em] uppercase">System
+                        Support</div>
+                    <button onclick="loadPage('store')" class="sidebar-item" id="nav-store">
+                        <i class="fas fa-shopping-cart w-5"></i> Resource Store
+                    </button>
+                    <button onclick="loadPage('health')" class="sidebar-item" id="nav-health">
+                        <i class="fas fa-heartbeat w-5"></i> Vital Stats
+                    </button>
+                    <button onclick="loadPage('profile')" class="sidebar-item" id="nav-profile">
+                        <i class="fas fa-user-shield w-5"></i> Identity Hub
+                    </button>
+                    <button onclick="loadPage('helpdesk')" class="sidebar-item" id="nav-helpdesk">
+                        <i class="fas fa-headset w-5"></i> Neural Support
+                    </button>
+                    <button onclick="loadPage('leaderboard')" class="sidebar-item" id="nav-leaderboard">
+                        <i class="fas fa-trophy w-5"></i> Global Rankings
+                    </button>
+                </nav>
+
+                <div class="p-10 border-t border-slate-900">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center font-bold text-blue-500"
+                            id="user-initials">--</div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Operative</div>
+                            <div class="font-bold text-sm" id="user-name">Loading...</div>
+                        </div>
+                    </div>
+                    <button onclick="logout()"
+                        class="flex items-center gap-3 text-red-500/60 hover:text-red-500 font-bold p-1 rounded-2xl w-full transition text-xs uppercase tracking-widest">
+                        <i class="fas fa-power-off"></i> Terminate Link
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-grow min-h-screen flex flex-col relative lg:ml-84 transition-all duration-300">
+                <div id="version-badge"
+                    class="fixed bottom-6 right-8 text-[9px] font-black text-slate-700 tracking-[0.4em] uppercase z-40 pointer-events-none">
+                    Zenith.OS // LINK ESTABLISHED
+                </div>
+                <header class="p-14 pb-0 flex justify-between items-end mb-10">
+                    <div>
+                        <h2 id="page-title" class="text-6xl font-black tracking-tighter mb-2 syne">Intelligence Center
+                        </h2>
+                        <p id="page-desc-sub" class="text-slate-500 font-medium">System status: Nominal | <span
+                                id="ver-branding">v1.07</span>
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div
+                            class="bg-slate-900/50 px-6 py-3 rounded-2xl border border-slate-800 font-bold text-blue-500 flex items-center gap-4">
+                            <i class="fas fa-wallet"></i>
+                            <span id="balance-display">₹0.00</span>
+                            <button onclick="loadPage('helpdesk', 'topup')"
+                                class="ml-2 w-6 h-6 bg-blue-600 rounded-lg text-white flex items-center justify-center text-[10px] hover:scale-110 transition"><i
+                                    class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </header>
+
+                <div id="app-content" class="flex-grow overflow-y-auto px-14 pb-14 transition-all duration-500">
+                    <!-- Dynamic Content -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Zenith Immersive Engine (Courses/Player) -->
+    <div id="zenith-immersive" class="animate-in fade-in duration-700"></div>
+
+    <!-- Modals (LMS Player etc) -->
+    <!-- TASK MODAL -->
+    <div id="mission-modal" class="modal-overlay">
+        <div
+            class="glass-card p-10 rounded-[2rem] w-full max-w-lg relative border border-blue-500/20 shadow-[0_0_50px_rgba(37,99,235,0.2)]">
+            <button onclick="closeMissionModal()"
+                class="absolute top-6 right-8 text-slate-500 hover:text-white transition"><i
+                    class="fas fa-times text-xl"></i></button>
+
+            <div class="mb-8">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-600/20 text-blue-500 flex items-center justify-center mb-4 text-xl border border-blue-500/30">
+                    <i class="fas fa-satellite-dish"></i>
+                </div>
+                <h3 class="text-3xl font-black syne text-white uppercase italic tracking-tighter">New Operation</h3>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Define Mission Parameters
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="lbl-zenith">Mission Objective</label>
+                    <input type="text" id="m-title" class="input-zenith"
+                        placeholder="e.g. Complete Neural Network Module...">
+                </div>
+                <div>
+                    <label class="lbl-zenith">Priority Level</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="setPriority('low')" id="btn-low"
+                            class="p-3 rounded-xl border border-white/5 bg-black/40 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:border-blue-500/50 hover:bg-white/5 transition">Low</button>
+                        <button onclick="setPriority('medium')" id="btn-medium"
+                            class="p-3 rounded-xl border-2 border-blue-500 bg-blue-600/10 text-white text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(37,99,235,0.3)] transition">Medium</button>
+                        <button onclick="setPriority('high')" id="btn-high"
+                            class="p-3 rounded-xl border border-white/5 bg-black/40 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:border-red-500/50 hover:text-red-500 hover:bg-white/5 transition">High</button>
+                    </div>
+                </div>
+                <div class="pt-4">
+                    <button onclick="submitNewMission()"
+                        class="w-full py-4 bg-blue-600 rounded-xl font-black text-white text-xs uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-blue-600/20">
+                        Initialize Mission <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPLORE TREE MODALS -->
+    <!-- Skill Detail Modal -->
+    <div id="skill-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div
+            class="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div class="p-10">
+                <div class="flex items-start justify-between mb-8">
+                    <div>
+                        <h2 id="modal-skill-name"
+                            class="text-3xl font-black syne uppercase tracking-tighter text-white"></h2>
+                        <p id="modal-skill-category"
+                            class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-2"></p>
+                    </div>
+                    <button onclick="closeSkillModal()" class="text-slate-500 hover:text-white transition-colors">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <div id="modal-skill-content" class="space-y-8">
+                    <!-- Content will be dynamically inserted -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Placement Modal -->
+    <div id="placement-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div
+            class="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div class="p-10">
+                <div class="flex items-start justify-between mb-8">
+                    <h2 class="text-3xl font-black syne uppercase tracking-tighter text-white font-black italic">
+                        Placement Profile</h2>
+                    <button onclick="closePlacementModal()" class="text-slate-500 hover:text-white transition-colors">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <form id="placement-form" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="lbl-zenith">Resume URL</label>
+                            <input type="url" id="resume-url" class="input-zenith"
+                                placeholder="https://drive.google.com/...">
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">Portfolio URL</label>
+                            <input type="url" id="portfolio-url" class="input-zenith"
+                                placeholder="https://yourportfolio.com">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="lbl-zenith">GitHub URL</label>
+                            <input type="url" id="github-url" class="input-zenith"
+                                placeholder="https://github.com/username">
+                        </div>
+                        <div>
+                            <label class="lbl-zenith">LinkedIn URL</label>
+                            <input type="url" id="linkedin-url" class="input-zenith"
+                                placeholder="https://linkedin.com/in/username">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="lbl-zenith">Target Role</label>
+                        <input type="text" id="target-role" class="input-zenith"
+                            placeholder="e.g. Full Stack Developer">
+                    </div>
+                    <div>
+                        <label class="lbl-zenith">Expected Salary</label>
+                        <input type="text" id="expected-salary" class="input-zenith" placeholder="e.g. $80k - $100k">
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit"
+                            class="w-full py-5 bg-blue-600 rounded-2xl font-black text-white text-xs uppercase tracking-[0.3em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-blue-600/30">
+                            Save Operative Profile <i class="fas fa-save ml-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zenith Immersive Player Container -->
+    <div id="zenith-immersive" style="display: none;" class="fixed inset-0 z-[200] bg-black">
+        <!-- Full-page immersive content will be injected here -->
+    </div>
+
+    <!-- Course Player Modal Container -->
+    <div id="modal-container"
+        class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl hidden items-center justify-center p-6"
+        style="display: none;">
+        <!-- Content will be dynamically injected here -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/zenith-player.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

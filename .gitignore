@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment variables (IMPORTANT - Don't upload!)
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Build files
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Antigravity brain (local AI assistant files)
+.gemini/
+
+# Test files
+coverage/
+.nyc_output/
