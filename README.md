@@ -212,7 +212,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **Advik**
-- GitHub: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
+- GitHub: @devsunnywokr(https://github.com/devsunnywork)
 - Live Demo: [Zenith OS](https://getzenithos.netlify.app)
 
 ## 🙏 Acknowledgments
@@ -225,7 +225,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Support
 
-For support, email your-email@example.com or open an issue in the repository.
+For support, email sunnyrajput0247@gmail.com or open an issue in the repository.
 
 ---
 
