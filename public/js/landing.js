@@ -101,7 +101,8 @@ async function handleAuth(event, mode) {
             if (data.username) localStorage.setItem('username', data.username);
 
             // Redirect based on role
-            if (data.user && data.user.role === 'admin') {
+            // Backend returns { token, username, role }
+            if (data.role === 'admin') {
                 window.location.replace('/admin.html');
             } else {
                 window.location.replace('/user.html');
