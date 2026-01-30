@@ -25,15 +25,21 @@ const state = {
 
 async function init() {
     ZLoader.show("Initializing Neural Link...");
-    initToastSystem(); // Initialize notifications
-    await fetchUser();
-    await fetchCourses(); // Fetch full course data for stats
-    await fetchTasks();   // Fetch tasks for dashboard feed
-    await fetchSettings();
-    applyTheme();
-    loadPage('dashboard');
-    lucide.createIcons();
-    ZLoader.hide();
+    try {
+        initToastSystem();
+        await fetchUser();
+        await fetchCourses();
+        await fetchTasks();
+        await fetchSettings();
+        applyTheme();
+        loadPage('dashboard');
+        lucide.createIcons();
+    } catch (err) {
+        console.error("Critical System Failure:", err);
+        if (window.showToast) showToast("Neural Link Failure: System Offline", "error");
+    } finally {
+        ZLoader.hide();
+    }
 }
 
 async function fetchCourses() {
@@ -264,14 +270,15 @@ async function fetchUser() {
 
         // Normalize enrolledCourses to expected [{ courseId: ... }] format if backend returns flat array
         if (state.user.enrolledCourses && state.user.enrolledCourses.length > 0) {
-            // Check if first item is a Course Object directly (has title/skills) rather than wrapper
-            // Or check if .courseId is missing
             if (!state.user.enrolledCourses[0].courseId) {
                 state.user.enrolledCourses = state.user.enrolledCourses.map(c => ({ courseId: c }));
             }
         }
 
-        document.getElementById('user-name').innerText = state.user.username.toUpperCase();
+        const userNameEl = document.getElementById('user-name');
+        if (userNameEl && state.user.username) {
+            userNameEl.innerText = state.user.username.toUpperCase();
+        }
 
         const initials = state.user.username.substring(0, 2).toUpperCase();
         const initialEl = document.getElementById('user-initials');
