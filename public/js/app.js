@@ -7,6 +7,8 @@ const token = localStorage.getItem('token');
 // If no token, redirect to Landing (now at /)
 if (!token && !window.location.pathname.includes('index.html') && window.location.pathname !== '/' && window.location.pathname !== '/index.html') window.location.href = '/index.html';
 
+window.navigate = (page) => loadPage(page);
+
 const state = {
     activePage: 'dashboard',
     user: null,
@@ -249,6 +251,9 @@ function toggleSidebar() {
     toggle.innerHTML = sidebar.classList.contains('mobile-active') ? '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
 }
 
+
+
+
 async function fetchUser() {
     try {
         const res = await fetch(API_BASE_URL + '/api/auth/profile', {
@@ -373,88 +378,47 @@ function renderView(page, container) {
 }
 
 function renderRoadmap(container) {
-    // Collect all skills from enrolled courses
-    const skillMap = {};
-    if (state.enrolledCourses) {
-        state.enrolledCourses.forEach(c => {
-            const course = c.courseId;
-            if (!course || course.category === 'Academic') return; // Filter Academic Modules
+    // Redirecting Roadmap to the new Immersive Explorer experience
+    renderExploreTreeLayout(container, "ROADMAP");
+}
 
-            if (course.skills && course.skills.length > 0) {
-                course.skills.forEach(skill => {
-                    if (!skillMap[skill]) skillMap[skill] = [];
-                    skillMap[skill].push(course);
-                });
-            } else {
-                // Fallback for courses without specific skills
-                if (!skillMap['General Ops']) skillMap['General Ops'] = [];
-                skillMap['General Ops'].push(course);
-            }
-        });
-    }
 
-    const skills = Object.keys(skillMap);
-
+function renderExploreTreeLayout(container, mode = "EXPLORE") {
     container.innerHTML = `
-        <div class="h-full flex flex-col">
-            <!-- Roadmap Navbar -->
-            <div class="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
-                <div class="flex gap-4">
-                    <button class="px-6 py-2 bg-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20">My Path</button>
-                    <button onclick="loadPage('explore')" class="px-6 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">Explore Trees</button>
-                </div>
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    <span class="text-blue-400">${skills.length}</span> Active Nodes
-                </div>
-            </div>
+        <div class="w-full h-full flex flex-col items-center justify-center relative p-8 animate-in fade-in duration-700">
+            <!-- Background Decoration -->
+            <div class="absolute inset-0 bg-[#020308] rounded-[2rem] border border-white/5 -z-10"></div>
+            
+            <div class="glass-card p-12 max-w-lg w-full rounded-[3rem] border border-white/5 text-center relative overflow-hidden group shadow-2xl">
+                
+                <!-- Glow -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-600/10 rounded-full blur-[60px] group-hover:bg-blue-600/20 transition-all duration-700"></div>
 
-            <!-- Tree Visualization -->
-            ${skills.length > 0 ? `
-            <div class="relative pl-10 border-l border-blue-500/20 ml-10 space-y-12 pb-20">
-                ${skills.map((skill, index) => `
-                <div class="relative animate-in fade-in slide-in-from-bottom-4 duration-500" style="animation-delay: ${index * 100}ms">
-                    <!-- Connector Dot -->
-                    <div class="absolute -left-[45px] top-6 w-4 h-4 bg-black border-2 border-blue-500 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] z-10"></div>
+                <div class="relative z-10 font-syne">
+                    <div class="w-20 h-20 mx-auto bg-white/5 rounded-2xl flex items-center justify-center text-blue-500 mb-8 border border-white/5 shadow-lg backdrop-blur-md">
+                        <i class="fas fa-network-wired text-3xl"></i>
+                    </div>
+
+                    <h3 class="text-3xl font-black text-white uppercase tracking-tighter mb-4">Neural Matrix</h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-10 leading-relaxed">
+                        Access the immersive skill visualization engine.<br>
+                        Launch in a new protocol window for full capability.
+                    </p>
+
+                    <button onclick="window.open('/explore-tree.html', '_blank')" 
+                        class="w-full py-5 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white text-[10px] font-black uppercase tracking-[0.3em] transition-all active:scale-95 shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 group/btn">
+                        Launch System <i class="fas fa-external-link-alt group-hover/btn:translate-x-1 transition-transform"></i>
+                    </button>
                     
-                    <div class="glass-card p-8 rounded-3xl border-white/5 hover:border-blue-500/30 transition group">
-                        <div class="flex flex-col md:flex-row gap-8 items-start">
-                            <div class="w-full md:w-1/3">
-                                <h3 class="text-3xl font-black syne text-white mb-2 group-hover:text-blue-400 transition uppercase">${skill}</h3>
-                                <div class="inline-block px-3 py-1 bg-blue-600/10 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-widest mb-4">
-                                    mastery pending
-                                </div>
-                                <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                                     <div class="bg-blue-600 h-full" style="width: ${Math.random() * 60 + 20}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="w-full md:w-2/3 grid grid-cols-1 gap-4">
-                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Linked Modules</div>
-                                ${skillMap[skill].map(course => `
-                                <div onclick="openCoursePlayer('${course._id}')" class="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition group/item">
-                                    <div class="flex items-center gap-4">
-                                        <img src="${course.thumbnail || 'https://via.placeholder.com/150'}" class="w-12 h-8 object-cover rounded-md opacity-70 group-hover/item:opacity-100 transition">
-                                        <div class="text-xs font-bold text-zinc-300 group-hover/item:text-white transition">${course.title}</div>
-                                    </div>
-                                    <i class="fas fa-play-circle text-2xl text-slate-600 group-hover/item:text-blue-500 transition"></i>
-                                </div>
-                                `).join('')}
-                            </div>
-                        </div>
+                    <div class="mt-8 flex items-center justify-center gap-2">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Protocol Active</span>
                     </div>
                 </div>
-                `).join('')}
             </div>
-            ` : `
-            <div class="glass-card p-16 rounded-[3rem] text-center border-white/5">
-                <i class="fas fa-network-wired text-6xl text-slate-700 mb-6"></i>
-                <h3 class="text-2xl font-black syne text-white mb-4">NEURAL PATH OFFLINE</h3>
-                <p class="text-slate-400 mb-8 max-w-md mx-auto">No skill nodes detected. Enroll in tactical modules to generate your development roadmap.</p>
-                <button onclick="loadPage('store')" class="px-8 py-4 bg-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-500 transition shadow-lg shadow-blue-600/20">
-                    Initialize Protocol
-                </button>
-            </div>
-            `}
         </div>
     `;
 }
@@ -466,13 +430,13 @@ async function renderEnrolledCatalog(container, category) {
         enrolledIds.includes(String(c._id)) && c.category === category
     );
 
-    console.log('Academic Course Debug:', {
+    /* console.log('Academic Course Debug:', {
         totalCourses: state.courses.length,
         enrolledIds: enrolledIds.length,
         academicCourses: academicCourses.length,
         category: category,
         allCategories: state.courses.map(c => c.category)
-    });
+    }); */
 
     if (academicCourses.length === 0) {
         container.innerHTML = `
@@ -557,7 +521,7 @@ function renderOverview(container) {
     let totalPossibleLecs = 0;
     enrolledData.forEach(c => totalPossibleLecs += (c.lectureCount || 0));
 
-    console.log('Dashboard Lecture Count Debug:', {
+    /* console.log('Dashboard Lecture Count Debug:', {
         enrolledCourses: enrolledData.length,
         completedLectures: completedLecs,
         totalPossibleLectures: totalPossibleLecs,
@@ -566,7 +530,7 @@ function renderOverview(container) {
             lectureCount: c.lectureCount,
             units: c.units?.length || 0
         }))
-    });
+    }); */
 
     // XP AND LEVELING SYSTEM (1000 XP per level, max 100)
     const currentXP = state.user.xp || 0;
@@ -723,7 +687,12 @@ function renderOverview(container) {
                         </div>
                     </div>
 
-                    <button onclick="loadPage('explore')" class="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 transition-all border border-white/5 mt-4">Expand Neural Map</button>
+                    <div class="flex gap-4 mt-4">
+                        <button onclick="loadPage('explore')" class="flex-1 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 transition-all border border-white/5">Expand Neural Map</button>
+                        <button onclick="window.open('/explore-tree.html', '_blank')" class="flex-1 py-4 bg-blue-600/10 hover:bg-blue-600/20 rounded-2xl text-[9px] font-black uppercase tracking-widest text-blue-400 transition-all border border-blue-500/20">
+                            <i class="fas fa-external-link-alt mr-2"></i> Quick Launch
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -865,13 +834,17 @@ async function renderStoreCatalog(container) {
 }
 
 async function promptEnroll(id, title, price) {
-    if (confirm(`AUTHORIZE FINANCIAL TRANSACTION: Acquire ${title.toUpperCase()} for ₹${price}?`)) {
-        try {
-            const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) { await fetchUser(); loadPage(state.activePage); }
-            else { const d = await res.json(); alert(d.message.toUpperCase()); }
-        } catch (e) { alert('SYNC FAILURE.'); }
-    }
+    showZenithConfirm(
+        "Authorize Transaction",
+        `Acquire ${title.toUpperCase()} for ₹${price}? This will sync the module to your neural stack.`,
+        async () => {
+            try {
+                const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.ok) { await fetchUser(); loadPage(state.activePage); }
+                else { const d = await res.json(); alert(d.message.toUpperCase()); }
+            } catch (e) { alert('SYNC FAILURE.'); }
+        }
+    );
 }
 
 function renderHealth(container) {
@@ -920,6 +893,9 @@ function renderProfileTab() {
             </button>
             <button onclick="setProfileTab('wallet')" class="px-6 py-2 rounded-full text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.profileTab === 'wallet' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:text-white'}">
                 Neural Wallet
+            </button>
+            <button onclick="setProfileTab('protocols')" class="px-6 py-2 rounded-full text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.profileTab === 'protocols' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:text-white'}">
+                Manage Protocols
             </button>
         </div>
 
@@ -993,6 +969,59 @@ function renderProfileTab() {
                 </div>
             </div>
         </div>
+        ` : state.profileTab === 'protocols' ? `
+        <div class="glass-card p-12 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div class="flex items-center justify-between mb-10">
+                <div>
+                    <h3 class="text-3xl font-black syne text-white uppercase italic tracking-tighter">Active Protocols</h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Manage your skill trajectories</p>
+                </div>
+             </div>
+
+             <div class="space-y-6">
+                ${state.user.activeCareers && state.user.activeCareers.length > 0 ?
+                state.user.activeCareers.map(career => {
+                    const careerId = career._id || career;
+                    const careerName = career.name || career.title || 'Unknown Protocol';
+                    return `
+                        <div class="p-8 bg-white/5 border border-white/5 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-blue-500/30 transition-all">
+                            <div class="flex items-center gap-6">
+                                <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-600 transition-all">
+                                    <i class="fas fa-project-diagram text-2xl text-blue-500 group-hover:text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black text-white uppercase tracking-tight mb-1">${careerName}</h4>
+                                    <div class="flex items-center gap-3">
+                                        <span class="px-2 py-1 bg-blue-500/10 text-blue-500 rounded text-[8px] font-black uppercase tracking-widest">Active Link</span>
+                                        <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">ID: ${careerId.toString().substring(0, 8)}...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="terminateProtocol('${careerId}')" class="px-8 py-4 bg-red-600/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95">
+                                <i class="fas fa-trash-alt mr-2"></i> Terminate Protocol
+                            </button>
+                        </div>
+                        `;
+                }).join('')
+                : `
+                <div class="text-center py-20 border-2 border-dashed border-white/5 rounded-[3rem]">
+                    <i class="fas fa-ghost text-5xl text-slate-800 mb-6"></i>
+                    <p class="text-slate-600 font-black uppercase text-[10px] tracking-widest">No active protocols detected in neural stack.</p>
+                    <button onclick="loadPage('explore')" class="mt-8 px-10 py-4 bg-blue-600 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/20 hover:scale-105 transition-all">Initialize Protocol</button>
+                </div>
+                `}
+             </div>
+
+             <div class="mt-12 p-8 bg-blue-600/5 rounded-3xl border border-blue-500/10">
+                <h5 class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-3">
+                    <i class="fas fa-info-circle"></i> Protocol Security Notice
+                </h5>
+                <p class="text-[11px] text-slate-400 font-medium leading-relaxed">
+                    Terminating a protocol will remove it from your active neural map. Progress (XP and completed nodes) is preserved but the link must be re-established to continue data synchronization. 
+                    <span class="text-blue-500/80">Maximum of 3 protocol changes allowed per lunar cycle.</span>
+                </p>
+             </div>
+        </div>
         ` : `
         <div class="glass-card p-12 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500 text-center">
              <div class="inline-block p-6 rounded-full bg-blue-600/10 text-blue-500 mb-8 border border-blue-500/20"><i class="fas fa-wallet text-4xl"></i></div>
@@ -1047,9 +1076,13 @@ function handleAvatarFile(input) {
         reader.onload = function (e) {
             // Preview
             document.getElementById('avatar-preview').src = e.target.result;
-            if (confirm("Confirm Avatar Update?")) {
-                updateAvatar(file);
-            }
+            showZenithConfirm(
+                "Update Visual Identity",
+                "Do you want to authorize this avatar update for your operative profile?",
+                () => {
+                    updateAvatar(file);
+                }
+            );
         }
         reader.readAsDataURL(file);
     }
@@ -1074,6 +1107,72 @@ async function updateAvatar(file) {
             alert(d.message || "UPLOAD FAILED");
         }
     } catch (e) { alert("UPLOAD FAILED."); }
+}
+
+// --- SYSTEM UTILS & UI HELPERS ---
+
+function showZenithConfirm(title, message, onConfirm) {
+    const modal = document.getElementById('zenith-confirm-modal');
+    const titleEl = document.getElementById('z-confirm-title');
+    const msgEl = document.getElementById('z-confirm-message');
+    const proceedBtn = document.getElementById('z-confirm-proceed');
+    const cancelBtn = document.getElementById('z-confirm-cancel');
+
+    titleEl.innerText = title.toUpperCase();
+    msgEl.innerText = message.toUpperCase();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const handleConfirm = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        proceedBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        onConfirm();
+    };
+
+    const handleCancel = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        proceedBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    proceedBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+}
+
+async function terminateProtocol(skillId) {
+    showZenithConfirm(
+        "Protocol Termination Warning",
+        "Abandoning this career will remove it from your active neural stack. You will lose active synchronization but your progress data is preserved. Proceed?",
+        async () => {
+            ZLoader.show("De-linking Protocol...");
+            try {
+                const res = await fetch(API_BASE_URL + '/api/explore/careermode/select', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ skillId, action: 'remove' })
+                });
+
+                if (res.ok) {
+                    showToast("PROTOCOL TERMINATED SUCCESSFULLY", "success");
+                    await fetchUser();
+                    renderProfile(document.getElementById('app-content'));
+                } else {
+                    const d = await res.json();
+                    showToast(d.message || "TERMINATION FAILED", "error");
+                }
+            } catch (e) {
+                showToast("PROTOCOL LINK FAILURE", "error");
+            } finally {
+                ZLoader.hide();
+            }
+        }
+    );
 }
 
 
@@ -1302,223 +1401,38 @@ async function fetchMyRequests() {
 
 // --- LMS PLAYER v6.0 ---
 
-// Alias for academic course cards
+// Fix: Delegate to Zenith Player if available
+async function openPlayer(courseId) {
+    if (window.openCoursePlayer && window.openCoursePlayer.name !== 'openCoursePlayer') {
+        // This check is a bit tricky if function names are stripped/minified, 
+        // but since zenith-player overrides it, we can just try calling it.
+        // Better yet, check if ImmersiveEngine exists.
+    }
+
+    if (window.ImmersiveEngine) {
+        // Use the new player from zenith-player.js
+        if (typeof window.openCoursePlayer === 'function') {
+            return window.openCoursePlayer(courseId);
+        }
+    }
+
+    // Fallback or Error if new player not loaded
+    console.error("Zenith Player not loaded");
+    alert("System Error: Media Protocol Failed");
+}
+
+// Keep this for backward compatibility if needed, but it should be overridden by zenith-player.js
 function openCoursePlayer(courseId) {
     return openPlayer(courseId);
 }
 
-async function openPlayer(courseId) {
-    const modal = document.getElementById('modal-container');
-    if (!modal) {
-        console.error('Modal container not found');
-        return;
-    }
-    modal.style.display = 'flex';
-    modal.innerHTML = `<div class="p-20 text-center"><i class="fas fa-spin fa-spinner text-4xl text-blue-500"></i></div>`;
-
-    try {
-        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/content`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const course = await res.json();
-
-        if (!course) throw new Error('Link Lost.');
-
-        window.activeCourseContent = course;
-        renderCourseLanding(course);
-    } catch (e) {
-        console.error(e);
-        closeModal();
-        alert('LINK FAILURE: Unable to establish neural uplink.');
-    }
-}
-
-function closeModal() {
-    const modal = document.getElementById('modal-container');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.innerHTML = '';
-    }
-}
-
-function renderCourseLanding(course) {
-    const modal = document.getElementById('modal-container');
-    const isSkill = course.category === 'Skills';
-    const progress = state.user.courseProgress?.find(p => p.courseId === course._id) || { completedLectures: [], watchTime: 0 };
-    const totalLecs = course.units.reduce((acc, u) => acc + u.lectures.length, 0);
-    const completedPct = totalLecs > 0 ? Math.floor((progress.completedLectures.length / totalLecs) * 100) : 0;
-
-    modal.innerHTML = `
-        <div class="glass-card w-full max-w-7xl h-[90vh] rounded-[4rem] overflow-hidden flex flex-col relative border border-white/10 shadow-[0_0_100px_rgba(37,99,235,0.15)] animate-in zoom-in-95 duration-500">
-            <button onclick="closeModal()" class="absolute top-10 right-10 z-[120] text-slate-500 hover:text-white transition hover:scale-110">
-                <i class="fas fa-times text-4xl"></i>
-            </button>
-
-            <!-- Course Header/Banner -->
-            <div class="h-64 bg-gradient-to-r from-blue-900/40 via-blue-600/10 to-transparent p-16 flex items-end">
-                <div class="flex-grow">
-                    <span class="px-5 py-2 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 inline-block">${course.category} HUB</span>
-                    <h2 class="text-6xl font-black syne tracking-tighter uppercase mb-4">${course.title}</h2>
-                    <div class="flex items-center gap-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span><i class="fas fa-layer-group mr-2 text-blue-500"></i> ${course.units.length} Phases</span>
-                        <span><i class="fas fa-play-circle mr-2 text-blue-500"></i> ${totalLecs} Lectures</span>
-                        <span class="text-white"><i class="fas fa-trophy mr-2 text-yellow-500"></i> ${completedPct}% Synchronized</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Course Navbar -->
-            <div class="flex px-16 border-y border-white/5 bg-black/40">
-                <button onclick="renderCourseLanding(window.activeCourseContent)" class="px-10 py-6 text-[10px] font-black uppercase tracking-widest border-b-2 border-blue-600 text-white">Overview</button>
-                <button onclick="renderCourseCurriculum()" class="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">Curriculum</button>
-                ${isSkill ? `<button onclick="renderCourseStats()" class="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">Telemetry Hub</button>` : ''}
-            </div>
-
-            <!-- Scrollable Content Area -->
-            <div class="flex-grow overflow-y-auto custom-scrollbar p-16" id="course-modal-content">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16 animate-in fade-in slide-in-from-bottom-10 duration-700">
-                    <div class="lg:col-span-2 space-y-12">
-                        <div>
-                            <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-6">Briefing / Logic</h4>
-                            <p class="text-xl font-bold leading-relaxed text-slate-300">${course.description || 'Module lacks a narrative briefing. Direct uplink recommended.'}</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-8">
-                            <div class="p-8 bg-white/5 rounded-3xl border border-white/5 group">
-                                <h5 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Core Focus</h5>
-                                <div class="text-sm font-black text-white uppercase tracking-tight">System Engineering & Architecture</div>
-                            </div>
-                            <div class="p-8 bg-white/5 rounded-3xl border border-white/5 group">
-                                <h5 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Difficulty</h5>
-                                <div class="text-sm font-black text-white uppercase tracking-tight">High-Level Operative</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="glass-card p-10 rounded-[3rem] border-blue-500/20 bg-blue-600/5">
-                            <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-10 text-center">Procurement Status</h4>
-                            <div class="space-y-6">
-                                <button onclick="renderCourseCurriculum()" class="w-full py-6 bg-blue-600 rounded-3xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all">Resume Operation</button>
-                                <div class="text-center text-[10px] font-black text-slate-600 uppercase tracking-widest">v1.0.8 Neural Link Secured</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderCourseCurriculum() {
-    const course = window.activeCourseContent;
-    const container = document.getElementById('course-modal-content');
-    const userProgress = state.user.courseProgress?.find(p => p.courseId === course._id)?.completedLectures || [];
-
-    // Update Nav
-    const nav = container.previousElementSibling;
-    nav.querySelectorAll('button').forEach(b => b.classList.remove('border-b-2', 'border-blue-600', 'text-white'));
-    nav.querySelectorAll('button')[1].classList.add('border-b-2', 'border-blue-600', 'text-white');
-
-    container.innerHTML = `
-        <div class="max-w-4xl mx-auto animate-in fade-in slide-in-from-right-10 duration-500">
-            <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-12">Modular Sequence / Phases</h4>
-            <div class="space-y-12">
-                ${course.units.map((u, ui) => `
-                    <div class="relative pl-12">
-                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-slate-900 rounded-full"></div>
-                        <div class="absolute left-[-8px] top-0 w-5 h-5 rounded-full bg-slate-900 border-4 border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.6)]"></div>
-                        <div class="mb-8">
-                            <h5 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Phase ${ui + 1}</h5>
-                            <h3 class="text-3xl font-black syne tracking-tighter uppercase text-white">${u.title}</h3>
-                        </div>
-                        <div class="grid grid-cols-1 gap-4">
-                            ${u.lectures.map(l => {
-        const isComplete = userProgress.includes(l._id);
-        return `
-                                    <div onclick="launchProPlayer('${l._id}', '${u._id}')" class="p-8 bg-white/5 rounded-3xl border border-white/5 flex items-center justify-between group hover:bg-white/10 cursor-pointer transition-all border-l-4 ${isComplete ? 'border-l-blue-600' : 'border-l-transparent'}">
-                                        <div class="flex items-center gap-8">
-                                            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                <i class="fas ${l.videoUrl ? 'fa-play' : 'fa-file-alt'}"></i>
-                                            </div>
-                                            <div>
-                                                <div class="text-lg font-black tracking-tight uppercase">${l.title}</div>
-                                                <div class="text-[9px] font-black text-slate-600 uppercase tracking-widest mt-1">${l.videoUrl ? 'HD VIDEO FEED' : 'DOCS STREAM'}</div>
-                                            </div>
-                                        </div>
-                                        ${isComplete ? '<i class="fas fa-check-circle text-blue-500 text-xl"></i>' : '<i class="fas fa-chevron-right text-slate-800"></i>'}
-                                    </div>
-                                `;
-    }).join('')}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-}
-
-function renderCourseStats() {
-    const course = window.activeCourseContent;
-    const container = document.getElementById('course-modal-content');
-    const p = state.user.courseProgress?.find(p => p.courseId === course._id) || { completedLectures: [], watchTime: 0 };
-
-    // Update Nav
-    const nav = container.previousElementSibling;
-    nav.querySelectorAll('button').forEach(b => b.classList.remove('border-b-2', 'border-blue-600', 'text-white'));
-    nav.querySelectorAll('button')[2].classList.add('border-b-2', 'border-blue-600', 'text-white');
-
-    container.innerHTML = `
-        <div class="max-w-5xl mx-auto animate-in zoom-in-95 duration-500">
-            <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-12 text-center">Module Telemetry Hub</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-16">
-                <div class="glass-card p-10 rounded-[3rem] text-center border-white/5">
-                    <div class="text-blue-500 mb-6"><i class="fas fa-stopwatch text-3xl"></i></div>
-                    <div class="text-5xl font-black syne tracking-tighter mb-2">${Math.floor(p.watchTime / 60)}<span class="text-xl text-slate-700">M</span></div>
-                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Active Retention</p>
-                </div>
-                <div class="glass-card p-10 rounded-[3rem] text-center border-white/5">
-                    <div class="text-blue-500 mb-6"><i class="fas fa-tasks text-3xl"></i></div>
-                    <div class="text-5xl font-black syne tracking-tighter mb-2">${p.completedLectures.length}</div>
-                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Blocks Synchronized</p>
-                </div>
-                <div class="glass-card p-10 rounded-[3rem] text-center border-white/5">
-                    <div class="text-blue-500 mb-6"><i class="fas fa-signal text-3xl"></i></div>
-                    <div class="text-5xl font-black syne tracking-tighter mb-2">98<span class="text-xl text-slate-700">%</span></div>
-                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Neural Stability</p>
-                </div>
-            </div>
-            <div class="p-12 glass-card rounded-[4rem] border-white/5 relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-10 opacity-10"><i class="fas fa-award text-8xl text-blue-500"></i></div>
-                <h5 class="text-2xl font-black syne tracking-tighter uppercase mb-2">Available Strategic Badges</h5>
-                <p class="text-slate-500 font-bold mb-10 text-xs uppercase tracking-widest">Complete all phases to unlock master-tier credentials.</p>
-                <div class="flex gap-6 opacity-40 grayscale">
-                    <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10"><i class="fas fa-graduation-cap text-2xl"></i></div>
-                    <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10"><i class="fas fa-brain text-2xl"></i></div>
-                    <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10"><i class="fas fa-rocket text-2xl"></i></div>
-                </div>
-            </div>
-        </div>
-    `;
-}
+// [LEGACY MODAL LOGIC REMOVED - USING ZENITH PLAYER]
 
 // Assuming renderLeaderboard is defined elsewhere or will be added.
 // async function renderLeaderboard(container) {
 //     // ... existing leaderboard code ...
 // }
 
-function renderExploreTreeLayout(container) {
-    container.innerHTML = `
-        <div class="w-full h-[calc(100vh-180px)] rounded-3xl overflow-hidden glass-card border border-white/5 relative">
-            <iframe src="/explore-tree.html" class="w-full h-full border-none" style="background: transparent;"></iframe>
-            <div class="absolute top-4 right-4 flex gap-2">
-                <button onclick="window.open('/explore-tree.html', '_blank')" class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded-lg text-[10px] font-bold uppercase tracking-widest text-blue-400 backdrop-blur-md transition-all">
-                    <i class="fas fa-expand-alt mr-2"></i> Fullscreen Mode
-                </button>
-            </div>
-        </div>
-    `;
-}
 
 async function launchProPlayer(lecId, unitId) {
     const course = window.activeCourseContent;
@@ -1649,11 +1563,16 @@ async function postComment(lecId) {
 }
 
 async function deleteComment(id, lecId) {
-    if (!confirm('PURGE TRANSMISSION?')) return;
-    try {
-        await fetch(API_BASE_URL + `/api/courses/comments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-        renderComments(lecId);
-    } catch (e) { }
+    showZenithConfirm(
+        "Purge Transmission",
+        "Are you sure you want to permanently delete this comment from the neural nexus?",
+        async () => {
+            try {
+                await fetch(API_BASE_URL + `/api/courses/comments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                renderComments(lecId);
+            } catch (e) { }
+        }
+    );
 }
 
 async function toggleLectureComplete(lecId, courseId) {
@@ -1938,194 +1857,31 @@ async function submitNewMission() {
             document.getElementById('m-title').value = '';
             renderMissionControl(document.getElementById('app-content'));
             showToast("OPERATION INITIALIZED", "success");
+
         }
     } catch (e) { showToast("INIT FAILED", "error"); }
 }
 
 async function deleteTask(id) {
-    if (!confirm("ABORT MISSION?")) return;
-    try {
-        await fetch(API_BASE_URL + `/api/tasks/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        renderMissionControl(document.getElementById('app-content'));
-    } catch (e) { showToast("DELETE FAILED", "error"); }
+    showZenithConfirm(
+        "Abort Mission",
+        "Are you sure you want to terminate this mission? All current progress on this tactical objective will be lost.",
+        async () => {
+            try {
+                const res = await fetch(API_BASE_URL + `/ api / tasks / ${id} `, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token} ` }
+                });
+                if (res.ok) {
+                    showToast("MISSION ABORTED", "success");
+                    renderMissionControl(document.getElementById('app-content'));
+                }
+            } catch (e) { showToast("UPLINK FAILURE", "error"); }
+        }
+    );
 }
 
 
 
-function renderExploreTreeLayout(container) {
-    container.innerHTML = `
-        <div id="explore-loading" class="flex flex-col items-center justify-center py-32">
-            <div class="relative w-24 h-24 mb-6">
-                <div class="absolute inset-0 rounded-full border-4 border-blue-600/20"></div>
-                <div class="absolute inset-0 rounded-full border-4 border-t-blue-600 animate-spin"></div>
-            </div>
-            <p class="text-xs font-black uppercase tracking-[0.4em] text-slate-500 animate-pulse">Initializing Skill Constellation...</p>
-        </div>
-
-        <div id="explore-main-content" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <!-- Top Stats Banner -->
-            <div class="flex items-center gap-6 mb-10 px-2">
-                <div class="glass-card px-8 py-4 rounded-2xl border border-white/5 flex items-center gap-4 bg-gradient-to-r from-orange-600/10 to-transparent">
-                    <i class="fas fa-fire text-orange-500 text-lg"></i>
-                    <div>
-                        <div class="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Learning Streak</div>
-                        <div class="text-sm font-black text-white"><span id="streak-count">0</span> Days</div>
-                    </div>
-                </div>
-                <div class="glass-card px-8 py-4 rounded-2xl border border-white/5 flex items-center gap-4 bg-gradient-to-r from-blue-600/10 to-transparent">
-                    <i class="fas fa-star text-blue-500 text-lg"></i>
-                    <div>
-                        <div class="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Experience Points</div>
-                        <div class="text-sm font-black text-white"><span id="user-xp">0</span> XP</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid lg:grid-cols-4 gap-8">
-                <!-- Left Sidebar - Career Path & Stats -->
-                <div class="lg:col-span-1 space-y-8">
-                    <!-- Career Path Selector -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border border-white/5">
-                        <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Strategic Path</h2>
-                        <div class="relative group">
-                            <select id="career-path-select"
-                                class="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none focus:border-blue-500/50 appearance-none transition-all cursor-pointer group-hover:bg-black/60">
-                                <option value="">Select your path...</option>
-                            </select>
-                            <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-600 text-[10px] pointer-events-none group-hover:text-blue-500 transition-colors"></i>
-                        </div>
-
-                        <div id="career-progress" class="mt-8 hidden">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Trajectory</span>
-                                <span id="career-progress-percent" class="text-xs font-black text-blue-500">0%</span>
-                            </div>
-                            <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div id="career-progress-bar"
-                                    class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-1000 shadow-[0_0_15px_rgba(37,99,235,0.4)]"
-                                    style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border border-white/5">
-                        <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Neural Metrics</h2>
-                        <div class="space-y-5">
-                            <div class="flex items-center justify-between group">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-slate-300 transition-colors">Skills Mastered</span>
-                                <span id="skills-mastered" class="text-xs font-black text-green-500 bg-green-500/10 px-3 py-1 rounded-lg">0</span>
-                            </div>
-                            <div class="flex items-center justify-between group">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-slate-300 transition-colors">Active Training</span>
-                                <span id="skills-in-progress" class="text-xs font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-lg">0</span>
-                            </div>
-                            <div class="flex items-center justify-between group">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-slate-300 transition-colors">Unlocked Medals</span>
-                                <span id="achievements-count" class="text-xs font-black text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg">0</span>
-                            </div>
-                            <div class="flex items-center justify-between group">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-slate-300 transition-colors">Readiness Score</span>
-                                <span id="job-readiness" class="text-xs font-black text-purple-500 bg-purple-500/10 px-3 py-1 rounded-lg">0%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Placement Profile -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border border-white/5 hover:border-blue-500/20 transition-all">
-                        <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Placement Status</h2>
-                        <button onclick="openPlacementModal()"
-                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20 active:scale-95">
-                            <i class="fas fa-id-badge mr-2"></i> Update Profile
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Center - Skill Tree Visualization -->
-                <div class="lg:col-span-2">
-                    <div class="glass-card rounded-[3rem] p-4 min-h-[650px] relative border border-white/5 shadow-2xl overflow-hidden group">
-                        <div class="absolute top-8 left-8 z-10">
-                             <h2 class="text-xs font-black text-white uppercase tracking-[0.4em]">Skill Constellation</h2>
-                             <p class="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">Interactive Neural Pathway</p>
-                        </div>
-                        
-                        <div class="absolute top-8 right-8 z-10 flex gap-2">
-                            <button onclick="zoomIn()" class="w-10 h-10 bg-black/40 hover:bg-blue-600/20 border border-white/5 rounded-xl flex items-center justify-center text-xs transition-all hover:scale-110 active:scale-90">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button onclick="zoomOut()" class="w-10 h-10 bg-black/40 hover:bg-blue-600/20 border border-white/5 rounded-xl flex items-center justify-center text-xs transition-all hover:scale-110 active:scale-90">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button onclick="resetZoom()" class="w-10 h-10 bg-black/40 hover:bg-blue-600/20 border border-white/5 rounded-xl flex items-center justify-center text-xs transition-all hover:scale-110 active:scale-90">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-
-                        <!-- SVG Canvas for Skill Tree -->
-                        <div id="skill-tree-container" class="relative w-full h-[600px] cursor-grab active:cursor-grabbing">
-                            <svg id="skill-tree-svg" width="100%" height="100%" class="transition-transform duration-300 ease-out">
-                                <g id="connections"></g>
-                                <g id="nodes"></g>
-                            </svg>
-                        </div>
-
-                        <!-- Legend -->
-                        <div class="absolute bottom-8 left-8 flex gap-6 z-10">
-                            <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                                <span class="text-[8px] font-black uppercase text-slate-500 tracking-widest">Active</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                                <span class="text-[8px] font-black uppercase text-slate-500 tracking-widest">Mastered</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full bg-slate-800 border border-white/10"></div>
-                                <span class="text-[8px] font-black uppercase text-slate-500 tracking-widest">Locked</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Sidebar - Achievements & Recommendations -->
-                <div class="lg:col-span-1 space-y-8">
-                    <!-- Achievements -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border border-white/5">
-                        <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Recent Honors</h2>
-                        <div id="achievements-list" class="space-y-4">
-                            <p class="text-[10px] font-bold text-slate-600 text-center py-6 uppercase tracking-widest italic">No honors detected.</p>
-                        </div>
-                    </div>
-
-                    <!-- Recommended Next -->
-                    <div class="glass-card p-8 rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-blue-600/[0.03] to-purple-600/[0.03]">
-                        <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Tactical Logistics</h2>
-                        <div id="recommendations-list" class="space-y-4">
-                            <div class="p-6 text-center border border-dashed border-white/5 rounded-2xl">
-                                <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-loose">Initialize career trajectory to receive tactical recommendations.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Initialize Explore Tree Logic
-    if (typeof startExploreTree === 'function') {
-        setTimeout(startExploreTree, 100);
-    }
-}
-
-function renderExploreTreeLayout(container) {
-    container.innerHTML = `
-        <div class="h-full w-full rounded-[3rem] overflow-hidden border border-white/5 bg-[#050505] relative">
-            <iframe src="explore-tree.html" class="w-full h-full border-0" title="Explore Tree"></iframe>
-        </div>
-    `;
-}
 
 init();

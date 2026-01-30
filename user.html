@@ -750,22 +750,18 @@
                 <span>Academic Core</span>
             </a>
 
-            <a href="#" class="mobile-nav-item" onclick="navigate('skill'); closeMobileMenu();">
+            <a href="#" class="mobile-nav-item" onclick="loadPage('skill'); closeMobileMenu();">
                 <i class="fas fa-code"></i>
                 <span>Skill-Based</span>
             </a>
 
-            <a href="#" class="mobile-nav-item" onclick="navigate('explore'); closeMobileMenu();">
-                <i class="fas fa-project-diagram"></i>
-                <span>Explore Tree</span>
-            </a>
 
-            <a href="#" class="mobile-nav-item" onclick="navigate('transactions'); closeMobileMenu();">
+            <a href="#" class="mobile-nav-item" onclick="loadPage('transactions'); closeMobileMenu();">
                 <i class="fas fa-receipt"></i>
                 <span>Transactions</span>
             </a>
 
-            <a href="#" class="mobile-nav-item" onclick="navigate('profile'); closeMobileMenu();">
+            <a href="#" class="mobile-nav-item" onclick="loadPage('profile'); closeMobileMenu();">
                 <i class="fas fa-user"></i>
                 <span>Profile</span>
             </a>
@@ -816,9 +812,6 @@
                     </button>
                     <button onclick="loadPage('missions')" class="sidebar-item" id="nav-missions">
                         <i class="fas fa-tasks w-5"></i> Mission Control
-                    </button>
-                    <button onclick="loadPage('explore')" class="sidebar-item" id="nav-explore">
-                        <i class="fas fa-tree w-5"></i> Explore Tree
                     </button>
 
                     <div class="px-12 mt-12 mb-6 text-[10px] text-slate-600 font-bold tracking-[0.3em] uppercase">System
@@ -1028,16 +1021,39 @@
         <!-- Full-page immersive content will be injected here -->
     </div>
 
-    <!-- Course Player Modal Container -->
-    <div id="modal-container"
-        class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl hidden items-center justify-center p-6"
-        style="display: none;">
-        <!-- Content will be dynamically injected here -->
+    <!-- Explore Tree Launcher Modal -->
+
+
+
+    <!-- Zenith Confirmation Modal -->
+    <div id="zenith-confirm-modal"
+        class="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md hidden items-center justify-center p-6 animate-in fade-in duration-300">
+        <div
+            class="glass-card w-full max-w-md rounded-[2.5rem] border-white/10 p-10 overflow-hidden relative shadow-[0_0_50px_rgba(37,99,235,0.1)]">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+            <div class="text-center">
+                <div
+                    class="w-20 h-20 bg-blue-600/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-blue-500/20">
+                    <i class="fas fa-shield-alt text-4xl text-blue-500"></i>
+                </div>
+                <h3 id="z-confirm-title" class="syne text-2xl font-black text-white uppercase tracking-tighter mb-4">
+                    Confirm Action</h3>
+                <p id="z-confirm-message"
+                    class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed mb-10">Proceed
+                    with the following system modification?</p>
+                <div class="flex gap-4">
+                    <button id="z-confirm-cancel"
+                        class="flex-1 py-4 bg-white/5 border border-white/5 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/10 transition-all">Abort</button>
+                    <button id="z-confirm-proceed"
+                        class="flex-1 py-4 bg-blue-600 rounded-2xl text-[9px] font-black uppercase tracking-widest text-white shadow-xl shadow-blue-600/20 hover:scale-[1.05] transition-all">Authorize</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
     <script src="public/js/config.js"></script>
-    <script src="public/js/app.js"></script>
+    <script src="public/js/app.js?v=3.3.0"></script>
     <script src="public/js/zenith-player.js"></script>
     <script>lucide.createIcons();</script>
 </body>
