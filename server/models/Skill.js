@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const skillSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
-    category: { type: String, enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Game Dev', 'Other'], default: 'Other' },
+    category: { type: String, enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Game Dev', 'Cloud Computing', 'Other'], default: 'Other' },
     description: { type: String },
     icon: { type: String, default: 'fa-code' }, // Font Awesome icon class
     color: { type: String, default: '#3b82f6' }, // Hex color for the node
@@ -21,7 +21,8 @@ const skillSchema = new mongoose.Schema({
             videoUrl: { type: String, default: '' },
             notes: { type: String, default: '' }
         }],
-        parent: { type: String }, // ID of the parent node
+        parent: { type: String }, // Legacy support
+        parents: [{ type: String }], // Multi-parent support (DAG)
         videoUrl: { type: String, default: '' },
         pdfUrl: { type: String, default: '' },
         importantPoints: { type: String, default: '' },

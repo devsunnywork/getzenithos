@@ -165,13 +165,43 @@ router.post('/skills/:skillId/topics/:topicId/complete', auth, async (req, res) 
         }
 
         skillProgress.lastPracticed = new Date();
+
+        // --- STREAK UPDATE INTEGRATION ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const lastActive = user.learningStreak.lastActiveDate ? new Date(user.learningStreak.lastActiveDate) : null;
+
+        if (lastActive) {
+            lastActive.setHours(0, 0, 0, 0);
+            const daysDiff = Math.floor((today - lastActive) / (1000 * 60 * 60 * 24));
+            if (daysDiff === 1) {
+                user.learningStreak.current += 1;
+                if (user.learningStreak.current > user.learningStreak.longest) {
+                    user.learningStreak.longest = user.learningStreak.current;
+                }
+            } else if (daysDiff > 1) {
+                user.learningStreak.current = 1;
+            }
+        } else {
+            user.learningStreak.current = 1;
+            user.learningStreak.longest = 1;
+        }
+        user.learningStreak.lastActiveDate = today;
+        // ---------------------------------
+
         await user.save();
 
         res.json({
             message: 'Topic completed!',
             xpGained: xpReward,
             skillProgress: user.skillProgress,
-            userXp: user.xp
+            user: {
+                name: user.profile?.personalInfo?.fullName || user.username,
+                avatar: user.profile?.avatar,
+                xp: user.xp,
+                level: Math.floor(user.xp / 1000) + 1,
+                streak: user.learningStreak?.current || 0
+            }
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -314,19 +344,39 @@ router.post('/careermode/select', auth, async (req, res) => {
         }
 
         if (action === 'add') {
+            // FIX: ATOMIC CLEANUP & VALIDATION
+            const originalLength = user.activeCareers.length;
+
+            // 1. Force populate to inspect validity
+            await user.populate('activeCareers');
+
+            // 2. Filter out invalid references
+            const validCareers = user.activeCareers.filter(c => c !== null && c._id);
+            const cleanIDs = validCareers.map(c => c._id.toString());
+
+            // 3. Update with clean IDs
+            user.activeCareers = cleanIDs;
+
+            // 4. Persist cleanup if dirt was found
+            if (cleanIDs.length !== originalLength) {
+                await user.save();
+            }
+
+            // 5. Check Limits
             if (user.activeCareers.length >= 2) {
                 return res.status(400).json({ message: 'MAXIMUM CAPACITY: 2 CAREER PROTOCOLS ALREADY ACTIVE.' });
             }
-            if (user.activeCareers.includes(skillId)) {
+
+            // 6. Check duplicates (String to String)
+            const targetId = skillId.toString();
+            if (user.activeCareers.includes(targetId)) {
+                // Check if actually active (return 200 equivalent or 400 that client ignores?)
+                // Client ignores "ALREADY ACTIVE" message in 400, so we return 400 with specific text.
                 return res.status(400).json({ message: 'PROTOCOL ALREADY ACTIVE.' });
             }
 
-            // Check change limit
-            if (user.careerChangeMeta.changesThisMonth >= 3) {
-                return res.status(403).json({ message: 'SECURITY LOCK: 3 CHANGES PER MONTH LIMIT REACHED.' });
-            }
-
-            user.activeCareers.push(skillId);
+            // 7. Add new ID
+            user.activeCareers.push(targetId);
 
             // Auto-unlock/initialize skill progress if missing
             let skillProgress = user.skillProgress.find(sp => sp.skill.toString() === skillId);
@@ -340,22 +390,14 @@ router.post('/careermode/select', auth, async (req, res) => {
                 skillProgress.isUnlocked = true; // Ensure it is unlocked
             }
 
-            user.careerChangeMeta.changesThisMonth += 1;
             user.careerChangeMeta.history.push({ action: 'added', careerId: skillId });
         } else if (action === 'remove') {
-            if (!user.activeCareers.includes(skillId)) {
+            const isPresent = user.activeCareers.some(id => id.toString() === skillId);
+            if (!isPresent) {
                 return res.status(400).json({ message: 'PROTOCOL NOT FOUND IN ACTIVE STACK.' });
-            }
-            // Remove does not consume a change credit? User said "change them 3 a month". Usually add/swap is the change.
-            // Let's assume removing also counts if it's a "change" of state, OR be generous and only count Adds. 
-            // "select up to 2 ... and change them" implies swapping.
-            // Let's count REMOVE as a change to prevent abuse of swapping.
-            if (user.careerChangeMeta.changesThisMonth >= 3) {
-                return res.status(403).json({ message: 'SECURITY LOCK: 3 CHANGES PER MONTH LIMIT REACHED.' });
             }
 
             user.activeCareers = user.activeCareers.filter(id => id.toString() !== skillId);
-            user.careerChangeMeta.changesThisMonth += 1;
             user.careerChangeMeta.history.push({ action: 'removed', careerId: skillId });
         }
 
@@ -390,6 +432,14 @@ router.get('/careermode/my-progress', auth, async (req, res) => {
         // user.skillProgress tracks "skill" (which is the root skill) and "completedTopics" (node IDs)
 
         res.json({
+            user: {
+                name: user.profile?.personalInfo?.fullName || user.username, // Fix: Map to correct schema field
+                avatar: user.profile?.avatar,
+                email: user.email,
+                xp: user.xp,
+                level: Math.floor(user.xp / 1000) + 1, // Simple level calc
+                streak: user.learningStreak?.current || 0
+            },
             activeCareers: user.activeCareers,
             skillProgress: user.skillProgress,
             changesLeft: 3 - (user.careerChangeMeta.changesThisMonth || 0)

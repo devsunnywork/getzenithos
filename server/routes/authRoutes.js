@@ -46,7 +46,8 @@ router.get('/profile', auth, async (req, res) => {
         const user = await User.findById(req.user._id)
             .select('-password')
             .populate('enrolledCourses')
-            .populate('courseProgress.courseId');
+            .populate('courseProgress.courseId')
+            .populate('activeCareers');
         res.json(user);
     } catch (err) {
         res.status(500).json({ message: err.message });

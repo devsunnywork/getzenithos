@@ -34,7 +34,9 @@ const allowedOrigins = [
     'http://localhost:5000',           // Local development
     'http://127.0.0.1:5000',           // Local development (alternative)
     'https://getzenithos.netlify.app', // Final Netlify frontend
-    'https://getzenithos.onrender.com' // Render backend URL
+    'https://getzenithos.onrender.com', // Render backend URL
+    'http://127.0.0.1:5500',           // VS Code Live Server
+    'http://localhost:5500'            // VS Code Live Server (localhost)
 ];
 
 const corsOptions = {
