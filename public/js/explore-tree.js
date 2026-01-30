@@ -1,568 +1,1057 @@
-// Career Dashboard Logic (V2)
-const token = localStorage.getItem('token');
+/**
+ * ZENITH // EXPLORE TREE ENGINE v4.0
+ * -----------------------------------------------------------------------------
+ * A high-performance, SVG-based neural visualization engine for skill trees.
+ * 
+ * CORE ARCHITECTURE:
+ * 1. State Management: Centralized store for nodes, edges, and viewport state.
+ * 2. Visual Engine: Pure SVG manipulation for crisp rendering at any scale.
+ * 3. Interaction Layer: Event delegation for performant drag/zoom/click handling.
+ */
 
-const state = {
-    user: null,
-    skills: [], // All available skills (for selector)
-    activeCareer: null, // The currently viewed career object
-    activeCareerIndex: 0,
-    userProgress: [], // List of completed topic IDs
-    otherActiveCareers: [], // For switching
-    treeScale: 1,
-    isDragging: false,
-    lastMouse: { x: 0, y: 0 },
-    viewOffset: { x: 0, y: 0 },
-    viewInitialized: false, // NEW: track if we already centered the view
-    currentModalNode: null
+// --- CONFIGURATION ---
+const CONFIG = {
+    // Visuals
+    NODE_RADIUS: 40,
+    NODE_SPACING_X: 250,
+    NODE_SPACING_Y: 150,
+    CONNECTION_WIDTH: 2,
+    COLORS: {
+        background: '#020617', // Slate 950
+        nodeDefault: '#1e293b', // Slate 800
+        nodeActive: '#2563eb', // Blue 600
+        nodeLocked: '#0f172a', // Slate 900
+        nodeMastered: '#10b981', // Emerald 500
+        text: '#f8fafc',
+        textMuted: '#64748b',
+        accent: '#3b82f6'
+    },
+    // Physics / Camera
+    ZOOM_MIN: 0.1,
+    ZOOM_MAX: 3.0,
+    ZOOM_SENSITIVITY: 0.001,
+    PAN_FRICTION: 0.9,
+    ANIMATION_SPEED: 0.4 // Seconds
 };
 
-// --- Initialization ---
-
-async function startExploreTree() {
-    if (!token) return window.top.location.href = '/index.html';
-
-    ZLoader.show("Initializing Career Protocol...");
-    // Simulate high-tech loading delay for effect
-    setTimeout(async () => {
-        await loadData();
-        initPanZoom(); // Initialize panning system
-        ZLoader.hide();
-        document.getElementById('app-interface').classList.remove('hidden');
-    }, 1500);
-}
-
-async function loadData() {
-    try {
-        const [profileRes, progressRes, skillsRes] = await Promise.all([
-            fetch(API_BASE_URL + '/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(API_BASE_URL + '/api/explore/careermode/my-progress', { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(API_BASE_URL + '/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
-
-        const profile = await profileRes.json();
-        const progress = await progressRes.json();
-        const allSkills = await skillsRes.json();
-
-        state.user = profile;
-        state.userProgress = progress.skillProgress ? progress.skillProgress.filter(p => p.isMastered).map(p => p.skillId) : [];
-        // Note: backend 'skillProgress' tracks topics. Let's assume progress.skillProgress is array of { skillId: topicId, isMastered: true }
-        // Wait, backend response structure might be different. Let's adjust.
-        // Usually skillProgress is [{ skill: ID, progress: 50, isMastered: bool }] for ROOTS.
-        // We need Topic-level progress. 
-        // Let's assume the backend 'my-progress' returns { activeCareers: [Populated], skillProgress: [ { topicId: "...", isCompleted: true } ] }
-        // For now, I'll fallback to checking 'activeCareers' which should be populated with user data if I updated the route correctly.
-        // Actually, the route likely returns 'activeCareers' as the Skill Objects. User specific progress is separate.
-
-        state.skills = allSkills;
-        state.activeCareers = progress.activeCareers || [];
-        state.changesLeft = progress.changesLeft;
-
-        // Flatten completed topics from all skill progress entries
-        const allCompleted = (progress.skillProgress || []).flatMap(sp => sp.completedTopics || []);
-        state.completedNodeIds = new Set(allCompleted.map(id => id.toString()));
-
-        updateUIState();
-    } catch (e) {
-        console.error("System Failure:", e);
-        // showToast("DATA CORRUPTION DETECTED", "error");
+// --- STATE MANAGEMENT ---
+const State = {
+    nodes: [],
+    connections: [],
+    activeCareer: null,
+    view: {
+        x: 0,
+        y: 0,
+        scale: 1,
+        isDragging: false,
+        lastMouse: { x: 0, y: 0 }
+    },
+    ui: {
+        selectedNode: null,
+        hoveredNode: null
+    },
+    user: {
+        unlockedNodes: new Set(),
+        masteredNodes: new Set()
     }
-}
+};
 
-function updateUIState() {
-    const { activeCareers } = state;
+// --- CORE ENGINE ---
+class ExploreEngine {
+    constructor() {
+        this.svg = document.getElementById('tree-svg-layer');
+        this.container = document.getElementById('tree-container');
+        this.layers = {
+            connections: document.getElementById('connections-layer'),
+            nodes: document.getElementById('nodes-layer')
+        };
 
-    if (activeCareers.length === 0) {
-        // No active career -> Show Selection View
-        document.getElementById('view-selection').classList.remove('hidden');
-        document.getElementById('view-dashboard').classList.add('hidden');
-        document.getElementById('nav-tabs').classList.add('hidden');
-        document.getElementById('header-icon').className = 'fas fa-exclamation-triangle text-xl';
-        document.getElementById('career-name').innerText = "NO PROTOCOL";
-        document.getElementById('career-status').innerText = "SELECT PATH";
-    } else {
-        // Has active career
-        document.getElementById('view-selection').classList.add('hidden');
-        document.getElementById('nav-tabs').classList.remove('hidden');
-
-        // Load the target career (default to index 0)
-        loadCareerIntoView(state.activeCareerIndex);
+        this.init();
     }
-}
 
-function loadCareerIntoView(index) {
-    if (index >= state.activeCareers.length) index = 0;
-    state.activeCareerIndex = index;
-    state.activeCareer = state.activeCareers[index];
+    init() {
+        console.log("ZENITH // EXPLORE ENGINE: Initializing sequence...");
 
-    // Update Header
-    document.getElementById('header-icon').className = `fas ${state.activeCareer.icon || 'fa-code'} text-xl`;
-    document.getElementById('career-name').innerText = state.activeCareer.name;
-    document.getElementById('career-status').innerText = "PROTOCOL ACTIVE";
+        this.setupEventListeners();
+        this.fetchData(); // Run in parallel, but it handles its own UI updates
+        this.startRenderLoop();
 
-    // Update Views
-    renderDashboard();
-    renderTree();
-    renderSyllabus();
+        // FAIL-SAFE: Force loader removal after 5 seconds to prevent infinite lock
+        setTimeout(() => {
+            this.hideLoader();
+        }, 5000);
+    }
 
-    // Default to dashboard tab
-    switchTab('dashboard');
-}
 
-// --- Dashboard View ---
 
-function renderDashboard() {
-    const nodes = state.activeCareer.topics || [];
-    const totalNodes = nodes.length;
-    const completedNodes = nodes.filter(n => state.completedNodeIds.has(n._id)).length;
+    // --- DATA HANDLING ---
+    async fetchData() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return;
+            }
 
-    // Calculate Stats
-    // XP Calculation: Sum of XP of completed nodes (using curr node.xp || 50)
-    let totalXP = 0;
-    nodes.forEach(n => {
-        if (state.completedNodeIds.has(n._id)) {
-            totalXP += (n.xp || 50);
+            const response = await fetch(`${API_BASE_URL}/api/explore/careermode/my-progress`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            console.log("ZENITH // DEBUG DATA:", data); // DEBUG LOG
+
+            // Store User Data globally in State
+            State.user = data.user || { name: 'Operative', xp: 0, level: 1 };
+            State.skillProgress = data.skillProgress || [];
+
+            if (data.activeCareers && data.activeCareers.length > 0) {
+                // Load the first active career by default
+                this.loadTree(data.activeCareers[0], data.skillProgress);
+            } else {
+                // No active career, prompt selection
+                console.log("ZENITH // No active protocol. Initiating selection...");
+                // Just render empty dashboard with user stats
+                this.renderDashboard(State.user, { name: 'No Protocol', topics: [] }, []);
+                this.openCareerSelector();
+                this.hideLoader();
+            }
+        } catch (error) {
+            console.error("ZENITH // SYSTEM HALT: Data Retrieval Failed", error);
+            // Fallback to mock if API fails in dev
+            this.renderDashboard(State.user, { name: 'System Error', topics: [] }, []);
+            this.loadMockData();
+            this.hideLoader();
         }
-    });
-
-    const percent = totalNodes === 0 ? 0 : Math.round((completedNodes / totalNodes) * 100);
-
-    // XP AND LEVELING SYSTEM (1000 XP per level)
-    const currentLevel = Math.floor(totalXP / 1000) + 1;
-    const xpLeft = 1000 - (totalXP % 1000);
-
-    // Update DOM
-    document.getElementById('dash-xp').innerText = totalXP.toLocaleString();
-    document.getElementById('dash-level').innerText = `LEVEL ${currentLevel}`;
-    document.getElementById('xp-next-level').innerText = `${xpLeft} XP TO NEXT TIER`;
-    document.getElementById('dash-nodes').innerText = `${completedNodes}/${totalNodes}`;
-    document.getElementById('dash-percent').innerText = `${percent}%`;
-
-    // Circle Animation
-    const circle = document.getElementById('dash-circle');
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (percent / 100) * circumference;
-    circle.style.strokeDashoffset = offset;
-
-    // MASTERY CHECK: Toggle Certificate Access (Dashboard Buttons)
-    const isMastered = percent === 100;
-    const lockedBtn = document.getElementById('btn-claim-cert-locked');
-    const unlockedBtn = document.getElementById('btn-claim-cert-unlocked');
-    if (lockedBtn && unlockedBtn) {
-        lockedBtn.classList.toggle('hidden', isMastered);
-        unlockedBtn.classList.toggle('hidden', !isMastered);
     }
 
-    // Last Active Node (Just find the first unlocked but not completed for now, or last completed)
-    // Simple logic: Find first incomplete node
-    const nextNode = nodes.find(n => !state.completedNodeIds.has(n._id));
-    const lbl = document.getElementById('dash-last-node');
-    if (nextNode) {
-        lbl.innerText = `Next Target: ${nextNode.title}`;
-        lbl.style.cursor = 'pointer';
-        lbl.onclick = (e) => { e.stopPropagation(); openNodeInspector(nextNode); };
-    } else {
-        lbl.innerText = "All Targets Eliminated. Protocol Complete.";
-        lbl.onclick = null;
-    }
-}
+    renderDashboard(user, activeCareer, progressRaw) {
+        // Render User Stats
+        const elName = document.getElementById('dash-username');
+        const elXp = document.getElementById('dash-xp');
+        const elLevel = document.getElementById('dash-level');
+        const elStreak = document.getElementById('dash-streak');
+        const elCompleted = document.getElementById('dash-completed');
 
-function continueJourney() {
-    const nodes = state.activeCareer?.topics || [];
-    const nextNode = nodes.find(n => !state.completedNodeIds.has(n._id));
-    if (nextNode) {
-        openNodeInspector(nextNode);
-    } else {
-        showToast("PROTOCOL COMPLETE. ALL TARGETS ACQUIRED.", "success");
-    }
-}
+        // Safety checks
+        if (!user) user = { name: 'Operative', xp: 0, level: 1 };
+        if (!activeCareer) activeCareer = { name: 'Unknown', topics: [] };
 
-// --- Roadmap (Tree) View ---
+        if (elName) elName.innerText = user.name || user.username || 'Operative';
+        if (elXp) elXp.innerText = user.xp || 0;
+        if (elLevel) elLevel.innerText = user.level || 1;
+        if (elStreak) elStreak.innerText = user.streak || 0;
 
-function renderTree() {
-    const layer = document.getElementById('panning-layer');
-    const svg = document.getElementById('skill-tree-svg');
+        // Render Avatar if available
+        const elAvatarContainer = document.querySelector('.dash-avatar-container'); // Assuming class hook
+        // If not found, try to find the icon container
+        // Based on UI screenshot implies a dedicated area. The user mentioned "Show user full name and avatar"
+        // Let's assume there is an avatar container or we should fallback.
+        // Actually, looking at the code I read earlier, I didn't see explicit avatar ID.
+        // I will target the existing icon and replace it if avatar URL exists.
 
-    // Clear old nodes (keep svg)
-    Array.from(layer.children).forEach(c => {
-        if (c.tagName !== 'svg') c.remove();
-    });
-    svg.innerHTML = ''; // Clear lines
+        // Find the user icon - it was <i class="fas fa-user-astronaut ..."></i>
+        // I need to search for it in HTML or assume I can find it via parent.
+        // Let's look for an element with specific class in HTML first? No, I am in JS.
+        // I'll add an ID to the HTML in the next step to make this robust.
+        // For now, I'll add generic logic:
 
-    const nodes = state.activeCareer.topics || [];
-    if (nodes.length === 0) return;
+        const elAvatarImg = document.getElementById('dash-avatar-img');
+        const elAvatarIcon = document.getElementById('dash-avatar-icon');
 
-    // Render Connections (Lines)
-    nodes.forEach(node => {
-        if (node.parent) {
-            const parent = nodes.find(n => n.id === node.parent || n._id === node.parent || n.title === node.parent); // simplified find
-            if (parent && parent.position && node.position) {
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const p1 = parent.position;
-                const p2 = node.position;
-                // Cubic Bezier
-                const d = `M ${p1.x} ${p1.y} C ${p1.x} ${p2.y} ${p1.x} ${p2.y} ${p2.x} ${p2.y}`;
-                line.setAttribute('d', d);
-                line.setAttribute('stroke', '#334155');
-                line.setAttribute('stroke-width', '2');
-                line.setAttribute('fill', 'none');
-                svg.appendChild(line);
+        if (user.avatar && elAvatarImg) {
+            let avatarUrl = user.avatar;
+            if (avatarUrl.startsWith('/') || avatarUrl.startsWith('uploads/')) {
+                // Ensure it has a leading slash for normalization if it starts with uploads
+                const path = avatarUrl.startsWith('/') ? avatarUrl : '/' + avatarUrl;
+                if (path.startsWith('/uploads/')) {
+                    avatarUrl = API_BASE_URL + path;
+                } else {
+                    avatarUrl = path; // Standard relative path
+                }
+            }
+            elAvatarImg.src = avatarUrl;
+            elAvatarImg.classList.remove('hidden');
+            if (elAvatarIcon) elAvatarIcon.classList.add('hidden');
+        } else if (elAvatarIcon) {
+            if (elAvatarImg) elAvatarImg.classList.add('hidden');
+            elAvatarIcon.classList.remove('hidden');
+        }
+
+        // Find career specific progress
+        let completedCount = 0;
+        if (progressRaw) {
+            const careerProgress = progressRaw.find(p => p.skill && ((p.skill._id || p.skill) === activeCareer._id));
+            completedCount = careerProgress ? careerProgress.completedTopics.length : 0;
+        }
+
+        const totalNodes = activeCareer.topics ? activeCareer.topics.length : 0;
+        const percent = totalNodes > 0 ? Math.round((completedCount / totalNodes) * 100) : 0;
+
+        if (elCompleted) elCompleted.innerText = completedCount;
+
+        // Render Active Protocol Card
+        const elIcon = document.getElementById('active-skill-icon');
+        const elSkillName = document.getElementById('active-skill-name');
+        const elDesc = document.getElementById('active-skill-desc');
+        const elProgBar = document.getElementById('active-skill-progress');
+        const elPercent = document.getElementById('active-skill-percent');
+
+        if (elIcon) elIcon.className = `fas ${activeCareer.icon || 'fa-cube'} text-2xl text-white`;
+        if (elSkillName) elSkillName.innerText = activeCareer.name;
+        if (elDesc) elDesc.innerText = activeCareer.description || 'System initialized.';
+        if (elProgBar) elProgBar.style.width = `${percent}%`;
+        if (elPercent) elPercent.innerText = `${percent}%`;
+
+        // Update Milestones
+        const elMilestoneTitle = document.getElementById('milestone-title');
+        const elMilestoneDesc = document.getElementById('milestone-desc');
+        const elCertOverlay = document.getElementById('cert-locked-overlay');
+        const elCertBtn = document.getElementById('btn-claim-cert');
+
+        if (elMilestoneTitle && elMilestoneDesc) {
+            const currentLevel = user.level || 1;
+            const nextLevel = currentLevel + 1;
+            const nodesNeededForNextLevel = nextLevel * 5; // Example logic: each level needs lvl*5 nodes
+            const remaining = Math.max(0, nodesNeededForNextLevel - completedCount);
+
+            if (remaining > 0) {
+                elMilestoneTitle.innerText = `Level ${nextLevel} Protocol`;
+                elMilestoneDesc.innerText = `Complete ${remaining} more nodes to reach Rank ${nextLevel}`;
+            } else {
+                elMilestoneTitle.innerText = `Elite Operative`;
+                elMilestoneDesc.innerText = `Requirement for Rank ${nextLevel} cleared`;
             }
         }
-    });
 
-    // Render Nodes (DOM Elements)
-    nodes.forEach(node => {
-        const el = document.createElement('div');
-        const isCompleted = state.completedNodeIds.has(node._id);
-
-        // Differentiate by type
-        let size = 'w-12 h-12';
-        let glow = '';
-        let iconClass = 'fa-cube';
-
-        if (node.type === 'main') {
-            size = 'w-16 h-16';
-            glow = 'shadow-[0_0_30px_rgba(59,130,246,0.5)] border-blue-400';
-            iconClass = 'fa-shield-halved text-xl';
-        } else if (node.type === 'sub') {
-            size = 'w-10 h-10';
-            iconClass = 'fa-atom text-[9px]';
-        } else if (node.type === 'branch') {
-            iconClass = 'fa-code-branch';
+        // Add Achievement Handler
+        const btnAchievements = document.querySelector('button[onclick*="Achievements"]');
+        if (btnAchievements) {
+            btnAchievements.onclick = () => window.showAchievements();
         }
 
-        el.className = `absolute transform -translate-x-1/2 -translate-y-1/2 ${size} rounded-2xl flex items-center justify-center border transition-all cursor-pointer group hover:scale-110 z-10 
-            ${isCompleted ? 'bg-blue-600 border-blue-400 text-white ' + glow : 'bg-[#050505] border-white/10 text-slate-500 hover:border-blue-500 hover:text-white'}`;
+        // Check Certificate Status (Enhanced for New Card)
 
-        if (!isCompleted && node.type === 'main') el.classList.add('border-blue-900/50');
-
-        el.style.left = `${node.position?.x || 0}px`;
-        el.style.top = `${node.position?.y || 0}px`;
-
-        el.innerHTML = `<i class="fas ${isCompleted ? 'fa-check' : iconClass}"></i>`;
-
-        // Fix node title text - correct "JAVA SCRIPT" to "JavaScript"
-        let displayTitle = node.title;
-        if (displayTitle.toUpperCase() === 'JAVA SCRIPT') {
-            displayTitle = 'JavaScript';
+        if (percent >= 100) {
+            if (elCertOverlay) elCertOverlay.classList.add('opacity-0', 'pointer-events-none');
+            if (elCertBtn) {
+                elCertBtn.disabled = false;
+                elCertBtn.classList.remove('bg-white/5', 'text-slate-500');
+                elCertBtn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:scale-105');
+            }
+        } else {
+            if (elCertOverlay) elCertOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            if (elCertBtn) {
+                elCertBtn.disabled = true;
+                elCertBtn.classList.add('bg-white/5', 'text-slate-500');
+                elCertBtn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:scale-105');
+            }
         }
 
-        // Permanent Stylish Label (More visible with better spacing)
-        const label = document.createElement('div');
-        label.className = 'absolute top-full left-1/2 -translate-x-1/2 mt-6 text-[11px] font-black text-white uppercase tracking-[0.15em] whitespace-nowrap drop-shadow-xl pointer-events-none group-hover:text-blue-400 transition-colors';
-        label.innerHTML = `
-            <div class="flex flex-col items-center">
-                <div class="bg-black/80 px-4 py-2 rounded-lg border border-white/20 backdrop-blur-sm shadow-lg">${displayTitle}</div>
-            </div>
-        `;
-        el.appendChild(label);
-
-        // Hover Tooltip (Detailed)
-        const tip = document.createElement('div');
-        tip.className = 'absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 bg-blue-600 border border-blue-400 rounded-lg text-[10px] font-black text-white opacity-0 group-hover:opacity-100 transition shadow-xl pointer-events-none uppercase tracking-widest z-50';
-        tip.innerHTML = `<i class="fas fa-satellite mr-2"></i> ${node.type?.toUpperCase() || 'PROTOCOL'} MODULE`;
-        el.appendChild(tip);
-        el.onclick = (e) => { e.stopPropagation(); openNodeInspector(node); };
-        layer.appendChild(el);
-    });
-
-    // Initial View Offset: Find ROOT and center it
-    if (!state.viewInitialized && nodes.length > 0) {
-        const root = nodes.find(n => n.type === 'main') || nodes[0];
-        const container = document.getElementById('skill-tree-container');
-        if (root && root.position && container) {
-            const cw = container.clientWidth / 2;
-            const ch = container.clientHeight / 2;
-            // Calculate offset to bring root to center
-            state.viewOffset = {
-                x: cw - root.position.x,
-                y: ch - root.position.y
-            };
-            state.viewInitialized = true;
-        }
-    }
-    updateTreeTransform();
-}
-
-// Tree Interaction (Zoom/Pan)
-// (Simplifying for this file - basic implementation)
-function initPanZoom() {
-    const container = document.getElementById('skill-tree-container');
-    container.onmousedown = e => {
-        state.isDragging = true;
-        state.lastMouse = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mouseup', () => state.isDragging = false);
-    window.addEventListener('mousemove', e => {
-        if (!state.isDragging) return;
-        // Sensitivity Reduction (Dampening)
-        const sensitivity = 0.7;
-        const dx = ((e.clientX - state.lastMouse.x) / state.treeScale) * sensitivity;
-        const dy = ((e.clientY - state.lastMouse.y) / state.treeScale) * sensitivity;
-
-        state.viewOffset.x += dx;
-        state.viewOffset.y += dy;
-        state.lastMouse = { x: e.clientX, y: e.clientY };
-        updateTreeTransform();
-    });
-
-    // Wheel Zoom
-    container.onwheel = e => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        state.treeScale = Math.min(Math.max(0.2, state.treeScale * delta), 2);
-        updateTreeTransform();
-    };
-}
-
-function updateTreeTransform() {
-    const layer = document.getElementById('panning-layer');
-    if (layer) {
-        layer.style.transform = `translate(${state.viewOffset.x}px, ${state.viewOffset.y}px) scale(${state.treeScale})`;
-    }
-}
-
-function zoomIn() {
-    state.treeScale = Math.min(2, state.treeScale * 1.2);
-    updateTreeTransform();
-}
-
-function zoomOut() {
-    state.treeScale = Math.max(0.2, state.treeScale / 1.2);
-    updateTreeTransform();
-}
-
-function resetView() {
-    state.treeScale = 1;
-    const nodes = state.activeCareer?.topics || [];
-    if (nodes.length > 0) {
-        const root = nodes.find(n => n.type === 'main') || nodes[0];
-        const container = document.getElementById('skill-tree-container');
-        if (root && root.position && container) {
-            const cw = container.clientWidth / 2;
-            const ch = container.clientHeight / 2;
-            state.viewOffset = {
-                x: cw - root.position.x,
-                y: ch - root.position.y
-            };
-        }
-    } else {
-        state.viewOffset = { x: 0, y: 0 };
-    }
-    updateTreeTransform();
-}
-
-// --- Syllabus View ---
-
-function renderSyllabus() {
-    const list = document.getElementById('syllabus-list');
-    const nodes = state.activeCareer.topics || [];
-
-    // Group by 'parent' to create hierarchy? Or just a flat list for now with indents?
-    // Let's use simple list.
-    list.innerHTML = nodes.map(node => `
-        <div class="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-blue-500/30 cursor-pointer transition select-none" onclick="openNodeInspectorId('${node._id}')">
-            <div class="w-10 h-10 rounded bg-black/40 flex items-center justify-center text-slate-500 border border-white/5">
-                <i class="fas ${state.completedNodeIds.has(node._id) ? 'fa-check text-green-500' : 'fa-cube'}"></i>
-            </div>
-            <div class="flex-1">
-                <h4 class="text-sm font-bold text-white">${node.title}</h4>
-                <p class="text-[10px] text-slate-500 uppercase tracking-widest">${node.lectures ? node.lectures.length + ' Lectures' : 'Module'}</p>
-            </div>
-            <span class="text-[10px] font-mono text-blue-500 bg-blue-500/10 px-2 py-1 rounded">+${node.xp || 50} XP</span>
-        </div>
-    `).join('');
-}
-function openNodeInspectorId(id) {
-    const node = state.activeCareer.topics.find(n => n._id === id);
-    if (node) openNodeInspector(node);
-}
-
-
-// --- Node Inspector (Modal) ---
-
-function openNodeInspector(node) {
-    state.currentModalNode = node;
-    const modal = document.getElementById('node-modal');
-    modal.classList.remove('hidden');
-
-    // Populate Header
-    document.getElementById('nm-title').innerText = node.title;
-    document.getElementById('nm-xp').innerText = `${node.xp || 50} XP`;
-
-    const isCompleted = state.completedNodeIds.has(node._id);
-    const statusEl = document.getElementById('nm-status');
-    statusEl.innerText = isCompleted ? "COMPLETED" : "INCOMPLETE";
-    statusEl.className = isCompleted
-        ? "px-2 py-0.5 bg-green-500/20 text-green-400 text-[9px] font-bold uppercase tracking-widest rounded transition"
-        : "px-2 py-0.5 bg-slate-800 text-slate-500 text-[9px] font-bold uppercase tracking-widest rounded transition";
-
-    // Complete Button
-    const btn = document.getElementById('nm-complete-btn');
-    if (isCompleted) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-check-double text-blue-500"></i> MISSION ACCREDITED`;
-        btn.className = "btn-complete-protocol btn-complete-cleared w-full py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.3em] flex items-center justify-center gap-3";
-    } else {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-bolt"></i> START ACCREDITATION`;
-        btn.className = "btn-complete-protocol w-full py-5 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.3em] transition-all flex items-center justify-center gap-3";
+        // Store for certificate
+        this.currentUser = user;
+        this.currentSkill = activeCareer;
     }
 
-    // Populate Briefing / Intel
-    document.getElementById('nm-desc-content').innerText = node.description || "No mission description provided.";
-    document.getElementById('nm-notes-content').innerHTML = `<ul>${(node.importantPoints || '').split('\n').map(l => `<li>${l}</li>`).join('')}</ul>`;
-    document.getElementById('nm-pdf-link').href = node.pdfUrl || '#';
+    renderSyllabus(skill, nodes) {
+        const container = document.getElementById('syllabus-container');
+        if (!container) return;
 
-    // Populate Lectures List
-    renderModalLectures(node);
+        container.innerHTML = '';
 
-    // Default Tab
-    switchModalTab('visual');
-}
+        // Clear existing structure (remove Year 1/2/3 divs)
+        // We will just create a clean list of grouped topics based on their parent relationships or flat list 
+        // User requested "Show exactly as admin created", so we list them by depth/flow
 
-function renderModalLectures(node) {
-    const list = document.getElementById('nm-lecture-list');
-    const lectures = node.lectures || []; // Fallback if old node
+        // Group by Parent for clearer structure, or just flat list by level?
+        // Let's do a structured list: Root -> Children
 
-    // If no lectures structure, check legacy flat 'videoUrl' or 'url'
-    const legacyUrl = node.videoUrl || node.url;
-    if (lectures.length === 0 && legacyUrl) {
-        lectures.push({ title: "Main Briefing", videoUrl: legacyUrl, notes: "Core mission briefing." });
-    }
+        const renderNodeItem = (node, depth = 0) => {
+            const el = document.createElement('div');
+            el.className = `group flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5 transition cursor-pointer mb-2 ml-${depth * 4}`;
+            el.onclick = () => window.openNodeDetail(node);
 
-    if (lectures.length === 0) {
-        list.innerHTML = `<div class="text-center p-4 text-[10px] text-slate-600 italic">No video feeds available.</div>`;
-        document.getElementById('nm-video-frame').src = "";
-        document.getElementById('nm-no-video').classList.remove('hidden');
-        return;
-    }
+            const isDone = node.status === 'mastered';
+            const isLocked = node.status === 'locked';
 
-    list.innerHTML = lectures.map((lec, i) => `
-        <div onclick="playLecture(${i})" class="p-4 rounded-xl border border-white/5 bg-white/0 hover:bg-white/[0.03] hover:border-blue-500/20 cursor-pointer transition-all group relative overflow-hidden">
-            <div class="flex items-center gap-4 relative z-10">
-                <div class="w-10 h-10 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 group-hover:text-blue-500 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
-                    <i class="fas fa-play text-xs"></i>
+            let statusIcon = isLocked ? '<i class="fas fa-lock text-slate-600"></i>' : (isDone ? '<i class="fas fa-check text-emerald-500"></i>' : '<i class="fas fa-circle text-blue-500 text-[8px]"></i>');
+            let statusClass = isLocked ? 'bg-white/5 border-white/5' : (isDone ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-blue-500/10 border-blue-500/20');
+
+            el.innerHTML = `
+                <div class="w-10 h-10 rounded-lg ${statusClass} flex items-center justify-center border transition group-hover:scale-110 shrink-0">
+                    ${statusIcon}
                 </div>
-                <div class="flex-1 min-w-0">
-                    <h5 class="text-[11px] font-black text-white/80 uppercase tracking-widest group-hover:text-white transition truncate">${lec.title}</h5>
-                    <p class="text-[9px] font-black text-slate-600 uppercase tracking-tighter mt-1">Syllabus Segment 0${i + 1}</p>
+                <div class="flex-1">
+                    <h4 class="text-slate-200 font-bold text-sm group-hover:text-white transition">${node.label}</h4>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest">${node.data.description || 'Module Content'}</p>
                 </div>
-            </div>
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/0 to-blue-600/[0.02] opacity-0 group-hover:opacity-100 transition"></div>
-        </div>
-    `).join('');
+                <div class="text-right shrink-0">
+                    <span class="text-[10px] font-bold text-slate-600 group-hover:text-slate-400 transition">${node.data.xp || 50} XP</span>
+                </div>
+            `;
+            container.appendChild(el);
 
-    // Auto play first
-    playLecture(0);
-}
+            // Find children and render them
+            const children = nodes.filter(n => n.data.parent === node.id || n.data.parent === node.label);
+            children.forEach(child => renderNodeItem(child, depth + 1));
+        };
 
-function playLecture(index) {
-    const node = state.currentModalNode;
-    if (!node) return;
-
-    // Get processed lectures (same logic as renderModalLectures)
-    let lectures = [...(node.lectures || [])];
-    const legacyUrl = node.videoUrl || node.url;
-    if (lectures.length === 0 && legacyUrl) {
-        lectures.push({ title: "Main Briefing", videoUrl: legacyUrl, notes: node.description || "Core mission briefing." });
+        // Find roots (Depth 0)
+        const roots = nodes.filter(n => n.level === 0 || !n.data.parent);
+        if (roots.length === 0 && nodes.length > 0) {
+            // Fallback if no clear root
+            nodes.forEach(n => renderNodeItem(n, 0));
+        } else {
+            roots.forEach(r => renderNodeItem(r, 0));
+        }
     }
 
-    const lec = lectures[index];
-    if (!lec) return;
+    loadTree(skill, progress) {
+        console.log("ZENITH // Loading Protocol:", skill.name);
+        State.activeCareer = skill;
 
-    const vUrl = lec.videoUrl || lec.url;
+        // Parse Skill Topics into Graph
+        const { nodes, connections } = this.parseSkillToGraph(skill, progress);
 
-    // Update Video View
-    const frame = document.getElementById('nm-video-frame');
-    const noVid = document.getElementById('nm-no-video');
-    const title = document.getElementById('nm-active-lec-title');
+        State.nodes = nodes;
+        State.connections = connections;
 
-    title.innerText = lec.title || "Unknown Signal";
+        // Auto-center on Root
+        const root = nodes.find(n => n.type === 'root');
+        if (root) this.centerViewOn(root.x, root.y);
 
-    if (vUrl) {
-        let finalUrl = vUrl;
+        this.render();
+        this.render();
+        this.renderSyllabus(skill, nodes);
+        this.renderDashboard(State.user, skill, State.skillProgress); // <--- FIX: Update Dashboard UI
+        this.updateHUD();
+        this.hideLoader(); // FIX: Remove loader after render
+    }
 
-        // Robust YouTube Regex for all weird URL variants
-        const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-        const match = vUrl.match(ytRegex);
+    hideLoader() {
+        const loader = document.getElementById('zenith-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 1000);
+        }
+    }
 
-        if (match && match[1]) {
-            const videoId = match[1];
-            finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
-        } else if (vUrl.includes('youtube.com/embed/')) {
-            // Already embed, but ensuring autoplay policy
-            if (!vUrl.includes('autoplay=')) finalUrl += (vUrl.includes('?') ? '&' : '?') + 'autoplay=1';
+    parseSkillToGraph(skill, progress) {
+        const nodes = [];
+        const connections = [];
+        const topics = skill.topics || [];
+
+        // Helper for robust ID matching
+        const normalizeId = (val) => {
+            if (!val) return null;
+            if (val._id) return String(val._id); // Handle object/populated
+            return String(val); // Handle direct string/ID
+        };
+
+        // 1. Create Nodes
+        const levelMap = new Map(); // level -> count
+        const topicMap = new Map(); // id -> node
+
+        const getDepth = (t) => {
+            if (!t.parent) return 0;
+            const parent = topics.find(p => p._id === t.parent || p.title === t.parent);
+            return parent ? getDepth(parent) + 1 : 0;
+        };
+
+        topics.forEach(t => {
+            const depth = getDepth(t);
+            if (!levelMap.has(depth)) levelMap.set(depth, 0);
+
+            const countInLevel = levelMap.get(depth);
+            levelMap.set(depth, countInLevel + 1);
+
+            const userSkillProg = progress.find(p => {
+                const pId = normalizeId(p.skill);
+                const sId = normalizeId(skill);
+                return pId === sId;
+            });
+
+            const isCompleted = userSkillProg?.completedTopics?.some(topicId => normalizeId(topicId) === normalizeId(t._id));
+            const isUnlocked = t.parent ? true : true; // Simplify unlock logic for visual
+
+            const node = {
+                id: t._id,
+                label: t.title,
+                type: depth === 0 ? 'root' : 'skill',
+                status: isCompleted ? 'mastered' : (isUnlocked ? 'unlocked' : 'locked'),
+                level: depth,
+                index: countInLevel,
+                data: t,
+                x: 0,
+                y: 0
+            };
+
+            nodes.push(node);
+            topicMap.set(t._id, node);
+            topicMap.set(t.title, node);
+        });
+
+        // 2. Position Nodes
+        nodes.forEach(n => {
+            if (n.data.position && (n.data.position.x !== 0 || n.data.position.y !== 0)) {
+                // Use Admin-defined position
+                n.x = n.data.position.x;
+                n.y = n.data.position.y;
+            } else {
+                // Fallback: Auto-Layout
+                const count = levelMap.get(n.level);
+                const xOffset = -(count - 1) * CONFIG.NODE_SPACING_X / 2;
+                n.x = (n.index * CONFIG.NODE_SPACING_X) + xOffset;
+                n.y = n.level * CONFIG.NODE_SPACING_Y;
+            }
+        });
+
+        // 3. Create Connections
+        topics.forEach(t => {
+            if (t.parent) {
+                const parentNode = topicMap.get(t.parent);
+                const myNode = topicMap.get(t._id);
+                if (parentNode && myNode) {
+                    connections.push({ from: parentNode.id, to: myNode.id });
+                }
+            }
+        });
+
+        return { nodes, connections };
+    }
+
+    openCareerSelector() {
+        if (typeof window.openCareerSelector === 'function') {
+            window.openCareerSelector();
+        }
+    }
+
+    updateHUD() {
+        if (!State.activeCareer) return;
+        // const header = document.querySelector('#view-dashboard h2'); // REMOVED: Dashboard handles its own update now
+        // if (header) header.innerText = State.activeCareer.name;
+    }
+
+    loadMockData() {
+        // Generate a grid of nodes for testing rendering performance
+        const nodes = [];
+        const connections = [];
+        const tiers = 5;
+        const width = 4;
+
+        for (let i = 0; i < tiers; i++) {
+            for (let j = 0; j < width; j++) {
+                const id = `node-${i}-${j}`;
+                nodes.push({
+                    id,
+                    x: j * CONFIG.NODE_SPACING_X,
+                    y: i * CONFIG.NODE_SPACING_Y,
+                    label: `Module ${i}.${j}`,
+                    type: i === 0 ? 'root' : 'skill',
+                    status: i === 0 ? 'unlocked' : 'locked',
+                    level: i,
+                    data: { xp: 100, description: "System generated mock node." } // Mock data
+                });
+
+                if (i > 0) {
+                    // Connect to parent in row above
+                    connections.push({
+                        from: `node-${i - 1}-${j}`,
+                        to: id
+                    });
+
+                    // Cross connections
+                    if (j > 0 && Math.random() > 0.5) {
+                        connections.push({
+                            from: `node-${i - 1}-${j - 1}`,
+                            to: id
+                        });
+                    }
+                }
+            }
         }
 
-        frame.src = finalUrl;
-        frame.classList.remove('hidden');
-        noVid.classList.add('hidden');
+        State.nodes = nodes;
+        State.connections = connections;
+
+        // Center view on first node
+        if (nodes.length > 0) {
+            this.centerViewOn(nodes[0].x, nodes[0].y);
+        }
+
+        this.render();
+        this.renderSyllabus({ name: 'Simulation Protocol' }, nodes); // Mock syllabus
+        this.hideLoader(); // FIX: Remove loader after mock load
+    }
+
+    zoomIn() {
+        State.view.scale = Math.min(State.view.scale + 0.2, CONFIG.ZOOM_MAX);
+        this.updateTransform();
+    }
+
+    zoomOut() {
+        State.view.scale = Math.max(State.view.scale - 0.2, CONFIG.ZOOM_MIN);
+        this.updateTransform();
+    }
+
+    resetView() {
+        State.view.scale = 1;
+        State.view.x = 0;
+        State.view.y = 0;
+        this.updateTransform();
+
+        // Re-center on root
+        const root = State.nodes.find(n => n.type === 'root');
+        if (root) this.centerViewOn(root.x, root.y);
+    }
+
+    // --- RENDERING ---
+    render() {
+        this.renderConnections();
+        this.renderNodes();
+        this.updateTransform();
+    }
+
+    renderNodes() {
+        this.layers.nodes.innerHTML = '';
+
+        // Rectangular dimensions
+        const rectW = 180;
+        const rectH = 60;
+        const radius = 12;
+
+        State.nodes.forEach(node => {
+            const el = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            el.setAttribute("class", `node-group ${node.status}`);
+            // Center the rect on the coordinate (x - w/2, y - h/2)
+            el.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+            el.dataset.id = node.id;
+
+            // Glow Effect (behind rect)
+            const glow = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            glow.setAttribute("x", -rectW / 2);
+            glow.setAttribute("y", -rectH / 2);
+            glow.setAttribute("width", rectW);
+            glow.setAttribute("height", rectH);
+            glow.setAttribute("rx", radius);
+            glow.setAttribute("ry", radius);
+            glow.setAttribute("class", "node-glow");
+
+            // Main Shape (Rectangle)
+            const shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            shape.setAttribute("x", -rectW / 2);
+            shape.setAttribute("y", -rectH / 2);
+            shape.setAttribute("width", rectW);
+            shape.setAttribute("height", rectH);
+            shape.setAttribute("rx", radius);
+            shape.setAttribute("ry", radius);
+            shape.setAttribute("class", "node-shape");
+
+            // Label (Centered)
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", 0);
+            text.setAttribute("y", 5); // Slight optical adjustment for vertical center
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("dominant-baseline", "middle");
+            text.setAttribute("class", "node-label");
+            text.textContent = node.label;
+
+            el.appendChild(glow);
+            el.appendChild(shape);
+            el.appendChild(text);
+
+            // Interaction
+            el.style.cursor = 'pointer';
+            el.onclick = (e) => {
+                e.stopPropagation(); // Prevent drag start
+                window.openNodeDetail(node);
+            };
+
+            this.layers.nodes.appendChild(el);
+        });
+    }
+
+    // --- MODAL LOGIC ---
+    openNodeDetail(node) {
+        // defined globally below, calling it here for class method fallback
+        if (window.openNodeDetail) window.openNodeDetail(node);
+    }
+
+    renderConnections() {
+        this.layers.connections.innerHTML = '';
+
+        State.connections.forEach(conn => {
+            const startNode = State.nodes.find(n => n.id === conn.from);
+            const endNode = State.nodes.find(n => n.id === conn.to);
+
+            if (!startNode || !endNode) return;
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+            // Bezier Curve Logic
+            const deltaY = endNode.y - startNode.y;
+            const controlOffset = deltaY * 0.5;
+
+            const d = `M ${startNode.x} ${startNode.y} 
+                       C ${startNode.x} ${startNode.y + controlOffset}, 
+                         ${endNode.x} ${endNode.y - controlOffset}, 
+                         ${endNode.x} ${endNode.y}`;
+
+            path.setAttribute("d", d);
+            path.setAttribute("class", "connection-line");
+
+            this.layers.connections.appendChild(path);
+        });
+    }
+
+    updateTransform() {
+        // Apply global transform to the main group inside SVG
+        // Note: We need a group wrapping everything for pan/zoom
+        const transform = `translate(${State.view.x}, ${State.view.y}) scale(${State.view.scale})`;
+
+        // Optimization: Apply to the container group instead of re-rendering
+        // Assuming HTML structure has <g id="viewport">
+        const viewport = document.getElementById('viewport-group');
+        if (viewport) {
+            viewport.setAttribute("transform", transform);
+        }
+    }
+
+    // --- INTERACTION ---
+    setupEventListeners() {
+        // Pan & Zoom
+        this.svg.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                State.view.isDragging = true;
+                State.view.lastMouse = { x: e.clientX, y: e.clientY };
+                this.svg.style.cursor = 'grabbing';
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (State.view.isDragging) {
+                const dx = e.clientX - State.view.lastMouse.x;
+                const dy = e.clientY - State.view.lastMouse.y;
+
+                State.view.x += dx;
+                State.view.y += dy;
+                State.view.lastMouse = { x: e.clientX, y: e.clientY };
+
+                this.updateTransform();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            State.view.isDragging = false;
+            this.svg.style.cursor = 'grab';
+        });
+
+        this.svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = -e.deltaY * CONFIG.ZOOM_SENSITIVITY;
+            const newScale = Math.min(Math.max(State.view.scale + delta, CONFIG.ZOOM_MIN), CONFIG.ZOOM_MAX);
+
+            // Zoom towards mouse pointer logic (simplified for now)
+            State.view.scale = newScale;
+            this.updateTransform();
+        });
+    }
+
+    startRenderLoop() {
+        // Optional: requestAnimationFrame for smooth animations
+    }
+
+    centerViewOn(x, y) {
+        // Calculate offsets to center (x,y)
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        State.view.x = (width / 2) - (x * State.view.scale);
+        State.view.y = (height / 2) - (y * State.view.scale);
+
+        this.updateTransform();
+    }
+
+    showError(msg) {
+        console.error(msg);
+    }
+}
+
+// --- UI LOGIC (SELECTOR) ---
+
+// --- UI LOGIC (SELECTOR) ---
+
+window.openCareerSelector = async function () {
+    const modal = document.getElementById('modal-career-selector');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        await window.renderCareerList();
+    }
+};
+
+window.closeCareerSelector = function () {
+    const modal = document.getElementById('modal-career-selector');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+};
+
+window.renderCareerList = async function () {
+    const container = document.getElementById('career-list-grid');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-white text-center col-span-2">Loading Protocols...</div>';
+
+    try {
+        const token = localStorage.getItem('token');
+        // Fetch ALL skills (Admin added ones included)
+        const res = await fetch(`${API_BASE_URL}/api/explore/skills`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const skills = await res.json();
+
+        container.innerHTML = '';
+
+        if (skills.length === 0) {
+            container.innerHTML = '<div class="text-slate-500 italic col-span-2 text-center">No protocols found.</div>';
+            return;
+        }
+
+        skills.forEach(skill => {
+            const el = document.createElement('div');
+            el.className = 'group p-6 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/5 hover:border-blue-500/30 transition cursor-pointer flex items-center gap-6';
+            el.onclick = () => window.initiateSwitch(skill);
+
+            el.innerHTML = `
+                <div class="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 text-2xl group-hover:scale-110 transition">
+                    <i class="fas ${skill.icon || 'fa-cube'}"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-1">${skill.name}</h4>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest">${skill.description || 'System Protocol'}</p>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+
+    } catch (error) {
+        console.error("Failed to load skills:", error);
+        container.innerHTML = '<div class="text-red-500 text-center col-span-2">Connection Interrupted</div>';
+    }
+};
+
+let pendingSkillSwitch = null;
+
+window.initiateSwitch = function (skill) {
+    pendingSkillSwitch = skill;
+    // Show Confirm Modal
+    const modal = document.getElementById('modal-confirm-switch');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // Bind Confirm Button
+    const confirmBtn = document.getElementById('btn-confirm-switch');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => window.confirmSwitch();
+    }
+};
+
+window.closeConfirmModal = function () {
+    const modal = document.getElementById('modal-confirm-switch');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    pendingSkillSwitch = null;
+};
+
+// --- TOAST SYSTEM ---
+window.showToast = function (message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const el = document.createElement('div');
+    el.className = `min-w-[300px] p-4 rounded-xl border backdrop-blur-md shadow-2xl transform transition-all duration-300 translate-x-10 opacity-0 flex items-center gap-4 pointer-events-auto`;
+
+    // Colors based on type
+    if (type === 'error') {
+        el.className += ' bg-red-500/10 border-red-500/20 text-red-200';
+        el.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl"></i>`;
+    } else if (type === 'success') {
+        el.className += ' bg-emerald-500/10 border-emerald-500/20 text-emerald-200';
+        el.innerHTML = `<i class="fas fa-check-circle text-emerald-500 text-xl"></i>`;
     } else {
-        frame.src = "";
-        frame.classList.add('hidden');
-        noVid.classList.remove('hidden');
+        el.className += ' bg-blue-500/10 border-blue-500/20 text-blue-200';
+        el.innerHTML = `<i class="fas fa-info-circle text-blue-500 text-xl"></i>`;
     }
 
-    // Update specific notes for this lecture if any?
-    if (lec.notes) {
-        document.getElementById('nm-notes-content').innerHTML = `
-            <div class="mb-4 text-blue-400 font-bold uppercase text-xs tracking-widest border-b border-blue-500/20 pb-2">Log: ${lec.title}</div>
-            <div class="text-slate-300 leading-relaxed">${markdownToHtml(lec.notes)}</div>
-        `;
-    }
-}
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'text-sm font-bold';
+    msgDiv.innerText = message;
+    el.appendChild(msgDiv);
 
-function markdownToHtml(text) {
-    return text ? text.replace(/\n/g, '<br>') : '';
-}
+    container.appendChild(el);
 
-function closeNodeModal() {
-    document.getElementById('node-modal').classList.add('hidden');
-    document.getElementById('nm-video-frame').src = ""; // Stop video
-}
-
-function switchModalTab(tab) {
-    document.querySelectorAll('.nm-tab-btn').forEach(b => {
-        b.classList.remove('border-blue-500', 'text-white');
-        b.classList.add('border-transparent', 'text-slate-500');
+    // Animate In
+    requestAnimationFrame(() => {
+        el.classList.remove('translate-x-10', 'opacity-0');
     });
-    // Highlight active
-    const activeBtn = Array.from(document.querySelectorAll('.nm-tab-btn')).find(b => b.innerText.toLowerCase().includes(tab.split(' ')[0])); // Hacky match
-    if (activeBtn) {
-        activeBtn.classList.remove('border-transparent', 'text-slate-500');
-        activeBtn.classList.add('border-blue-500', 'text-white');
-    }
 
-    document.getElementById('nm-view-visual').classList.add('hidden');
-    document.getElementById('nm-view-intel').classList.add('hidden');
-    document.getElementById('nm-view-briefing').classList.add('hidden');
+    // Auto Remove
+    setTimeout(() => {
+        el.classList.add('translate-x-10', 'opacity-0');
+        setTimeout(() => el.remove(), 300);
+    }, 4000);
+};
 
-    document.getElementById(`nm-view-${tab}`).classList.remove('hidden');
-}
+window.confirmSwitch = async function () {
+    if (!pendingSkillSwitch) return;
 
+    const skillToSwitch = pendingSkillSwitch; // CAPTURE SELECTION BEFORE CLOSING MODAL
 
-// --- Actions ---
+    window.closeConfirmModal();
+    window.closeCareerSelector();
 
-async function completeCurrentNode() {
-    const node = state.currentModalNode;
-    if (!node) return;
-
-    const btn = document.getElementById('nm-complete-btn');
-    if (btn) {
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Syncing...';
-        btn.disabled = true;
+    // Show global loader
+    const loader = document.getElementById('zenith-loader');
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.style.opacity = '1';
     }
 
     try {
-        // Use node._id for standard Mongoose lookup
-        const skillId = state.activeCareer._id;
-        const topicId = node._id;
+        // Call API to set active career
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/explore/careermode/select`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ skillId: skillToSwitch._id, action: 'add' })
+        });
 
-        console.log(`[Zenith System] Initializing Sync: Skill=${skillId}, Topic=${topicId}`);
+        const data = await res.json();
 
-        const res = await fetch(API_BASE_URL + `/api/explore/skills/${skillId}/topics/${topicId}/complete`, {
+        if (!res.ok) {
+            throw new Error(data.message || 'Server rejected request');
+        }
+
+        // Simply reload the page to refresh all states fresh
+        window.location.reload();
+
+    } catch (error) {
+        console.error("Switch failed", error);
+        if (loader) loader.style.display = 'none';
+
+        if (window.showToast) {
+            window.showToast(error.message || "Connection Error", 'error');
+        } else {
+            console.error("Fallback Alert:", error.message);
+        }
+    }
+};
+
+window.openNodeDetail = function (node) {
+    const detailContainer = document.getElementById('modal-node-detail');
+    if (!detailContainer) return;
+
+    // Populate Content using the "Technical Intelligence Card" Design
+    const isCompleted = node.status === 'mastered';
+    const isLocked = node.status === 'locked';
+
+    // Define Button State
+    let buttonHtml = '';
+    if (isLocked) {
+        buttonHtml = `
+            <button disabled class="w-full py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-sm tracking-wide bg-white/5 text-slate-500 border border-white/5 cursor-not-allowed">
+                <i class="fas fa-lock grayscale"></i>
+                <span>LOCKED PROTOCOL</span>
+            </button>`;
+    } else if (isCompleted) {
+        buttonHtml = `
+            <button disabled class="w-full py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-sm tracking-wide bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default">
+                <i class="fas fa-check-circle"></i>
+                <span>ALREADY MASTERED</span>
+            </button>`;
+    } else {
+        buttonHtml = `
+            <button onclick="window.completeNode('${node.id}')" class="yt-button w-full py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-sm tracking-wide hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all shadow-lg shadow-blue-900/20 group">
+                <i class="fas fa-fingerprint group-hover:scale-110 transition"></i>
+                <span>MARK AS COMPLETE (+${node.data.xp || 50} XP)</span>
+            </button>`;
+    }
+
+    // Code Snippet (Mocking relevant code based on node title for immersion)
+    const codeSnippet = `// ${node.label} Implementation
+const ${node.label.replace(/[^a-zA-Z]/g, '')} = new Module({
+    id: "${node.id}",
+    status: "${node.status.toUpperCase()}",
+    power: ${node.data.xp || 50}
+});
+
+// Initialize Protocol
+${node.label.replace(/[^a-zA-Z]/g, '')}.execute();`;
+
+    const cleanSnippet = codeSnippet.replace(/'/g, "\\'").replace(/\n/g, '\\n');
+
+    const htmlRaw = `
+        <div class="tech-card rounded-[2rem] p-8 md:p-12 overflow-y-auto custom-scrollbar w-full max-w-7xl h-[90vh] mx-auto relative bg-[#0a0a0a] border border-white/10 shadow-2xl scale-95 opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
+            
+            <!-- Close Button -->
+            <button onclick="window.closeNodeDetail()" class="absolute top-6 right-6 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition z-50">
+                <i class="fas fa-times text-slate-400"></i>
+            </button>
+
+            <!-- Header Section -->
+            <div class="flex items-center justify-between mb-10">
+                <div class="flex items-center space-x-5">
+                    <div class="chip-icon p-3 rounded-xl bg-blue-500/10 text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                        <i class="${node.data.icon || 'fas fa-code'} text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xs font-black tracking-[0.3em] text-blue-500 uppercase mb-1">MODULE ${node.id ? node.id.substring(0, 4).toUpperCase() : '001'}</h2>
+                        <h1 class="text-xl font-bold text-white">${node.label}</h1>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <span class="px-3 py-1 rounded-full border border-gray-800 text-[10px] font-medium text-gray-500 tracking-tighter">STK-MEM-${node.level}04</span>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="grid grid-cols-1 gap-10">
+                
+                <!-- Definition & Points -->
+                <div class="space-y-8">
+                    <div class="p-6 bg-white/5 rounded-2xl border border-white/5">
+                        <p class="text-[16px] leading-relaxed text-gray-300">
+                            <strong class="text-blue-400 font-semibold">${node.label}</strong>: ${node.data.description || 'Master the fundamentals of this technical concept to advance your architecture.'}
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <h3 class="text-white/50 text-xs font-bold uppercase tracking-widest">Architecture</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start">
+                                    <span class="custom-bullet w-2 h-2 bg-blue-500 rounded-sm inline-block mr-3 mt-2 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></span>
+                                    <span class="text-gray-300 text-sm">Stored in <strong class="text-white">Knowledge Graph</strong>.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="custom-bullet w-2 h-2 bg-blue-500 rounded-sm inline-block mr-3 mt-2 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></span>
+                                    <span class="text-gray-300 text-sm">Unlocks <strong class="text-white">Tier ${node.level + 1}</strong> capabilities.</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="space-y-4">
+                            <h3 class="text-white/50 text-xs font-bold uppercase tracking-widest">Metadata</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded text-xs font-mono">xp: ${node.data.xp || 50}</span>
+                                <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded text-xs font-mono">time: ${node.data.estimatedHours || 2}h</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code Section -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-white font-bold text-sm italic">Code Implementation:</h3>
+                         <button id="copyBtn" class="glow-button px-5 py-2 rounded-xl text-xs font-bold text-blue-400 flex items-center space-x-2 transition-all" onclick="window.copyToClipboard('${cleanSnippet}')">
+                            <span id="copyText">Copy Code</span>
+                            <i id="copyIcon" class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="code-window bg-black border border-white/10 rounded-2xl p-6 overflow-hidden font-mono text-xs text-left">
+                        <pre class="text-slate-300 leading-relaxed"><code class="language-javascript">${codeSnippet}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Action Section -->
+                <div class="pt-4 border-t border-white/5">
+                    <div class="flex flex-col items-center space-y-4">
+                        <p class="text-xs text-gray-500 font-medium text-center">Complete this module to earn XP and progress:</p>
+                        ${buttonHtml}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] text-gray-600 gap-4">
+                <div class="flex space-x-6 uppercase tracking-widest">
+                    <span>Performance: <span class="text-green-500">Optimized</span></span>
+                    <span>Safety: <span class="text-blue-500">Thread-Safe</span></span>
+                </div>
+                <span class="font-mono text-gray-700">INTELLIGENCE_LAYER_01.INF</span>
+            </div>
+        </div>
+    `;
+
+    detailContainer.innerHTML = htmlRaw;
+
+    // Show Modal
+    detailContainer.classList.remove('hidden');
+    detailContainer.classList.add('flex');
+};
+
+window.closeNodeDetail = function () {
+    const modal = document.getElementById('modal-node-detail');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+};
+
+
+window.copyToClipboard = function (text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const copyBtn = document.getElementById('copyBtn');
+        const copyText = document.getElementById('copyText');
+        const copyIcon = document.getElementById('copyIcon');
+
+        if (copyBtn) {
+            // Transition UI to Success State
+            copyText.innerText = 'Copied!';
+            copyBtn.classList.add('copy-success');
+            copyBtn.classList.add('border-emerald-500/50');
+            copyBtn.classList.add('text-emerald-500');
+            if (copyIcon) copyIcon.className = 'fas fa-check text-emerald-500';
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+                copyText.innerText = 'Copy Code';
+                copyBtn.classList.remove('copy-success');
+                copyBtn.classList.remove('border-emerald-500/50');
+                copyBtn.classList.remove('text-emerald-500');
+                if (copyIcon) copyIcon.className = 'fas fa-copy';
+            }, 2000);
+        }
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+};
+
+window.completeNode = async function (nodeId) {
+    if (!State.activeCareer) return;
+
+    const btn = document.querySelector('.yt-button');
+    const originalHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Synchronization...';
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const skillId = State.activeCareer._id;
+
+        const res = await fetch(`${API_BASE_URL}/api/explore/skills/${skillId}/topics/${nodeId}/complete`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -571,231 +1060,127 @@ async function completeCurrentNode() {
         });
 
         const data = await res.json();
-        if (res.ok) {
-            showToast("DATA UPLINK SUCCESSFUL", "success");
-            await loadData(); // Full refresh to catch auto-completions
-            renderSyllabus();
-            renderTree();
-            renderDashboard();
-            closeNodeModal();
-        } else {
-            // Enhanced error message
-            const errMsg = data.details ? `${data.message}\n${data.details}` : (data.message || "Uplink Rejected");
-            showToast(errMsg, "error");
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-shield-check mr-2"></i> Mark Mission Complete';
-                btn.disabled = false;
-            }
+
+        if (!res.ok) {
+            throw new Error(data.message || 'Transmission Failed');
         }
-    } catch (e) {
-        console.error("Completion Error:", e);
-        showToast("SYNC ERROR", "error");
+
+        // Success: Update UI
+        if (window.showToast) window.showToast("Module Decrypted & Synchronized", "success");
+
+        // Update local state
+        const node = State.nodes.find(n => n.id === nodeId);
+        if (node) node.status = 'mastered';
+
+        // Update skillProgress in State
+        if (data.skillProgress) {
+            State.skillProgress = data.skillProgress;
+        }
+
+        if (data.user) {
+            State.user = data.user;
+        }
+
+        // Re-open detail to show updated state (or just close it?)
+        // Closing or re-rendering dashboard is better
+        window.openNodeDetail(node);
+
+        if (window.ZenithExplore) {
+            window.ZenithExplore.render();
+            window.ZenithExplore.renderDashboard(State.user, State.activeCareer, State.skillProgress);
+        }
+
+    } catch (error) {
+        console.error("ZENITH // Uplink Error:", error);
+        if (window.showToast) window.showToast(error.message, "error");
         if (btn) {
-            btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Mark Mission Complete';
             btn.disabled = false;
+            btn.innerHTML = originalHtml;
         }
     }
-}
+};
 
-// --- Helpers ---
+// --- INITIALIZATION ---
+// Ensure the system boots when script loads
+// --- CERTIFICATE SYSTEM ---
 
-function showToast(message, type = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.style.cssText = 'position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
-        document.body.appendChild(container); // Explore-tree is in iframe body
-    }
+window.openCertificate = function () {
+    const engine = window.ZenithExplore;
+    if (!engine || !engine.currentUser) return;
 
-    const toast = document.createElement('div');
-    const color = type === 'success' ? '#22c55e' : '#ef4444';
+    const user = engine.currentUser;
+    const skill = engine.currentSkill;
 
-    toast.style.cssText = `
-        background: #050505;
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 1rem;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-left: 4px solid ${color};
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        font-weight: 700;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-        transform: translateX(100%);
-        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 250px;
-    `;
-
-    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}" style="color: ${color}; font-size: 14px;"></i> <div>${message.replace(/\n/g, '<br>')}</div>`;
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => toast.style.transform = 'translateX(0)');
-
-    setTimeout(() => {
-        toast.style.transform = 'translateX(120%)';
-        setTimeout(() => toast.remove(), 400);
-    }, 4000);
-}
-
-function switchTab(tab) {
-    ['dashboard', 'roadmap', 'syllabus', 'videos'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.add('hidden');
-    });
-    document.getElementById(`view-${tab}`).classList.remove('hidden');
-
-    // Update Nav
-    const btns = document.getElementById('nav-tabs').children;
-    Array.from(btns).forEach(b => b.classList.remove('active'));
-    // Simple index logic or text match
-    if (tab === 'dashboard') btns[0].classList.add('active');
-    if (tab === 'roadmap') btns[1].classList.add('active');
-    if (tab === 'syllabus') btns[2].classList.add('active');
-    if (tab === 'videos') btns[3].classList.add('active');
-}
-
-function openCareerSelector() {
-    // Re-use logic from previous version, just simpler modal
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9999] p-10 flex items-center justify-center animate-in zoom-in-95 duration-300';
-
-    // Filter available skills
-    const availableSkills = state.skills || [];
-
-    modal.innerHTML = `
-        <div class="bg-[#050505] border border-white/5 p-14 rounded-[4rem] max-w-5xl w-full h-[80vh] flex flex-col relative overflow-hidden">
-            <div class="flex justify-between items-center mb-10 shrink-0">
-                <h2 class="text-4xl font-black uppercase tracking-tighter syne">Initialize Protocol</h2>
-                <button onclick="this.closest('.fixed').remove()" class="p-4 bg-white/5 rounded-2xl text-slate-500 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pr-4">
-                ${availableSkills.map(s => `
-                    <div class="p-8 glass-card rounded-[2.5rem] border-white/5 hover:border-blue-500/30 transition-all cursor-pointer group" onclick="selectCareer('${s._id}', 'add'); this.closest('.fixed').remove()">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="w-14 h-14 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 text-2xl border border-blue-600/20 group-hover:scale-110 transition">
-                                <i class="fas ${s.icon || 'fa-code'}"></i>
-                            </div>
-                            <span class="px-3 py-1 bg-white/5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-500">${s.category}</span>
-                        </div>
-                        <h4 class="text-xl font-black uppercase tracking-tighter text-white mb-2">${s.name}</h4>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest line-clamp-2">${s.description || 'No briefing available.'}</p>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-async function selectCareer(skillId, action) {
-    try {
-        const res = await fetch(API_BASE_URL + '/api/explore/careermode/select', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ skillId, action })
-        });
-        if (res.ok) {
-            window.location.reload(); // Simple reload to refresh all state
-        } else {
-            const d = await res.json();
-            showToast(d.message, 'error');
-        }
-    } catch (e) {
-        showToast("Selection Failed", 'error');
-    }
-}
-
-// --- Certificate Engine V8.0 ---
-
-function openCertificate() {
-    if (!state.user || !state.activeCareer) return;
-
-    // User Details
-    document.getElementById('cert-user-name').innerText = state.user.username.toUpperCase();
-    document.getElementById('cert-career-name').innerText = state.activeCareer.name.toUpperCase();
-
-    // Performance Grade (S-Tier for 100% completion)
-    const grade = document.getElementById('cert-grade');
-    grade.innerText = 'S-TIER';
-
-    // Sync Date
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
-    document.getElementById('cert-date').innerText = dateStr;
-
-    // Protocol ID (Random but consistent looking)
-    const protocolId = `Z-${Math.floor(1000 + Math.random() * 9000)}-${state.activeCareer.name.substring(0, 2).toUpperCase()}-ALPHA`;
-    document.getElementById('cert-protocol-id').innerText = protocolId;
-
-    // Verified Skills Matrix - Extract completed node titles
-    const completedNodes = [];
-    if (state.activeCareer && state.activeCareer.skills) {
-        state.activeCareer.skills.forEach(skill => {
-            if (skill.topics) {
-                skill.topics.forEach(topic => {
-                    const topicProgress = state.userProgress?.topics?.find(t => String(t.topicId) === String(topic._id));
-                    if (topicProgress?.completed) {
-                        completedNodes.push(topic.title);
-                    }
-                });
-            }
-        });
-    }
-
-    // Populate Skills List
-    const skillsList = document.getElementById('cert-skills-list');
-    if (completedNodes.length > 0) {
-        skillsList.innerHTML = completedNodes.slice(0, 8).map(title => `
-            <div class="flex items-center gap-3 p-4 bg-black/40 rounded-xl border border-white/5">
-                <i class="fas fa-check-circle text-emerald-500 text-sm"></i>
-                <span class="text-xs font-bold text-white uppercase tracking-tight">${title}</span>
-            </div>
-        `).join('');
-    } else {
-        skillsList.innerHTML = `
-            <div class="col-span-2 text-center py-6">
-                <p class="text-xs text-slate-500 uppercase tracking-widest">All Core Competencies Verified</p>
-            </div>
-        `;
-    }
+    document.getElementById('cert-user-name').innerText = (user.name || user.username).toUpperCase();
+    document.getElementById('cert-skill-name').innerText = skill.name.toUpperCase();
+    document.getElementById('cert-date').innerText = new Date().toISOString().split('T')[0];
+    document.getElementById('cert-id-val').innerText = 'Z-' + Math.floor(Math.random() * 90000 + 10000) + '-MOD';
+    document.getElementById('cert-hash').innerText = '0x' + Math.random().toString(16).slice(2, 10).toUpperCase() + '_ZENITH_S';
 
     document.getElementById('modal-certificate').classList.remove('hidden');
-}
+    document.getElementById('modal-certificate').classList.add('flex');
+};
 
-function closeCertificate() {
+window.closeCertificate = function () {
     document.getElementById('modal-certificate').classList.add('hidden');
-}
+    document.getElementById('modal-certificate').classList.remove('flex');
+};
 
-function downloadCertificate(event) {
-    // Aesthetic simulated download
-    const btn = event.currentTarget || document.querySelector('#modal-certificate button');
+window.showAchievements = function () {
+    if (window.showToast) window.showToast("Achievement System: Synchronizing with Kernel... (V2.0 coming soon)", "info");
+    // Optionally open a small modal with current user achievements
+    const engine = window.ZenithExplore;
+    if (!engine || !engine.currentUser) return;
+
+    const achievements = engine.currentUser.achievements || [];
+    if (achievements.length === 0) {
+        if (window.showToast) window.showToast("No official achievements detected in current protocol.", "info");
+    } else {
+        // Logic to show a list could go here
+    }
+};
+
+window.downloadCertificate = async function () {
+    const btn = document.getElementById('btn-cert-download');
+    const area = document.getElementById('cert-capture-area');
+    const userName = document.getElementById('cert-user-name').innerText;
+
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ENCRYPTING PDF...';
     btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Encrypting...';
 
-    setTimeout(() => {
-        btn.innerHTML = '<i class="fas fa-check"></i> DOWNLOAD SUCCESSFUL';
-        btn.classList.remove('bg-emerald-600');
-        btn.classList.add('bg-blue-600');
+    try {
+        const canvas = await html2canvas(area, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#0a0a0a',
+            logging: false
+        });
 
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [canvas.width / 2, canvas.height / 2]
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Zenith_Credential_${userName.replace(/\s+/g, '_')}.pdf`);
+
+        btn.innerHTML = '<i class="fas fa-check"></i> Export Success';
         setTimeout(() => {
             btn.innerHTML = originalText;
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-emerald-600');
             btn.disabled = false;
-        }, 2000);
-    }, 2500);
-}
-
-// Start
-window.onload = () => {
-    startExploreTree();
-    const btn = document.getElementById('btn-continue-journey');
-    if (btn) btn.onclick = continueJourney;
+        }, 3000);
+    } catch (err) {
+        console.error("Certificate Export Error:", err);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Link Failure';
+        btn.disabled = false;
+    }
 };
+
+window.ZenithExplore = new ExploreEngine();

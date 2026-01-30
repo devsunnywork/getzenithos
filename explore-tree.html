@@ -4,764 +4,969 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zenith // Career Protocol</title>
+    <title>Zenith // Explore Matrix</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Syne:wght@400;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;700;900&family=Space+Mono&display=swap"
         rel="stylesheet">
+    <!-- Scripts for Certificate Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
+        :root {
+            --zenith-blue: #2563eb;
+            --zenith-dark: #020308;
+            --zenith-card: rgba(11, 12, 21, 0.7);
+        }
+
         body {
-            background: transparent;
+            background-color: var(--zenith-dark);
+            color: white;
             font-family: 'Inter', sans-serif;
             overflow: hidden;
+            margin: 0;
         }
 
         .syne {
             font-family: 'Syne', sans-serif;
         }
 
-        .glass-panel {
-            background: rgba(5, 5, 5, 0.9);
+        .glass-card {
+            background: var(--zenith-card);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
         }
 
+        /* CUSTOM SCROLLBAR */
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02);
+            background: transparent;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(37, 99, 235, 0.2);
             border-radius: 10px;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-complete-protocol {
-            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .btn-complete-protocol:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
-            filter: brightness(1.1);
-        }
-
-        .btn-complete-protocol::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
+        #skill-tree-container {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: 0.6s;
+            cursor: grab;
+            overflow: hidden;
+            background: radial-gradient(circle at center, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
         }
 
-        .btn-complete-protocol:hover::before {
-            left: 100%;
+        #panning-layer {
+            transform-origin: 0 0;
+            will-change: transform;
         }
 
-        .btn-complete-cleared {
-            background: #111827 !important;
-            border-color: #1f2937 !important;
-            color: #4b5563 !important;
-            box-shadow: none !important;
-            cursor: not-allowed !important;
-            text-shadow: none !important;
-        }
-
-        .btn-complete-cleared:hover {
-            transform: none !important;
-        }
-
-        @keyframes scanline {
-            0% {
-                transform: translateY(-100%);
-            }
-
-            100% {
-                transform: translateY(100%);
-            }
-        }
-
-        .scanline::after {
-            content: '';
+        .node-card {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.1), transparent);
-            animation: scanline 3s linear infinite;
+            width: 220px;
+            padding: 20px;
+            border-radius: 20px;
+            background: rgba(11, 12, 21, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .node-card:hover {
+            border-color: var(--zenith-blue);
+            transform: scale(1.05) translateY(-5px);
+            z-index: 20;
+        }
+
+        .node-card.completed {
+            border-color: #10b981;
+        }
+
+        .connection-line {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 2;
+        }
+
+        .connection-line.active {
+            stroke: var(--zenith-blue);
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px var(--zenith-blue));
+        }
+
+        .hud-action-btn {
+            width: 48px;
+            height: 48px;
+            background: var(--zenith-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .hud-action-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* SVG NODE STYLES */
+        .node-shape {
+            fill: #0f172a;
+            /* Dark background */
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .node-group:hover .node-shape {
+            fill: #1e293b;
+            stroke: #3b82f6;
+            /* Blue border on hover */
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.4));
+        }
+
+        .node-label {
+            fill: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .connection-line {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.6);
+            /* White Lines */
+            stroke-width: 2;
+        }
+
+        .node-glow {
+            fill: none;
+            stroke: rgba(59, 130, 246, 0.2);
+            stroke-width: 0;
+            transition: all 0.5s ease;
+        }
+
+        .node-group:hover .node-glow {
+            stroke-width: 4px;
+            opacity: 1;
+        }
+
+        /* Status Colors */
+        /* Status Colors */
+        .node-group.mastered .node-shape {
+            fill: #064e3b;
+            /* Dark Emerald */
+            stroke: #10b981;
+            /* Bright Emerald Border */
+        }
+
+        .node-group.locked .node-shape {
+            fill: #020617;
+            /* Very Dark */
+            stroke: rgba(255, 255, 255, 0.1);
+            opacity: 0.6;
+        }
+
+        .node-group.locked .node-label {
+            fill: #64748b;
+            /* Dim text for locked */
+        }
+
+        .node-group.unlocked .node-shape {
+            fill: #1e293b;
+            stroke: #60a5fa;
+            /* Blue Border */
+        }
+
+        .node-group[data-type="root"] .node-shape {
+            fill: #831843;
+            /* Dark Pink */
+            stroke: #ec4899;
+            /* Pink Border */
+            stroke-width: 3px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+    <style>
+        /* TECHNICAL INTELLIGENCE CARD STYLES */
+        .tech-card {
+            background: linear-gradient(165deg, #0a0a0a 0%, #050505 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+
+        .tech-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), transparent, rgba(59, 130, 246, 0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
             pointer-events: none;
         }
 
-        .tab-btn.active {
+        .chip-icon {
             background: rgba(59, 130, 246, 0.1);
             color: #3b82f6;
-            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
         }
 
-        /* RESPONSIVE DESIGN - Mobile First */
+        .custom-bullet {
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 2px;
+            display: inline-block;
+            margin-right: 14px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+            flex-shrink: 0;
+            margin-top: 7px;
+        }
 
-        /* Mobile (default - up to 640px) */
-        @media (max-width: 640px) {
-            body {
-                padding: 1rem !important;
+        .code-window {
+            background: #000000;
+            border: 1px solid #1a1a1a;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .keyword {
+            color: #f472b6;
+        }
+
+        .type {
+            color: #60a5fa;
+        }
+
+        .comment {
+            color: #4b5563;
+        }
+
+        .value {
+            color: #fbbf24;
+        }
+
+        .glow-button {
+            transition: all 0.3s ease;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .glow-button:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+
+        .yt-button {
+            transition: all 0.3s ease;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .yt-button:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Success Animation for Copy */
+        @keyframes success-pop {
+            0% {
+                transform: scale(1);
             }
 
-            #app-interface header {
-                margin-bottom: 1rem !important;
-                flex-direction: column;
-                gap: 1rem;
+            50% {
+                transform: scale(1.1);
             }
 
-            #app-interface header h1 {
-                font-size: 1.5rem !important;
-            }
-
-            #nav-tabs {
-                width: 100%;
-                flex-wrap: wrap;
-            }
-
-            #nav-tabs button {
-                flex: 1;
-                min-width: 80px;
-                padding: 0.5rem 0.75rem !important;
-                font-size: 8px !important;
-            }
-
-            #btn-switch-career {
-                width: 100%;
-                justify-content: center;
-            }
-
-            /* Dashboard - Stack everything */
-            #view-dashboard .grid {
-                grid-template-columns: 1fr !important;
-                gap: 1rem !important;
-                padding: 1rem !important;
-            }
-
-            #view-dashboard .col-span-4,
-            #view-dashboard .col-span-8,
-            #view-dashboard .col-span-2 {
-                grid-column: span 1 !important;
-            }
-
-            /* Smaller circular progress */
-            #view-dashboard .w-48 {
-                width: 10rem !important;
-                height: 10rem !important;
-            }
-
-            #dash-percent {
-                font-size: 2.5rem !important;
-            }
-
-            /* Card text sizing */
-            #view-dashboard h2 {
-                font-size: 2rem !important;
-            }
-
-            #view-dashboard h3 {
-                font-size: 1rem !important;
-            }
-
-            /* Certificate and Resume buttons */
-            #btn-claim-cert-locked,
-            #btn-claim-cert-unlocked,
-            #btn-continue-journey {
-                padding: 1.5rem !important;
-            }
-
-            /* Modal adjustments */
-            #node-modal .max-w-6xl {
-                max-width: 100% !important;
-                height: 100vh !important;
-                border-radius: 0 !important;
-            }
-
-            #node-modal .w-80 {
-                width: 100% !important;
-                border-right: none !important;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-
-            #node-modal>div>div {
-                flex-direction: column !important;
+            100% {
+                transform: scale(1);
             }
         }
 
-        /* Tablet (641px to 1024px) */
-        @media (min-width: 641px) and (max-width: 1024px) {
-            body {
-                padding: 1.5rem !important;
-            }
-
-            #app-interface header {
-                margin-bottom: 1.5rem !important;
-            }
-
-            #app-interface header h1 {
-                font-size: 1.75rem !important;
-            }
-
-            /* Dashboard - 2 column grid */
-            #view-dashboard .grid-cols-12 {
-                grid-template-columns: repeat(6, 1fr) !important;
-            }
-
-            #view-dashboard .col-span-4 {
-                grid-column: span 6 !important;
-            }
-
-            #view-dashboard .col-span-8 {
-                grid-column: span 6 !important;
-            }
-
-            #view-dashboard .col-span-8 .grid-cols-2 {
-                grid-template-columns: repeat(2, 1fr) !important;
-            }
-        }
-
-        /* Desktop (1025px and up) - Enhanced spacing */
-        @media (min-width: 1025px) {
-            #view-dashboard {
-                padding: 2.5rem !important;
-            }
-
-            #view-dashboard .grid {
-                gap: 2rem !important;
-            }
-
-            #view-dashboard .col-span-8 .grid {
-                gap: 1.5rem !important;
-            }
-        }
-
-        /* Touch-friendly buttons on mobile */
-        @media (max-width: 640px) {
-            button {
-                min-height: 44px;
-                min-width: 44px;
-            }
-
-            /* Tree controls on mobile */
-            #view-roadmap .absolute.bottom-8 {
-                bottom: 1rem !important;
-                right: 1rem !important;
-            }
-
-            #view-roadmap .absolute.bottom-8 button {
-                width: 44px !important;
-                height: 44px !important;
-            }
+        .copy-success {
+            animation: success-pop 0.3s ease-out;
+            color: #10b981 !important;
         }
     </style>
 </head>
 
-<body class="text-white h-screen w-screen flex flex-col p-6"> <!-- Added padding for iframe fit -->
-
-    <!-- Zenith Loader -->
+<body class="bg-[#020308]">
+    <!-- ESTABLISH LINK LOADER -->
     <div id="zenith-loader"
-        class="fixed inset-0 z-[9999] bg-[#020202] flex flex-col items-center justify-center transition-all duration-700 pointer-events-none opacity-0">
-        <div class="relative">
-            <div class="absolute inset-0 bg-blue-600/20 rounded-full blur-3xl animate-pulse scale-150"></div>
-            <div class="w-24 h-24 border-2 border-blue-500/10 rounded-full flex items-center justify-center">
-                <div class="w-16 h-16 border-t-2 border-blue-600 rounded-full animate-spin"></div>
-            </div>
-            <div class="absolute inset-0 flex items-center justify-center font-black text-xs syne text-blue-500">Z</div>
+        class="fixed inset-0 z-[500] bg-[#020308] flex flex-col items-center justify-center transition-opacity duration-1000">
+        <div class="relative w-24 h-24 mb-8">
+            <div class="absolute inset-0 border-4 border-blue-600/10 rounded-[2rem] animate-pulse"></div>
+            <div class="absolute inset-0 border-t-4 border-blue-600 rounded-[2rem] animate-spin"></div>
         </div>
-        <div class="mt-8 text-center">
-            <div class="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/50 mb-2">Neural Link Active
-            </div>
-            <div class="loader-msg text-xs text-white font-black uppercase tracking-[0.2em] animate-pulse">Syncing
-                Intelligence...</div>
-        </div>
+        <div class="text-[10px] font-black text-blue-500 uppercase tracking-[0.6em] animate-pulse">Establishing Neural
+            Link...</div>
     </div>
 
-    <!-- MAIN INTERFACE (Hidden initially) -->
-    <div id="app-interface" class="w-full h-full flex flex-col hidden animate-in fade-in duration-500 relative">
+    <!-- MAIN APP WRAPPER -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-24 md:w-80 glass-card border-r border-white/5 flex flex-col z-40 relative">
+            <div class="p-8 border-b border-white/5 mb-8">
+                <div class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-2">Protocol</div>
+                <h1 class="text-xl font-black syne tracking-tighter uppercase text-white">Explore<span
+                        class="text-blue-600">.OS</span></h1>
+            </div>
 
-        <!-- HEADER / NAVIGATION -->
-        <header class="flex items-center justify-between mb-3 shrink-0 z-20">
-            <div class="flex items-center gap-4">
-                <div class="p-3 bg-blue-600/10 border border-blue-500/20 rounded-xl text-blue-400">
-                    <i id="header-icon" class="fas fa-network-wired text-xl"></i>
-                </div>
-                <div>
-                    <h1 id="career-name" class="text-2xl font-black syne uppercase leading-none mb-1">Select Protocol
-                    </h1>
-                    <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></span>
-                        <span id="career-status"
-                            class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Standby</span>
+            <div class="px-8 text-slate-500 text-xs leading-relaxed mb-8">
+                Connect nodes to unlock new abilities.
+            </div>
+
+            <!-- SIDEBAR NAVIGATION -->
+            <nav class="flex-1 px-6 space-y-2">
+                <button onclick="window.backToZenith()"
+                    class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition group">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition">
+                        <i class="fas fa-home text-xs"></i>
                     </div>
-                </div>
-            </div>
-
-            <!-- TABS -->
-            <nav id="nav-tabs" class="flex p-1 bg-white/5 border border-white/5 rounded-xl hidden">
-                <button onclick="switchTab('dashboard')"
-                    class="tab-btn active px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">Dashboard</button>
-                <button onclick="switchTab('roadmap')"
-                    class="tab-btn px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">Roadmap</button>
-                <button onclick="switchTab('syllabus')"
-                    class="tab-btn px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">Syllabus</button>
-                <button onclick="switchTab('videos')"
-                    class="tab-btn px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">Video
-                    Library</button>
-            </nav>
-
-            <!-- Career Switcher (Only if multiple) -->
-            <div class="flex items-center gap-4">
-                <button id="btn-switch-career" onclick="openCareerSelector()"
-                    class="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition">
-                    <i class="fas fa-exchange-alt mr-2"></i> <span
-                        class="text-[10px] font-black uppercase tracking-widest">Switch</span>
+                    <span class="text-xs font-bold uppercase tracking-widest">Home Hub</span>
                 </button>
-            </div>
-        </header>
 
-        <!-- VIEWS -->
-        <main class="flex-1 relative overflow-hidden rounded-[2rem] glass-panel scanline">
+                <div class="h-px bg-white/5 my-4 mx-4"></div>
 
-            <!-- VIEW: SELECTION (Empty State) -->
-            <div id="view-selection"
-                class="absolute inset-0 flex flex-col items-center justify-center p-10 z-10 transition-all duration-300">
-                <div class="text-center max-w-lg">
-                    <i class="fas fa-project-diagram text-6xl text-slate-800 mb-6"></i>
-                    <h2 class="text-4xl font-black syne uppercase text-white mb-4">No Active Protocols</h2>
-                    <p class="text-sm text-slate-400 mb-8 leading-relaxed">Initialize a new career path to begin your
-                        neural augmentation journey.</p>
-                    <button onclick="openCareerSelector()"
-                        class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest shadow-[0_0_30px_rgba(59,130,246,0.3)] transition-all transform hover:scale-105">
-                        Initialize Protocol
+                <button onclick="switchTab('dashboard')" id="nav-dashboard"
+                    class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-white bg-blue-600 shadow-lg shadow-blue-900/20 transition group">
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                        <i class="fas fa-chart-pie text-xs"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest">Dashboard</span>
+                </button>
+
+
+                <button onclick="switchTab('syllabus')" id="nav-syllabus"
+                    class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition group">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition">
+                        <i class="fas fa-book text-xs"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-widest">Syllabus</span>
+                </button>
+
+                <div class="mt-auto pt-8">
+                    <button onclick="window.openCareerSelector()"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 transition group border border-amber-500/20">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                            <i class="fas fa-exchange-alt text-xs"></i>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-widest">Switch Path</span>
                     </button>
                 </div>
-            </div>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 relative overflow-hidden bg-[#020308]">
 
             <!-- VIEW: DASHBOARD -->
-            <div id="view-dashboard" class="absolute inset-0 p-10 overflow-y-auto custom-scrollbar hidden">
-                <div class="grid grid-cols-12 gap-10 h-full">
-                    <!-- Progress Circle -->
-                    <div
-                        class="col-span-4 flex flex-col items-center justify-center p-8 bg-white/5 rounded-3xl border border-white/5">
-                        <div class="relative w-48 h-48 flex items-center justify-center mb-6">
-                            <svg class="transform -rotate-90 w-full h-full">
-                                <circle cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12"
-                                    fill="transparent" class="text-slate-800" />
-                                <circle id="dash-circle" cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12"
-                                    fill="transparent" class="text-blue-500 transition-all duration-1000"
-                                    stroke-dasharray="552" stroke-dashoffset="552" />
-                            </svg>
-                            <div class="absolute text-center">
-                                <span id="dash-percent" class="block text-5xl font-black syne">0%</span>
-                                <span
-                                    class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Synced</span>
-                            </div>
+            <div id="view-dashboard" class="absolute inset-0 p-8 md:p-12 overflow-y-auto custom-scrollbar z-10">
+                <div class="max-w-6xl mx-auto space-y-8">
+
+                    <!-- HERO: User Stats -->
+                    <div class="glass-card p-8 rounded-[2rem] relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+                            <i class="fas fa-fingerprint text-9xl text-white"></i>
                         </div>
-                        <h3 class="text-xl font-black uppercase text-white mb-1">Current Sync Status</h3>
-                        <p class="text-[10px] text-slate-400">Based on nodes decrypted</p>
-                    </div>
-
-                    <!-- Stats Grid -->
-                    <div class="col-span-8 grid grid-cols-2 gap-8">
-                        <div class="p-8 bg-white/5 rounded-3xl border border-white/5 flex flex-col justify-between">
-                            <div class="flex justify-between items-start">
-                                <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl"><i
-                                        class="fas fa-bolt text-xl"></i></div>
-                                <div class="text-right">
-                                    <span
-                                        class="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Total
-                                        XP</span>
-                                    <span id="dash-level"
-                                        class="text-[9px] font-black text-blue-500 uppercase tracking-widest">LEVEL
-                                        1</span>
-                                </div>
+                        <div class="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                            <div
+                                class="w-24 h-24 rounded-full bg-blue-600/20 flex items-center justify-center border-2 border-blue-500/30 overflow-hidden relative dash-avatar-container">
+                                <img id="dash-avatar-img" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+                                <i id="dash-avatar-icon" class="fas fa-user-astronaut text-4xl text-blue-400"></i>
                             </div>
-                            <div class="mt-4">
-                                <h2 id="dash-xp" class="text-4xl font-black syne text-white">0</h2>
-                                <p id="xp-next-level"
-                                    class="text-[9px] text-slate-500 mt-1 font-black uppercase tracking-widest italic">
-                                    1000 XP TO NEXT TIER</p>
-                            </div>
-                        </div>
-
-                        <div class="p-8 bg-white/5 rounded-3xl border border-white/5 flex flex-col justify-between">
-                            <div class="flex justify-between items-start">
-                                <div class="p-3 bg-green-500/10 text-green-400 rounded-xl"><i
-                                        class="fas fa-check-circle text-xl"></i></div>
-                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Nodes
-                                    Decrypted</span>
-                            </div>
-                            <div class="mt-4">
-                                <h2 id="dash-nodes" class="text-4xl font-black syne text-white">0/0</h2>
-                                <p class="text-[10px] text-slate-500 mt-1">Modules Completed</p>
-                            </div>
-                        </div>
-
-
-                        <!-- Certificate & Continue Actions -->
-                        <div class="col-span-2 grid grid-cols-2 gap-6">
-                            <!-- Certificate Claim Button (Locked/Unlocked) -->
-                            <div id="btn-claim-cert-locked"
-                                class="p-8 bg-gradient-to-r from-slate-900/40 to-slate-800/10 rounded-3xl border border-white/10 flex items-center justify-between opacity-60 cursor-not-allowed">
-                                <div>
-                                    <h3 class="text-xl font-black syne uppercase text-slate-400 mb-2">Certificate Locked
-                                    </h3>
-                                    <p class="text-xs text-slate-500 font-mono">Complete all nodes to unlock</p>
-                                </div>
+                            <div class="text-center md:text-left">
+                                <div class="text-blue-500 font-bold tracking-widest text-[10px] uppercase mb-1">
+                                    Operative Profile</div>
+                                <h2 id="dash-username"
+                                    class="text-4xl font-black syne text-white uppercase leading-none mb-2">Loading...
+                                </h2>
                                 <div
-                                    class="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center text-slate-700 text-xl">
-                                    <i class="fas fa-lock"></i>
+                                    class="flex items-center justify-center md:justify-start gap-4 text-sm text-slate-400">
+                                    <span class="flex items-center gap-2"><i class="fas fa-bolt text-amber-400"></i>
+                                        <span id="dash-xp">0</span> XP</span>
+                                    <span class="w-1 h-1 bg-slate-600 rounded-full"></span>
+                                    <span class="flex items-center gap-2"><i
+                                            class="fas fa-layer-group text-emerald-400"></i> Lvl <span
+                                            id="dash-level">1</span></span>
                                 </div>
                             </div>
-
-                            <div id="btn-claim-cert-unlocked" onclick="openCertificate()"
-                                class="hidden p-8 bg-gradient-to-r from-emerald-900/40 to-emerald-600/10 rounded-3xl border border-emerald-500/20 flex items-center justify-between group cursor-pointer hover:border-emerald-500/40 transition-all">
-                                <div>
-                                    <h3 class="text-xl font-black syne uppercase text-white mb-2">Claim Certificate</h3>
-                                    <p class="text-xs text-emerald-200/60 font-mono">Architecture V8.0 Ready</p>
+                            <div class="md:ml-auto flex gap-4">
+                                <div class="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div class="text-2xl font-black text-white syne" id="dash-streak">0</div>
+                                    <div class="text-[9px] uppercase tracking-widest text-slate-500">Day Streak</div>
                                 </div>
-                                <div
-                                    class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-600/20 group-hover:scale-110 transition-transform">
-                                    <i class="fas fa-award"></i>
-                                </div>
-                            </div>
-
-                            <!-- Continue Journey Button -->
-                            <div id="btn-continue-journey"
-                                class="p-8 bg-gradient-to-r from-blue-900/40 to-blue-600/10 rounded-3xl border border-blue-500/20 flex items-center justify-between group cursor-pointer hover:border-blue-500/40 transition-all">
-                                <div>
-                                    <h3 class="text-xl font-black syne uppercase text-white mb-2">Resume Sequence</h3>
-                                    <p id="dash-last-node" class="text-xs text-blue-200/60 font-mono">Loading last
-                                        checkpoint...</p>
-                                </div>
-                                <div
-                                    class="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl shadow-lg shadow-blue-600/20 group-hover:scale-110 transition-transform">
-                                    <i class="fas fa-play ml-1"></i>
+                                <div class="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div class="text-2xl font-black text-white syne" id="dash-completed">0</div>
+                                    <div class="text-[9px] uppercase tracking-widest text-slate-500">Nodes Done</div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- DASHBOARD CONTENT GRID -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        <!-- COLUMN 1 & 2: PROTOCOL CORE -->
+                        <div class="lg:col-span-2 glass-card p-8 rounded-[2rem] border border-white/5 flex flex-col">
+                            <div class="flex items-center justify-between mb-8">
+                                <div class="flex flex-col">
+                                    <h3 class="text-xl font-black syne uppercase text-white tracking-tight">Protocol
+                                        Status</h3>
+                                    <p class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.3em]">
+                                        Operational</p>
+                                </div>
+                                <div
+                                    class="px-4 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                    <i class="fas fa-satellite-dish mr-2"></i> Live Sync
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-8 flex-1">
+                                <div
+                                    class="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-900/40 shrink-0">
+                                    <i id="active-skill-icon" class="fas fa-brain text-3xl text-white"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 id="active-skill-name"
+                                        class="text-3xl font-black text-white mb-2 truncate leading-tight uppercase syne">
+                                        Protocol Offline</h4>
+                                    <p id="active-skill-desc"
+                                        class="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed">Initialize a
+                                        neural pathway from the selection matrix to begin skill acquisition and kernel
+                                        integration.</p>
+
+                                    <div class="w-full bg-white/5 h-2.5 rounded-full overflow-hidden mb-3">
+                                        <div id="active-skill-progress"
+                                            class="h-full bg-gradient-to-r from-blue-600 to-blue-400 w-0 transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-slate-500">
+                                        <span>Integration Metric</span>
+                                        <span id="active-skill-percent" class="text-blue-400">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-10 flex gap-4">
+                                <button onclick="switchTab('roadmap')"
+                                    class="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-900/20">
+                                    Proceed to Roadmap
+                                </button>
+                                <button onclick="switchTab('syllabus')"
+                                    class="px-8 py-4 bg-white/5 hover:bg-white/10 text-slate-300 font-bold rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all border border-white/5">
+                                    Module Index
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- COLUMN 3: INTEL & REWARDS -->
+                        <div class="space-y-6">
+                            <!-- Next Milestone Card -->
+                            <div
+                                class="glass-card p-6 rounded-[2rem] border border-white/5 flex flex-col justify-center text-center">
+                                <div
+                                    class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 mb-4 mx-auto border border-amber-500/20">
+                                    <i class="fas fa-trophy text-2xl"></i>
+                                </div>
+                                <h3 id="milestone-title" class="text-white font-bold text-lg mb-1">Rank Elevation</h3>
+                                <p id="milestone-desc"
+                                    class="text-slate-500 text-[10px] uppercase tracking-widest font-bold mb-6">Complete
+                                    nodes to level up</p>
+                                <button onclick="window.showAchievements()"
+                                    class="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-400 font-black rounded-xl text-[9px] uppercase tracking-[0.2em] transition-all border border-white/5">
+                                    Log Achievements
+                                </button>
+                            </div>
+
+                            <!-- Certificate Unlock Card -->
+                            <div id="card-certificate"
+                                class="glass-card p-6 rounded-[2rem] border border-white/5 flex flex-col justify-center text-center relative overflow-hidden">
+                                <!-- Lock Overlay -->
+                                <div id="cert-locked-overlay"
+                                    class="absolute inset-0 bg-[#020308]/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center transition-all duration-700">
+                                    <div
+                                        class="w-12 h-12 bg-slate-500/10 rounded-full flex items-center justify-center text-slate-600 border border-slate-500/20 mb-3">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Locked
+                                        at 100%</span>
+                                </div>
+
+                                <div
+                                    class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-4 mx-auto border border-blue-500/20">
+                                    <i class="fas fa-award text-2xl"></i>
+                                </div>
+                                <h3 class="text-white font-bold text-lg mb-1">Zenith Credential</h3>
+                                <p class="text-slate-500 text-[10px] uppercase tracking-widest font-bold mb-6">Certified
+                                    Mastery Protocol</p>
+
+                                <button id="btn-claim-cert" onclick="window.openCertificate()" disabled
+                                    class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl text-[9px] uppercase tracking-[0.2em] transition-all shadow-lg shadow-blue-900/20">
+                                    Claim Credential
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-
-            <!-- VIEW: ROADMAP (TREE) -->
-            <div id="view-roadmap" class="absolute inset-0 hidden">
-                <div id="skill-tree-container"
-                    class="w-full h-full relative cursor-grab active:cursor-grabbing overflow-hidden">
-                    <div id="panning-layer"
-                        class="w-full h-full absolute inset-0 transition-none transform-gpu origin-center">
-                        <svg id="skill-tree-svg" class="w-full h-full absolute inset-0 pointer-events-none z-0"></svg>
-                        <!-- Nodes injected via JS -->
-                    </div>
+            <!-- VIEW: ROADMAP (The Tree) -->
+            <div id="view-roadmap" class="absolute inset-0 hidden z-0">
+                <div id="tree-container" class="absolute inset-0 w-full h-full cursor-grab overflow-hidden">
+                    <svg id="tree-svg-layer" class="w-full h-full block">
+                        <defs>
+                            <filter id="glow-effect" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <g id="viewport-group">
+                            <g id="connections-layer"></g>
+                            <g id="nodes-layer"></g>
+                        </g>
+                    </svg>
                 </div>
-                <!-- Controls -->
-                <div class="absolute bottom-8 right-8 flex flex-col gap-2 z-10">
-                    <button onclick="resetView()"
-                        class="w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white flex items-center justify-center transition"><i
-                            class="fas fa-compress"></i></button>
-                    <button onclick="zoomIn()"
-                        class="w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white flex items-center justify-center transition"><i
+
+                <!-- HUD CONTROLS -->
+                <div class="absolute bottom-24 right-10 flex flex-col gap-4 z-50">
+                    <button onclick="window.ZenithExplore.zoomIn()" class="hud-action-btn"><i
                             class="fas fa-plus"></i></button>
-                    <button onclick="zoomOut()"
-                        class="w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur rounded-lg text-white flex items-center justify-center transition"><i
+                    <button onclick="window.ZenithExplore.zoomOut()" class="hud-action-btn"><i
                             class="fas fa-minus"></i></button>
+                    <button onclick="window.ZenithExplore.resetView()" class="hud-action-btn"><i
+                            class="fas fa-crosshairs"></i></button>
                 </div>
             </div>
 
             <!-- VIEW: SYLLABUS -->
-            <div id="view-syllabus" class="absolute inset-0 p-8 overflow-y-auto custom-scrollbar hidden">
-                <div id="syllabus-list" class="space-y-4 max-w-4xl mx-auto">
-                    <!-- Injected JS -->
+            <div id="view-syllabus"
+                class="absolute inset-0 hidden p-8 md:p-12 overflow-y-auto custom-scrollbar z-10 bg-[#020308]/95 backdrop-blur-sm">
+                <div class="max-w-4xl mx-auto pb-24">
+                    <div class="mb-12 text-center">
+                        <h2 class="text-3xl font-black syne uppercase text-white mb-2">Protocol Syllabus</h2>
+                        <p class="text-slate-500 text-xs uppercase tracking-widest font-bold">Comprehensive breakdown of
+                            modules</p>
+                    </div>
+
+                    <div class="space-y-4" id="syllabus-container">
+                        <!-- Dynamic Content Loaded Here -->
+                    </div>
                 </div>
             </div>
 
-            <!-- VIEW: VIDEOS -->
-            <div id="view-videos" class="absolute inset-0 p-8 overflow-y-auto custom-scrollbar hidden">
-                <!-- Injected JS (Extra videos) -->
-                <div class="text-center mt-20 text-slate-500">
-                    <i class="fas fa-film text-4xl mb-4"></i>
-                    <p class="uppercase font-bold tracking-widest text-xs">Library Offline</p>
+            <!-- VIEW: SELECTION -->
+            <div id="view-selection"
+                class="absolute inset-0 bg-black/95 z-[100] flex items-center justify-center hidden">
+                <div class="text-center w-full max-w-4xl p-12">
+                    <h2 class="text-4xl font-black syne uppercase text-white mb-12">Initialize Neural Link</h2>
+                    <div id="initial-career-list" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
                 </div>
             </div>
+
+            <!-- BOTTOM NAVIGATION REMOVED (Moved to Sidebar) -->
 
         </main>
-
     </div>
 
-    <!-- NODE CONTENT MODAL -->
+    <!-- MODALS -->
     <div id="node-modal"
-        class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl hidden flex items-center justify-center animate-in zoom-in-95 duration-200">
+        class="fixed inset-0 z-[200] bg-black/95 backdrop-blur-3xl hidden items-center justify-center p-20">
         <div
-            class="w-full max-w-6xl h-[90vh] bg-[#0a0a0a] border border-white/10 rounded-[2rem] flex overflow-hidden relative shadow-2xl">
-
-            <!-- Close Button -->
+            class="w-full max-w-5xl bg-[#080808] border border-white/5 rounded-[4rem] overflow-hidden relative h-[85vh]">
             <button onclick="closeNodeModal()"
-                class="absolute top-6 right-6 z-10 w-10 h-10 bg-white/5 hover:bg-red-600 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition">
-                <i class="fas fa-times"></i>
-            </button>
+                class="absolute top-10 right-10 text-slate-500 hover:text-white transition z-20"><i
+                    class="fas fa-times text-2xl"></i></button>
+            <div id="nm-content-area" class="h-full overflow-y-auto p-20 custom-scrollbar"></div>
+        </div>
+    </div>
 
-            <!-- Sidebar (Lectures List) -->
-            <div class="w-80 bg-black/50 border-r border-white/5 flex flex-col">
-                <div class="p-8 border-b border-white/5">
-                    <h3 id="nm-title" class="text-xl font-black syne uppercase text-white break-words">Node Title</h3>
-                    <div class="flex items-center gap-2 mt-2">
-                        <span id="nm-xp"
-                            class="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-[9px] font-bold uppercase tracking-widest rounded">100
-                            XP</span>
-                        <span id="nm-status"
-                            class="px-2 py-0.5 bg-slate-800 text-slate-500 text-[9px] font-bold uppercase tracking-widest rounded">Locked</span>
+    <div id="modal-career-selector"
+        class="fixed inset-0 z-[250] bg-black/95 backdrop-blur-3xl hidden items-center justify-center p-20">
+        <div class="w-full max-w-4xl bg-[#080808] border border-white/10 rounded-[4rem] overflow-hidden relative p-16">
+            <button onclick="closeCareerSelector()"
+                class="absolute top-10 right-10 text-slate-500 hover:text-white transition z-20"><i
+                    class="fas fa-times text-2xl"></i></button>
+            <div id="career-list-grid"
+                class="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto max-h-[50vh] pr-4 custom-scrollbar"></div>
+        </div>
+    </div>
+
+    <!-- SWITCH CONFIRMATION MODAL -->
+    <div id="modal-confirm-switch"
+        class="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div
+            class="glass-card w-full max-w-md p-10 rounded-3xl border border-white/10 text-center relative overflow-hidden">
+            <div
+                class="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500 text-2xl mb-6">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-2xl font-black text-white uppercase tracking-tight mb-2">Confirm Protocol Shift</h3>
+            <p class="text-slate-400 text-xs mb-8 leading-relaxed">
+                You are about to switch your active learning path. <br>
+                This will reload the Neural Matrix.
+            </p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()"
+                    class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-slate-300 font-bold uppercase tracking-widest text-[10px] transition">
+                    Cancel
+                </button>
+                <button id="btn-confirm-switch"
+                    class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold uppercase tracking-widest text-[10px] transition shadow-lg shadow-blue-600/20">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NODE DETAIL MODAL -->
+    <div id="modal-node-detail"
+        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div
+            class="glass-card w-full max-w-2xl rounded-3xl border border-white/10 relative overflow-hidden flex flex-col max-h-[85vh]">
+
+            <!-- Header -->
+            <div class="p-8 border-b border-white/5 flex items-start justify-between bg-white/5">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span id="node-type-badge"
+                            class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded-full">Core
+                            Module</span>
+                        <span id="node-xp-badge" class="flex items-center gap-1 text-[10px] font-bold text-amber-400">
+                            <i class="fas fa-bolt"></i> <span id="node-xp-val">100</span> XP
+                        </span>
                     </div>
-                </div>
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2" id="nm-lecture-list">
-                    <!-- Lecture Items -->
-                </div>
-                <div class="p-6 border-t border-white/5 bg-black/40">
-                    <button id="nm-complete-btn" onclick="completeCurrentNode()"
-                        class="btn-complete-protocol w-full py-5 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 disabled:opacity-50">
-                        <i class="fas fa-shield-check text-base"></i> Mark Mission Complete
-                    </button>
-                    <p class="text-[9px] text-center text-slate-600 mt-2">Completing awards XP and decrypts next node.
+                    <h2 id="node-title" class="text-3xl font-black text-white uppercase tracking-tight syne">Variables
+                    </h2>
+                    <p id="node-desc" class="text-slate-400 text-sm mt-2">Understanding memory allocation and storage.
                     </p>
                 </div>
+                <button onclick="closeNodeDetail()"
+                    class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 transition">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <!-- Main Content Area -->
-            <div class="flex-1 flex flex-col h-full bg-[#050505]">
-                <!-- Tab Headers -->
-                <div class="flex border-b border-white/5 px-8">
-                    <button onclick="switchModalTab('visual')"
-                        class="nm-tab-btn active border-b-2 border-blue-500 text-white px-6 py-4 text-xs font-bold uppercase tracking-widest">Visual
-                        Feed</button>
-                    <button onclick="switchModalTab('intel')"
-                        class="nm-tab-btn border-b-2 border-transparent text-slate-500 px-6 py-4 text-xs font-bold uppercase tracking-widest hover:text-white">Intel
-                        / Notes</button>
-                    <button onclick="switchModalTab('briefing')"
-                        class="nm-tab-btn border-b-2 border-transparent text-slate-500 px-6 py-4 text-xs font-bold uppercase tracking-widest hover:text-white">Briefing</button>
+            <!-- Content Area -->
+            <div class="p-8 overflow-y-auto custom-scrollbar space-y-8">
+
+                <!-- Video / Lecture Placeholder -->
+                <div
+                    class="rounded-2xl bg-black/40 border border-white/5 aspect-video flex items-center justify-center relative group cursor-pointer overflow-hidden">
+                    <div
+                        class="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition duration-500">
+                    </div>
+                    <div
+                        class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white text-2xl group-hover:scale-110 transition duration-300 shadow-2xl relative z-10">
+                        <i class="fas fa-play ml-1"></i>
+                    </div>
+                    <p
+                        class="absolute bottom-4 left-0 right-0 text-center text-xs font-mono text-slate-400 uppercase tracking-widest">
+                        Initialize Neural Stream</p>
                 </div>
 
-                <!-- Tab Content -->
-                <div class="flex-1 overflow-y-auto custom-scrollbar relative">
-
-                    <!-- Visual Feed (Video) -->
-                    <div id="nm-view-visual" class="p-8 h-full flex flex-col">
+                <!-- Learning Resources -->
+                <div>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Neural Resources</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div
-                            class="w-full aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-lg mb-6 relative group">
-                            <iframe id="nm-video-frame" class="w-full h-full" src="" frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen></iframe>
-                            <div id="nm-no-video"
-                                class="absolute inset-0 flex items-center justify-center text-slate-600 hidden">
-                                <div class="text-center">
-                                    <i class="fas fa-video-slash text-4xl mb-4 opacity-50"></i>
-                                    <p class="text-xs font-bold uppercase tracking-widest">No Visual Feed Available</p>
-                                </div>
+                            class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition cursor-pointer flex items-center gap-4">
+                            <i class="fas fa-file-alt text-blue-400"></i>
+                            <div>
+                                <h4 class="text-white text-sm font-bold">Documentation</h4>
+                                <p class="text-[10px] text-slate-500">Read official protocol</p>
                             </div>
                         </div>
-                        <h4 id="nm-active-lec-title" class="text-lg font-bold text-white mb-2">Select a lecture</h4>
+                        <div
+                            class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition cursor-pointer flex items-center gap-4">
+                            <i class="fas fa-code text-emerald-400"></i>
+                            <div>
+                                <h4 class="text-white text-sm font-bold">Practice Lab</h4>
+                                <p class="text-[10px] text-slate-500">Execute code snippets</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Intel (Notes) -->
-                    <div id="nm-view-intel" class="p-10 hidden prose prose-invert max-w-none">
-                        <div id="nm-notes-content" class="text-slate-300 leading-relaxed text-sm"></div>
-                    </div>
-
-                    <!-- Briefing (Description) -->
-                    <div id="nm-view-briefing" class="p-10 hidden">
-                        <h4 class="text-sm font-black text-white uppercase tracking-widest mb-4">Mission Description
-                        </h4>
-                        <p id="nm-desc-content" class="text-slate-400 text-sm leading-relaxed mb-8"></p>
-
-                        <h4 class="text-sm font-black text-white uppercase tracking-widest mb-4">Documentation</h4>
-                        <a id="nm-pdf-link" href="#" target="_blank"
-                            class="inline-flex items-center gap-3 px-6 py-3 bg-white/5 hover:bg-blue-600 rounded-xl text-slate-300 hover:text-white transition border border-white/5">
-                            <i class="fas fa-file-pdf"></i>
-                            <span class="text-xs font-bold uppercase tracking-widest">Access PDF Resource</span>
-                        </a>
-                    </div>
-
+                <!-- Action Bar -->
+                <div class="flex items-center gap-4 pt-4 border-t border-white/5">
+                    <button
+                        class="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest rounded-xl transition shadow-lg shadow-blue-900/20">
+                        Mark as Complete
+                    </button>
+                    <button class="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl transition">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
                 </div>
             </div>
+
         </div>
     </div>
 
     <!-- CERTIFICATE MODAL -->
     <div id="modal-certificate"
-        class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl hidden flex items-center justify-center p-6">
-        <div
-            class="w-full max-w-5xl bg-[#050505] border border-emerald-500/30 rounded-[3rem] overflow-hidden shadow-[0_0_80px_rgba(16,185,129,0.15)] relative animate-in zoom-in-95 duration-500 max-h-[95vh] overflow-y-auto custom-scrollbar">
-            <!-- Scanline Effect -->
-            <div class="scanline absolute inset-0 pointer-events-none opacity-20"></div>
+        class="fixed inset-0 z-[600] bg-black/90 backdrop-blur-xl hidden flex-col items-center justify-center p-4">
+        <style>
+            #cert-capture-area {
+                width: 1000px;
+                height: 700px;
+                background-color: #0a0a0a;
+                border: 1px solid #222;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                padding: 50px;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
 
-            <div class="p-12 text-center relative z-10">
-                <!-- Header Branding -->
-                <div class="flex justify-center mb-12">
-                    <div
-                        class="px-8 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-500 text-[10px] font-black uppercase tracking-[0.4em] shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                        ZENITH // OFFICIAL CERTIFICATION
+            .cert-frame-line {
+                position: absolute;
+                background: #00f2ff;
+                opacity: 0.5;
+            }
+
+            .cert-h-line {
+                width: 60px;
+                height: 2px;
+            }
+
+            .cert-v-line {
+                width: 2px;
+                height: 60px;
+            }
+
+            .cert-watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-family: 'Syne', sans-serif;
+                font-size: 180px;
+                opacity: 0.02;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+
+            .cert-header-title {
+                font-family: 'Syne', sans-serif;
+                letter-spacing: 0.5em;
+                color: white;
+            }
+
+            #cert-user-name {
+                font-weight: 900;
+                letter-spacing: -0.02em;
+                color: #00f2ff;
+                text-transform: uppercase;
+            }
+
+            .cert-label {
+                font-family: 'Space Mono', monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.3em;
+                font-size: 10px;
+                color: #666;
+            }
+
+            .cert-sig-box {
+                border-top: 1px solid #333;
+                width: 220px;
+                padding-top: 10px;
+            }
+
+            .cert-stamp {
+                border: 2px solid #00f2ff;
+                color: #00f2ff;
+                padding: 4px 12px;
+                font-family: 'Space Mono', monospace;
+                font-weight: bold;
+                font-size: 12px;
+                transform: rotate(-15deg);
+                display: inline-block;
+                opacity: 0.7;
+            }
+        </style>
+
+        <div class="scale-[0.6] md:scale-75 lg:scale-90 transition-transform">
+            <div id="cert-capture-area">
+                <div class="cert-watermark uppercase">ZENITH</div>
+                <div class="cert-frame-line cert-h-line top-[30px] left-[30px]"></div>
+                <div class="cert-frame-line cert-v-line top-[30px] left-[30px]"></div>
+                <div class="cert-frame-line cert-h-line top-[30px] right-[30px]"></div>
+                <div class="cert-frame-line cert-v-line top-[30px] right-[30px]"></div>
+                <div class="cert-frame-line cert-h-line bottom-[30px] left-[30px]"></div>
+                <div class="cert-frame-line cert-v-line bottom-[30px] left-[30px]"></div>
+                <div class="cert-frame-line cert-h-line bottom-[30px] right-[30px]"></div>
+                <div class="cert-frame-line cert-v-line bottom-[30px] right-[30px]"></div>
+
+                <!-- Header -->
+                <div class="flex justify-between items-start relative z-10">
+                    <div>
+                        <h1 class="cert-header-title text-2xl uppercase">ZENITH<span class="opacity-50">.OS</span></h1>
+                        <p class="cert-label mt-2">Department of Technical Architecture</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="cert-stamp uppercase">GENUINE ASSET</div>
+                        <p class="cert-label mt-4">Security Class: S-Tier</p>
                     </div>
                 </div>
 
-                <!-- Main Content -->
-                <div id="certificate-content" class="space-y-10">
-                    <!-- Title - Fixed Clipping -->
-                    <div class="mb-6">
-                        <h2
-                            class="text-[4rem] font-black syne uppercase tracking-tighter leading-[0.9] text-white italic mb-3">
-                            MASTERY<br />ACHIEVED
-                        </h2>
-                        <div class="flex items-center justify-center gap-3">
-                            <div class="h-px w-20 bg-emerald-500/30"></div>
-                            <div class="text-[9px] font-black text-emerald-500 uppercase tracking-[0.3em]">Architecture
-                                V8.0</div>
-                            <div class="h-px w-20 bg-emerald-500/30"></div>
-                        </div>
-                    </div>
-
-                    <!-- Operative Details -->
-                    <div class="max-w-3xl mx-auto border-t border-b border-white/5 py-8">
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mb-6">Neural Link
-                            Validated For</p>
-                        <h3 id="cert-user-name"
-                            class="text-5xl font-black syne text-emerald-400 uppercase tracking-widest mb-4">
-                            OPERATIVE USER
-                        </h3>
-                        <p class="text-sm text-slate-400 leading-relaxed max-w-lg mx-auto">
-                            This document validates the full acquisition of tactical knowledge and practical deployment
-                            within the specified neural architecture.
-                        </p>
-                    </div>
-
-                    <!-- Performance Metrics Grid -->
-                    <div class="grid grid-cols-4 gap-8 max-w-4xl mx-auto">
-                        <div class="p-6 bg-white/5 rounded-2xl border border-white/5">
-                            <div class="text-[9px] font-black text-slate-700 uppercase tracking-widest mb-3">
-                                Architecture</div>
-                            <div id="cert-career-name" class="text-sm font-black text-white uppercase tracking-widest">
-                                FULLSTACK WEB CORE</div>
-                        </div>
-                        <div class="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
-                            <div class="text-[9px] font-black text-slate-700 uppercase tracking-widest mb-3">Performance
-                            </div>
-                            <div id="cert-grade" class="text-sm font-black text-emerald-500 uppercase tracking-widest">
-                                S-TIER</div>
-                        </div>
-                        <div class="p-6 bg-white/5 rounded-2xl border border-white/5">
-                            <div class="text-[9px] font-black text-slate-700 uppercase tracking-widest mb-3">Status
-                            </div>
-                            <div
-                                class="text-sm font-black text-emerald-500 uppercase tracking-widest flex items-center justify-center gap-2">
-                                <i class="fas fa-check-double"></i>100% DECRYPTED
-                            </div>
-                        </div>
-                        <div class="p-6 bg-white/5 rounded-2xl border border-white/5">
-                            <div class="text-[9px] font-black text-slate-700 uppercase tracking-widest mb-3">Sync Date
-                            </div>
-                            <div id="cert-date" class="text-sm font-mono text-slate-400 uppercase">2026-01-28</div>
-                        </div>
-                    </div>
-
-                    <!-- Verified Skills Matrix -->
-                    <div class="max-w-4xl mx-auto p-10 bg-white/5 rounded-3xl border border-white/5">
-                        <h4
-                            class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-6 flex items-center justify-center gap-3">
-                            <i class="fas fa-shield-alt"></i> Verified Skills Matrix
-                        </h4>
-                        <div id="cert-skills-list" class="grid grid-cols-2 gap-4 text-left">
-                            <div class="flex items-center gap-3 p-4 bg-black/40 rounded-xl border border-white/5">
-                                <i class="fas fa-check-circle text-emerald-500 text-sm"></i>
-                                <span class="text-xs font-bold text-white uppercase tracking-tight">Frontend
-                                    Development</span>
-                            </div>
-                            <div class="flex items-center gap-3 p-4 bg-black/40 rounded-xl border border-white/5">
-                                <i class="fas fa-check-circle text-emerald-500 text-sm"></i>
-                                <span class="text-xs font-bold text-white uppercase tracking-tight">Backend
-                                    Architecture</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Authenticity Hub -->
-                    <div class="grid grid-cols-2 gap-10 max-w-4xl mx-auto">
-                        <div class="p-8 bg-white/5 rounded-3xl border border-white/5 text-center">
-                            <div class="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-4">Holographic
-                                Verification</div>
-                            <div
-                                class="w-32 h-32 mx-auto bg-white/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 relative overflow-hidden">
-                                <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent">
-                                </div>
-                                <i class="fas fa-qrcode text-4xl text-emerald-500/50 relative z-10"></i>
-                            </div>
-                            <div id="cert-protocol-id" class="text-[10px] font-mono text-slate-500 uppercase mt-4">
-                                Z-7789-ALPHA</div>
-                        </div>
-                        <div class="p-8 bg-white/5 rounded-3xl border border-white/5">
-                            <div class="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-6">Command
-                                Signature</div>
-                            <div class="space-y-4">
-                                <div class="flex items-center gap-4">
-                                    <div
-                                        class="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
-                                        <i class="fas fa-user-shield text-emerald-500"></i>
-                                    </div>
-                                    <div class="text-left">
-                                        <div class="text-xs font-black text-white uppercase tracking-tight">ZENITH
-                                            COMMAND</div>
-                                        <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Chief
-                                            Architect</div>
-                                    </div>
-                                </div>
-                                <div class="h-px bg-white/5"></div>
-                                <div class="text-[8px] font-mono text-slate-600 italic">Digital Signature: 0xA7F9...3B2E
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Body -->
+                <div class="mt-24 flex flex-col items-center text-center relative z-10">
+                    <p class="cert-label mb-6">Credential of Technical Proficiency</p>
+                    <h2 class="text-lg opacity-60 font-light max-w-lg mb-8 text-white/70">
+                        This document confirms that the following operative has cleared all system protocols for
+                    </h2>
+                    <h3 id="cert-user-name" class="text-7xl mb-8">OPERATIVE NAME</h3>
+                    <div class="w-24 h-1 bg-white opacity-10 mb-8"></div>
+                    <h4 id="cert-skill-name" class="text-2xl font-bold tracking-tight mb-2 uppercase text-white">FULL
+                        STACK WEB ARCHITECTURE</h4>
+                    <p class="text-sm opacity-40 font-mono tracking-widest uppercase text-white/50">Kernel Integration &
+                        Deployment Mastery</p>
                 </div>
 
-                <!-- Footer Actions -->
-                <div class="mt-12 flex items-center justify-center gap-6">
-                    <button onclick="closeCertificate()"
-                        class="px-12 py-6 border border-white/10 hover:bg-white/5 text-slate-500 hover:text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-3">
-                        <i class="fas fa-arrow-left"></i> Back
-                    </button>
-                    <button onclick="downloadCertificate(event)"
-                        class="px-12 py-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-emerald-900/40 flex items-center gap-3">
-                        <i class="fas fa-download"></i> Download Certificate
-                    </button>
+                <!-- Footer -->
+                <div class="mt-auto flex justify-between items-end relative z-10">
+                    <div class="text-left">
+                        <p class="cert-label">Issue Date</p>
+                        <p id="cert-date" class="font-mono text-sm mt-1 text-white/80">2026-01-30</p>
+                        <p class="cert-label mt-4">Verification Hash</p>
+                        <p id="cert-hash" class="font-mono text-[10px] opacity-30 mt-1 text-white/40">
+                            0x882A_ZENITH_XX_9921_B</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="italic text-xl mb-1 opacity-90 text-white/90" style="font-family: serif;">System
+                            Kernel Admin</div>
+                        <div class="cert-sig-box text-center">
+                            <p class="cert-label">Digital Signature</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="cert-label">Credential ID</p>
+                        <p id="cert-id-val" class="font-mono text-sm mt-1 text-white/80">Z-99102-X</p>
+                        <p class="cert-label mt-4">Platform</p>
+                        <p class="font-mono text-sm mt-1 text-white/80">v5.0 Stable</p>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Absolute Watermarks -->
-            <div class="absolute top-10 left-10 opacity-5 text-8xl font-black syne select-none">ZENITH-OS</div>
-            <div class="absolute bottom-10 right-10 opacity-5 text-8xl font-black syne select-none">AUGUSTA</div>
+        <div class="mt-12 flex gap-6">
+            <button onclick="window.downloadCertificate()" id="btn-cert-download"
+                class="px-10 py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 hover:text-white transition-all shadow-xl flex items-center gap-3">
+                <i class="fas fa-download"></i> Initialize Official Export
+            </button>
+            <button onclick="window.closeCertificate()"
+                class="px-10 py-5 bg-white/5 text-white/50 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all">
+                Close
+            </button>
         </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="public/js/config.js"></script>
     <script src="public/js/explore-tree.js"></script>
+    <script>
+        // Tab Switching Logic
+        window.switchTab = function (tabName) {
+            const tabs = ['dashboard', 'roadmap', 'syllabus'];
+
+            tabs.forEach(t => {
+                const el = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+
+                if (t === tabName) {
+                    // Show View
+                    if (el) el.classList.remove('hidden');
+
+                    // Highlight Button (Sidebar Style)
+                    if (btn) {
+                        btn.classList.remove('text-slate-400', 'hover:bg-white/5');
+                        btn.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+                        // Ensure icon container is lit up
+                        const iconBox = btn.querySelector('div');
+                        if (iconBox) iconBox.classList.add('bg-white/20');
+                    }
+                } else {
+                    // Hide View
+                    if (el) el.classList.add('hidden');
+
+                    // Dim Button
+                    if (btn) {
+                        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+                        btn.classList.add('text-slate-400', 'hover:bg-white/5');
+                        // Dim icon container
+                        const iconBox = btn.querySelector('div');
+                        if (iconBox) iconBox.classList.remove('bg-white/20');
+                    }
+                }
+            });
+
+            console.log("Switching to tab:", tabName);
+        };
+
+        window.backToZenith = function () {
+            window.location.href = '/user.html';
+        };
+
+        // Standalone navigation helper
+        if (window.self === window.top) {
+            const btn = document.getElementById('btn-back-hub');
+            if (btn) btn.classList.remove('hidden');
+        }
+
+        // FAILSAFE: Force remove loader if app hangs for any reason
+        setTimeout(() => {
+            const l = document.getElementById('zenith-loader');
+            if (l && window.getComputedStyle(l).opacity !== '0') {
+                console.warn("ZENITH // LOADER TIMEOUT: Forcing removal");
+                l.style.opacity = '0';
+                setTimeout(() => l.style.display = 'none', 500);
+            }
+        }, 5000); // 5 sec extended
+    </script>
 </body>
 
 </html>
