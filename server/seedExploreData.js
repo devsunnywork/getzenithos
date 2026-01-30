@@ -29,7 +29,45 @@ async function seedData() {
         const skills = await Skill.insertMany([
             // Frontend Skills
             { name: 'HTML & CSS', category: 'Frontend', description: 'Master the fundamentals of web structure and styling', icon: 'fa-code', color: '#e34c26', level: 1, xpRequired: 500, estimatedHours: 20, position: { x: 200, y: 50 } },
-            { name: 'JavaScript', category: 'Frontend', description: 'Learn the programming language of the web', icon: 'fa-code', color: '#f7df1e', level: 2, xpRequired: 1000, estimatedHours: 40, position: { x: 200, y: 200 } },
+            {
+                name: 'JavaScript',
+                category: 'Frontend',
+                description: 'The language of the web. Master it to build interactive sites.',
+                icon: 'fa-js',
+                color: '#f7df1e',
+                level: 2,
+                xpRequired: 1000,
+                estimatedHours: 40,
+                position: { x: 200, y: 200 },
+                topics: [
+                    // Root
+                    { title: 'JS Fundamentals', type: 'main', description: 'Core concepts of JavaScript.', content: 'Introduction to the V8 engine and runtime.' },
+
+                    // Level 1
+                    { title: 'Variables & Scope', parent: 'JS Fundamentals', description: 'var, let, const and hoisting.' },
+                    { title: 'Data Types', parent: 'JS Fundamentals', description: 'Primitives vs Objects.' },
+                    { title: 'Operators', parent: 'JS Fundamentals', description: 'Arithmetic, logical, and comparison.' },
+
+                    // Level 2 (Branches)
+                    { title: 'Control Flow', parent: 'Variables & Scope', description: 'If-else, switch, and loops.' },
+                    { title: 'Functions', parent: 'Variables & Scope', description: 'Declarations, expressions, and arrows.', type: 'branch' },
+                    { title: 'Objects & Arrays', parent: 'Data Types', description: 'Manipulation and methods.', type: 'branch' },
+
+                    // Level 3 (Advanced)
+                    { title: 'Closures', parent: 'Functions', description: 'Lexical scoping mastery.', xp: 100 },
+                    { title: 'The `this` Keyword', parent: 'Functions', description: 'Context and binding.', xp: 100 },
+                    { title: 'Prototypes', parent: 'Objects & Arrays', description: 'Inheritance model.', xp: 150 },
+
+                    // Level 4 (ES6+)
+                    { title: 'ES6+ Features', parent: 'JavaScript Core', description: 'Modern syntax upgrades.', type: 'group' }, // Orphan, let's connect to Root
+                    { title: 'Promises & Async', parent: 'ES6+ Features', description: 'Handling asynchronous operations.', xp: 200 },
+                    { title: 'Modules', parent: 'ES6+ Features', description: 'Import/Export patterns.' },
+
+                    // Fix: Ensure ES6+ connects to something or make it a separate root? 
+                    // Let's connect ES6+ to JS Fundamentals
+                    // Note: 'JavaScript Core' doesn't exist. Changing parent to 'JS Fundamentals'.
+                ]
+            },
             { name: 'React', category: 'Frontend', description: 'Build modern user interfaces with React', icon: 'fa-code', color: '#61dafb', level: 3, xpRequired: 1500, estimatedHours: 50, position: { x: 100, y: 350 } },
             { name: 'Vue.js', category: 'Frontend', description: 'Progressive JavaScript framework', icon: 'fa-code', color: '#42b883', level: 3, xpRequired: 1500, estimatedHours: 50, position: { x: 300, y: 350 } },
             { name: 'TypeScript', category: 'Frontend', description: 'JavaScript with type safety', icon: 'fa-code', color: '#3178c6', level: 3, xpRequired: 1200, estimatedHours: 35, position: { x: 200, y: 500 } },
@@ -59,7 +97,39 @@ async function seedData() {
             { name: 'Figma', category: 'Design', description: 'Collaborative design tool', icon: 'fa-paint-brush', color: '#f24e1e', level: 2, xpRequired: 800, estimatedHours: 25, position: { x: 50, y: 350 } },
 
             // Mobile Skills
-            { name: 'React Native', category: 'Mobile', description: 'Build native mobile apps with React', icon: 'fa-mobile', color: '#61dafb', level: 4, xpRequired: 2000, estimatedHours: 60, position: { x: 350, y: 500 } },
+            { name: 'React Native', category: 'Mobile', description: 'Build native mobile apps with React', icon: 'fa-mobile', color: '#61dafb', level: 4, xpRequired: 2000, estimatedHours: 60, position: { x: 350, y: 500 }, topics: [{ title: 'React Native Basics' }] },
+
+            // New Premium Skill
+            {
+                name: 'Frontend Architecture',
+                category: 'Frontend',
+                description: 'Design scalable and performant frontend systems Strategy.',
+                icon: 'fa-cubes',
+                color: '#ec4899',
+                level: 4,
+                xpRequired: 2500,
+                estimatedHours: 60,
+                position: { x: 350, y: 50 },
+                topics: [
+                    { title: 'Architecture Patterns', type: 'main', description: 'Core design patterns for frontend.', position: { x: 0, y: 0 } },
+
+                    { title: 'State Management', parent: 'Architecture Patterns', description: 'Managing complex application state.', position: { x: -400, y: 250 } },
+                    { title: 'Client State', parent: 'State Management', description: 'Redux, Zustand, Context.', position: { x: -500, y: 500 } },
+                    { title: 'Server State', parent: 'State Management', description: 'React Query, SWR.', position: { x: -300, y: 500 } },
+
+                    { title: 'Performance', parent: 'Architecture Patterns', description: 'Optimizing rendering and loading.', position: { x: -150, y: 250 } },
+                    { title: 'Code Splitting', parent: 'Performance', description: 'Lazy loading and bundles.', position: { x: -200, y: 500 } },
+                    { title: 'Web Vitals', parent: 'Performance', description: 'LCP, CLS, FID metrics.', position: { x: -50, y: 500 } },
+
+                    { title: 'Testing Strategy', parent: 'Architecture Patterns', description: 'Ensuring reliability.', position: { x: 150, y: 250 } },
+                    { title: 'E2E Testing', parent: 'Testing Strategy', description: 'Cypress, Playwright.', position: { x: 50, y: 500 } },
+                    { title: 'Unit Testing', parent: 'Testing Strategy', description: 'Jest, Vitest, Testing Library.', position: { x: 250, y: 500 } },
+
+                    { title: 'Scalability', parent: 'Architecture Patterns', description: 'Growing the codebase.', position: { x: 400, y: 250 } },
+                    { title: 'Micro-frontends', parent: 'Scalability', description: 'Module Federation.', position: { x: 350, y: 500 } },
+                    { title: 'Monorepos', parent: 'Scalability', description: 'Nx, Turborepo.', position: { x: 500, y: 500 } }
+                ]
+            },
         ]);
 
         console.log(`✅ Created ${skills.length} skills\n`);
