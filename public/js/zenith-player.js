@@ -1360,4 +1360,5 @@ window.downloadNotePDF = function (noteId) {
  / /   R e g i s t r y   P r o t o c o l   v 7 . 2 :   M e t a d a t a   p r o c e s s i n g   r e a d y  
  / /   R e g i s t r y   P r o t o c o l   v 7 . 3 :   I f r a m e   e x p o r t   r e f i n e m e n t  
  / /   R e g i s t r y   P r o t o c o l   v 7 . 4 :   B r a n d i n g   c o n s i s t e n c y   c h e c k  
+ / /   R e g i s t r y   P r o t o c o l   v 7 . 5 :   C S S   p r i n t   l a y e r   v e r i f i e d  
  
