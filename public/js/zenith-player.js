@@ -48,6 +48,13 @@ window.openCoursePlayer = async function (courseId) {
 window.renderCourseTree = async function (courseData) {
     if (!courseData) return;
 
+    // Fetch notes for this course
+    let notes = [];
+    try {
+        const notesRes = await fetch(API_BASE_URL + `/api/notes/course/${courseData._id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        notes = await notesRes.json();
+    } catch (e) { console.error("Could not fetch notes matrix"); }
+
     // Find progress - handle both populated and unpopulated courseId
     const progress = (state.user.courseProgress || []).find(p => {
         const pCourseId = p.courseId?._id || p.courseId;
@@ -118,6 +125,35 @@ window.renderCourseTree = async function (courseData) {
                     </div>
                 </div>
             </div>
+
+            <!-- Study Notes Section -->
+            ${notes.length > 0 ? `
+            <div class="mb-16">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-3 syne uppercase tracking-tight">
+                        <i class="fas fa-file-signature text-red-500"></i>
+                        Neural Study Matrix
+                    </h2>
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">${notes.length} Records Detected</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${notes.map(n => `
+                        <div onclick="openNoteViewer('${n._id}')" class="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-center justify-between group hover:bg-white/10 hover:border-red-500/30 transition-all cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-red-600/10 rounded-xl flex items-center justify-center text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white uppercase tracking-tight group-hover:text-red-400 transition-colors">${n.title}</h4>
+                                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Version 1.0 // ${new Date(n.updatedAt).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-slate-700 group-hover:text-red-500 transition-all"></i>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Course Content -->
             <div class="space-y-4">
@@ -359,6 +395,12 @@ window.launchProPlayer = async function (lecId, unitId) {
                                     Live Chat
                                 </span>
                             </button>
+                            <button onclick="setTab('cheat')" id="t-cheat" class="tab-btn pb-3 px-1 text-sm font-bold border-b-2 border-transparent transition-all relative group">
+                                <span class="relative z-10 flex items-center gap-2">
+                                    <i class="fas fa-terminal"></i>
+                                    Cheat Code
+                                </span>
+                            </button>
                         </div>
                     </div>
 
@@ -464,7 +506,7 @@ window.launchProPlayer = async function (lecId, unitId) {
 window.setTab = async function (tab) {
     if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
 
-    ['about', 'comments', 'notes', 'chat'].forEach(t => {
+    ['about', 'comments', 'notes', 'chat', 'cheat'].forEach(t => {
         const btn = document.getElementById(`t-${t}`);
         if (btn) btn.classList.toggle('active', t === tab);
     });
@@ -487,42 +529,40 @@ window.setTab = async function (tab) {
                 </div>
             </div>`;
     } else if (tab === 'notes') {
-        const url = lecture.notesUrl || lecture.documentUrl;
-        const filename = url ? url.split('/').pop().split('?')[0] : "Resource.pdf";
-        canvas.innerHTML = url ? `
-            <div class="space-y-6">
-                <div class="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/20 p-6 rounded-xl">
-                    <div class="flex items-center justify-between gap-6">
-                        <div class="flex items-center gap-5">
-                            <div class="w-16 h-16 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                                <i class="fas fa-file-pdf text-3xl text-blue-500"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg mb-1">${filename}</h3>
-                                <p class="text-xs text-slate-500">Study Material • PDF Document</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-3">
-                            <button onclick="launchResourcePreview('${url}')" class="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition-all">
-                                <i class="fas fa-eye mr-2"></i>View
-                            </button>
-                            <button onclick="window.open('${url}', '_blank')" class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-600/20">
-                                <i class="fas fa-download mr-2"></i>Download
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div id="inline-resource-view" class="hidden rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                    <iframe id="resource-iframe" src="" class="w-full h-[600px] bg-white"></iframe>
-                </div>
-            </div>` : `<div class="text-center py-16 text-slate-600">
-                <i class="fas fa-folder-open text-4xl mb-4 opacity-20"></i>
-                <p class="text-sm">No resources available for this lecture</p>
-            </div>`;
+        renderNeuralNotes();
     } else if (tab === 'comments') {
         renderComments();
     } else if (tab === 'chat') {
         renderLiveChat();
+    } else if (tab === 'cheat') {
+        canvas.innerHTML = `
+            <div class="max-w-md mx-auto py-12">
+                <div class="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl group-hover:bg-blue-600/30 transition-all"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-500 mb-6 mx-auto">
+                            <i class="fas fa-terminal text-2xl"></i>
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-center mb-2 uppercase tracking-tight">Access Protocol</h3>
+                        <p class="text-slate-500 text-center text-xs font-bold uppercase tracking-widest mb-8">Enter Neural Override Sequence</p>
+                        
+                        <div class="space-y-4">
+                            <div class="relative">
+                                <input id="cheat-input" type="text" placeholder="Protocol Code..." 
+                                    class="w-full bg-white/5 border border-white/20 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-black tracking-[0.2em] text-white uppercase placeholder:text-slate-700 transition-all">
+                                <div class="absolute inset-0 rounded-2xl bg-blue-600/5 -z-10 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                            
+                            <button onclick="submitCheatCode()" 
+                                class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 py-5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20 active:scale-95">
+                                Execute Override
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
     }
 };
 
@@ -736,6 +776,156 @@ window.resumeCourse = function () {
         targetUnit = course.units[0]; targetLec = targetUnit.lectures[0];
     }
     if (targetLec) launchProPlayer(targetLec._id, targetUnit._id);
+};
+
+window.openNoteViewer = async function (id) {
+    const modal = document.getElementById('zenith-modal');
+    const content = document.getElementById('zenith-modal-content');
+    if (!modal || !content) return;
+
+    content.innerHTML = `
+        <div class="flex items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
+    `;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    try {
+        const res = await fetch(API_BASE_URL + `/api/admin/notes`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const notes = await res.json();
+        const note = notes.find(n => n._id === id);
+
+        if (note) {
+            let noteBody = '';
+            if (note.content && note.content.pages) {
+                // Render Multi-page A4 Layout
+                noteBody = `
+                    <div class="a4-viewer-container flex flex-col items-center gap-10 py-12 bg-slate-900/50 rounded-3xl border border-white/5">
+                        ${note.content.pages.map((p, idx) => `
+                            <div class="a4-page-static bg-white shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] relative overflow-hidden shrink-0 group/page" style="width: 210mm; min-height: 297mm;">
+                                <div class="absolute top-4 right-4 text-[8px] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover/page:opacity-100 transition-opacity">Page ${idx + 1}</div>
+                                <div class="p-[20mm] h-full">
+                                    ${p}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <style>
+                        .a4-page-static .content-box { position: absolute; pointer-events: none; }
+                        .a4-page-static .box-content { width: 100%; height: 100%; }
+                        .a4-page-static .resize-handle { display: none; }
+                        .a4-page-static img { max-width: 100%; height: auto; }
+                        
+                        /* Responsive scaling for A4 */
+                        @media screen and (max-width: 230mm) {
+                            .a4-page-static { 
+                                width: 95vw !important; 
+                                height: auto !important;
+                                min-height: 134vw !important;
+                                padding: 5vw !important;
+                            }
+                            .a4-page-static .p-\\[20mm\\] {
+                                padding: 5vw !important;
+                            }
+                        }
+                    </style>
+                `;
+            } else {
+                // Fallback for old simple notes
+                noteBody = `
+                    <div class="glass-card p-12 rounded-[3rem] border-white/5 bg-white/5">
+                        <div class="prose prose-invert prose-blue max-w-none text-slate-300 text-lg leading-relaxed font-medium">
+                            ${note.content?.html || ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = `
+                <div class="min-h-screen bg-black text-white selection:bg-blue-600/30 font-['Plus_Jakarta_Sans'] relative">
+                    <!-- Top Navigation Bar (Fixed for full-screen feel - FIXED Z-INDEX) -->
+                    <nav class="sticky top-0 z-[1000] px-10 py-6 bg-black border-b border-white/10 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,1)]">
+                        <div class="flex items-center gap-8">
+                            <button onclick="closeZenithModal()" class="group flex items-center gap-4 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-blue-500/30 transition-all">
+                                <i class="fas fa-chevron-left text-blue-500 group-hover:-translate-x-1 transition-transform"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white">Back to Hub</span>
+                            </button>
+                            <div class="h-10 w-px bg-white/10 hidden md:block"></div>
+                            <div class="hidden lg:block text-center flex-grow mx-8">
+                                <h2 class="text-2xl font-black syne tracking-tighter uppercase italic leading-none mb-1 text-white">${note.title}</h2>
+                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-[0.4em]">Integrated Intelligence // Zenith OS</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button onclick="downloadNotePDF('${note._id}')" class="px-8 py-4 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500 transition shadow-2xl shadow-blue-600/30 flex items-center gap-3 group">
+                                <i class="fas fa-file-pdf group-hover:scale-110 transition-transform"></i> Export PDF
+                            </button>
+                        </div>
+                    </nav>
+
+                    <div class="max-w-6xl mx-auto w-full py-20 px-6 relative z-10">
+                        <!-- Main Header (In-page) -->
+                        <div class="mb-20">
+                            <div class="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 rounded-xl border border-blue-500/20 mb-8">
+                                <i class="fas fa-microchip text-blue-500 text-xs shadow-[0_0_10px_rgba(59,130,246,0.5)]"></i>
+                                <span class="text-[9px] font-black text-blue-400 uppercase tracking-[0.4em]">Protocol // ${note._id}</span>
+                            </div>
+                            <h1 class="text-7xl font-black syne tracking-tighter uppercase italic text-white mb-10 leading-[0.8] drop-shadow-[0_0_30px_rgba(37,99,235,0.2)]">${note.title}</h1>
+                            
+                            <!-- Metadata Cards -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-center gap-5 hover:bg-white/10 transition-all">
+                                    <div class="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center text-blue-400 border border-blue-500/20">
+                                        <i class="fas fa-calendar-alt text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Last Synchronized</div>
+                                        <div class="text-sm font-bold text-white">${new Date(note.updatedAt).toLocaleDateString()}</div>
+                                    </div>
+                                </div>
+                                <div class="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-center gap-5 hover:bg-white/10 transition-all">
+                                    <div class="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center text-purple-400 border border-purple-500/20">
+                                        <i class="fas fa-copy text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Record Density</div>
+                                        <div class="text-sm font-bold text-white">${note.content?.pages?.length || 1} Neural Units</div>
+                                    </div>
+                                </div>
+                                <div class="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-center gap-5 sm:col-span-2 lg:col-span-1 hover:bg-white/10 transition-all">
+                                    <div class="w-12 h-12 bg-emerald-600/20 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                                        <i class="fas fa-shield-alt text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Clearance Protocol</div>
+                                        <div class="text-sm font-bold uppercase text-white">Zenith Secured</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="h-px bg-gradient-to-r from-blue-600 via-white/5 to-transparent mb-20 opacity-30"></div>
+                        
+                        <!-- Neural Records (A4 Pages) -->
+                        <div class="notes-body-container flex flex-col items-center gap-20 pb-40">
+                            ${noteBody}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        content.innerHTML = `<div class="text-center py-20 text-red-500 font-bold uppercase tracking-widest">Protocol Failure: Could not decode neural record.</div>`;
+    }
+};
+
+window.closeZenithModal = function () {
+    const modal = document.getElementById('zenith-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
 };
 
 function getActiveLecture() {
@@ -965,24 +1155,206 @@ window.shareLecture = async function (lecId) {
     }
 };
 
-// Simple notification function
-function notify(message) {
-    // Check if global showToast exists
-    if (typeof showToast === 'function') {
-        showToast(message);
-    } else {
-        // Fallback: create simple toast
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-20 right-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
-        toast.textContent = message;
-        document.body.appendChild(toast);
+// Cheat Code Submission
+window.submitCheatCode = async function () {
+    const input = document.getElementById('cheat-input');
+    const code = input.value.trim();
+    if (!code) return notify('Enter protocol code');
 
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(-20px)';
-            toast.style.transition = 'all 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+    try {
+        const res = await fetch(API_BASE_URL + '/api/auth/cheat-code', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            notify('🚀 ' + data.message);
+            input.value = '';
+            // Update UI XP if visible
+            const xpEl = document.getElementById('user-xp-display');
+            if (xpEl) xpEl.textContent = data.newXp;
+        } else {
+            notify('❌ ' + data.message);
+        }
+    } catch (e) {
+        notify('Override Failed');
     }
-}
+};
 
+// Enhanced Note Rendering (A4 Style)
+window.renderNeuralNotes = async function () {
+    const canvas = document.getElementById('tab-canvas');
+    canvas.innerHTML = `<div class="flex justify-center py-12"><div class="w-8 h-8 border-2 border-slate-700 border-t-blue-600 rounded-full animate-spin"></div></div>`;
+
+    try {
+        const res = await fetch(API_BASE_URL + `/api/notes/course/${window.activeCourseContent._id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const notes = await res.json();
+
+        if (!notes || notes.length === 0) {
+            canvas.innerHTML = `<div class="text-center py-16 text-slate-600">
+                <i class="fas fa-brain text-4xl mb-4 opacity-20"></i>
+                <p class="text-sm">No Neural Notes found for this module</p>
+            </div>`;
+            return;
+        }
+
+        canvas.innerHTML = `
+            <div class="space-y-12 pb-20">
+                ${notes.map(note => `
+                    <div class="bg-white/5 border border-white/10 rounded-3xl p-8">
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-2xl font-black text-white uppercase tracking-tight">${note.title}</h3>
+                                <p class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.3em] mt-1">Neural Documentation</p>
+                            </div>
+                            <button onclick="downloadNotePDF('${note._id}')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2">
+                                <i class="fas fa-file-pdf text-red-500"></i> Download PDF
+                            </button>
+                        </div>
+                        
+                        <div class="note-a4-container space-y-8 flex flex-col items-center">
+                            ${note.content.pages.map((p, idx) => `
+                                <div class="w-full max-w-[800px] aspect-[1/1.414] bg-white text-gray-800 p-12 shadow-2xl relative overflow-hidden page-transition" style="border-radius: 4px;">
+                                    <div class="absolute top-0 right-0 p-4 text-[8px] font-bold text-gray-300 uppercase tracking-widest">Page ${idx + 1}</div>
+                                    <div class="note-page-content h-full">
+                                        ${p.html}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (e) {
+        notify('Failed to load neural notes');
+    }
+};
+
+window.downloadNotePDF = function (noteId) {
+    if (window.showToast) showToast('Formatting Neural Record...', 'info');
+
+    const noteEl = event.currentTarget.closest('.min-h-screen');
+    const noteTitle = noteEl.querySelector('nav h2').innerText;
+
+    // Attempt to find Course Name from the Hub or parent context
+    let courseName = "ZENITH CORE CURRICULUM";
+    const courseTitleEl = document.getElementById('page-title'); // Usually shows "Academic Core" or Course Title
+    if (courseTitleEl) courseName = courseTitleEl.innerText;
+
+    const pagesContainer = noteEl.querySelector('.a4-viewer-container');
+    if (!pagesContainer) {
+        if (window.showToast) showToast('Export Failed: Record Container missing.', 'error');
+        return;
+    }
+    const pagesHtml = pagesContainer.innerHTML;
+
+    // Create Hidden Iframe for Seamless Export
+    let printFrame = document.getElementById('zenith-print-frame');
+    if (printFrame) printFrame.remove();
+
+    printFrame = document.createElement('iframe');
+    printFrame.id = 'zenith-print-frame';
+    printFrame.style.position = 'fixed';
+    printFrame.style.opacity = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <html>
+            <head>
+                <title>${noteTitle}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@800&display=swap" rel="stylesheet">
+                <style>
+                    body { background: white; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+                    .note-page { 
+                        background: white; 
+                        margin: 0 auto; 
+                        width: 210mm;
+                        height: 297mm;
+                        position: relative;
+                        overflow: hidden;
+                        padding: 20mm;
+                        page-break-after: always;
+                        color: black !important;
+                        box-sizing: border-box;
+                    }
+                    .watermark {
+                        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+                        font-size: 80px; font-weight: 900; color: rgba(0, 0, 0, 0.03);
+                        white-space: nowrap; pointer-events: none; z-index: 1000; text-transform: uppercase; letter-spacing: 0.25em;
+                    }
+                    .registry-header {
+                        text-align: center;
+                        margin-bottom: 40px;
+                        padding-bottom: 30px;
+                        border-bottom: 2px solid #f1f5f9;
+                    }
+                    @media print {
+                        body { background: white; color: black; }
+                        .note-page { width: 210mm; height: 297mm; padding: 20mm; }
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="note-page">
+                    <div class="watermark">ZENITH INTELLIGENCE</div>
+                    
+                    <!-- Centered Minimalist Header -->
+                    <div class="registry-header">
+                        <div style="font-size: 10px; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5em; margin-bottom: 12px;">
+                            ZENITH.OS // NEURAL REGISTRY
+                        </div>
+                        <h1 style="font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 8px; color: #0f172a;">
+                            ${noteTitle}
+                        </h1>
+                        <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">
+                            Course: ${courseName}
+                        </div>
+                        <div style="height: 4px; width: 60px; background: #3b82f6; margin: 0 auto 20px auto; border-radius: 2px;"></div>
+                        <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
+                            Download Day: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </div>
+                    </div>
+
+                    <!-- Content (Starting directly below header) -->
+                    ${pagesHtml.replace(/a4-page-static/g, 'content-wrapper').replace(/bg-white shadow-\[0_30px_60px_-15px_rgba\(0,0,0,0.5\)\]/g, '').replace(/style="width: 210mm; min-height: 297mm;"/g, '').replace(/<div class="absolute top-4 right-4 text-\[8px\] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover\/page:opacity-100 transition-opacity">Page \d+<\/div>/g, '').replace(/(<div class="content-wrapper[^>]*>)/g, '$1<div class="watermark">ZENITH INTELLIGENCE</div>').replace(/<div class="p-\[20mm\] h-full">/g, '<div class="note-content">').replace(/<\/div>\s*<\/div>\s*<\/div>/g, '</div></div>')}
+                </div>
+                
+                <!-- If multi-page, handle remaining pages -->
+                ${pagesHtml.includes('a4-page-static') && pagesHtml.split('a4-page-static').length > 2 ?
+            pagesHtml.split(/a4-page-static/).slice(2).map(p => `
+                        <div class="note-page">
+                            <div class="watermark">ZENITH INTELLIGENCE</div>
+                            <div class="note-content">
+                                ${p.replace(/bg-white shadow-\[0_30px_60px_-15px_rgba\(0,0,0,0.5\)\]/g, '').replace(/style="width: 210mm; min-height: 297mm;"/g, '').replace(/<div class="absolute top-4 right-4 text-\[8px\] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover\/page:opacity-100 transition-opacity">Page \d+<\/div>/g, '').replace(/<div class="p-\[20mm\] h-full">/g, '').replace(/<\/div>\s*<\/div>/g, '')}
+                            </div>
+                        </div>
+                    `).join('') : ''
+        }
+            </body>
+        </html>
+    `);
+    doc.close();
+
+    printFrame.onload = function () {
+        setTimeout(() => {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+            if (window.showToast) showToast('Registry Exported Successfully', 'success');
+        }, 800);
+    };
+};
+/ /   R e g i s t r y   P r o t o c o l   v 7 . 1 :   L o g i c   i n i t i a l i z e d  
+ 
