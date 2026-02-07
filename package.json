@@ -1,6 +1,6 @@
 {
   "name": "project-alpha",
-  "version": "1.0.0",
+  "version": "1.09.0",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
@@ -12,7 +12,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
