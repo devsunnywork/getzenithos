@@ -41,7 +41,10 @@ window.openCoursePlayer = async function (courseId) {
         const course = await res.json();
         window.activeCourseContent = course;
         window.renderCourseTree(course);
-    } catch (e) { ImmersiveEngine.close(); }
+    } catch (e) {
+        console.error("CRITICAL ENGINE FAILURE:", e);
+        ImmersiveEngine.close();
+    }
 };
 
 // POLISHED LANDING PAGE
@@ -56,9 +59,9 @@ window.renderCourseTree = async function (courseData) {
     } catch (e) { console.error("Could not fetch notes matrix"); }
 
     // Find progress - handle both populated and unpopulated courseId
-    const progress = (state.user.courseProgress || []).find(p => {
+    const progress = (state?.user?.courseProgress || []).find(p => {
         const pCourseId = p.courseId?._id || p.courseId;
-        return pCourseId.toString() === courseData._id.toString();
+        return pCourseId && pCourseId.toString() === courseData._id.toString();
     }) || { completedLectures: [], xp: 0 };
     const totalLectures = courseData.units.reduce((acc, unit) => acc + (unit.lectures?.length || 0), 0);
     const completedCount = progress.completedLectures.length;
@@ -383,12 +386,14 @@ window.launchProPlayer = async function (lecId, unitId) {
                                     Comments
                                 </span>
                             </button>
+                            ${lecture.notesUrl ? `
                             <button onclick="setTab('notes')" id="t-notes" class="tab-btn pb-3 px-1 text-sm font-bold border-b-2 border-transparent transition-all relative group">
                                 <span class="relative z-10 flex items-center gap-2">
                                     <i class="fas fa-file-pdf"></i>
                                     Resources
                                 </span>
                             </button>
+                            ` : ''}
                             <button onclick="setTab('chat')" id="t-chat" class="tab-btn pb-3 px-1 text-sm font-bold border-b-2 border-transparent transition-all relative group">
                                 <span class="relative z-10 flex items-center gap-2">
                                     <i class="fas fa-message"></i>
@@ -529,8 +534,35 @@ window.setTab = async function (tab) {
                 </div>
             </div>`;
     } else if (tab === 'notes') {
-        renderNeuralNotes();
-    } else if (tab === 'comments') {
+        const lecture = getActiveLecture();
+        if (lecture && lecture.notesUrl) {
+            const downloadUrl = convertDriveLink(lecture.notesUrl);
+            canvas.innerHTML = `
+                <div class="max-w-4xl mx-auto py-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div class="bg-white/5 border border-white/10 rounded-2xl p-4 md:p-6 shadow-xl backdrop-blur-2xl flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-blue-500/30 transition-all">
+                        <div class="flex items-center gap-5 overflow-hidden">
+                            <div class="w-12 h-12 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-500 border border-blue-500/20 shrink-0">
+                                <i class="fas fa-file-pdf text-lg"></i>
+                            </div>
+                            <div class="truncate text-center md:text-left">
+                                <h3 class="text-sm font-black text-white uppercase tracking-tight truncate">${lecture.title || "Lecture Document"}</h3>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-0.5">ADMIN VERIFIED RESOURCE</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0">
+                            <a href="${lecture.notesUrl}" target="_blank" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95">
+                                Open <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            <a href="${downloadUrl}" target="_blank" download class="px-6 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all flex items-center gap-2 active:scale-95">
+                                Download <i class="fas fa-download text-blue-500"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+        }
+    }
+    else if (tab === 'comments') {
         renderComments();
     } else if (tab === 'chat') {
         renderLiveChat();
@@ -605,7 +637,7 @@ window.renderComments = async function () {
                             <img src="${avatarUrl}" class="w-12 h-12 rounded-full border-2 border-white/10">
                             <div class="flex-grow">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span class="font-bold text-sm">${c.user.username}</span>
+                                    <span class="font-bold text-sm text-white">${c.user?.username || 'Anonymous User'}</span>
                                     <span class="text-xs text-slate-600">${new Date(c.createdAt).toLocaleDateString()}</span>
                                 </div>
                                 <p class="text-sm text-slate-300 leading-relaxed">${c.text}</p>
@@ -659,7 +691,7 @@ async function pollChat() {
             stream.innerHTML = chats.slice(-25).reverse().map(c => `
                 <div class="text-sm">
                     <span class="text-slate-600 text-xs">[${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
-                    <span class="text-blue-500 font-bold ml-2">${c.user.username}:</span>
+                    <span class="text-blue-500 font-bold ml-2">${c.user?.username || 'System'}:</span>
                     <span class="text-slate-300 ml-2">${c.text}</span>
                 </div>
             `).join('');
@@ -792,46 +824,36 @@ window.openNoteViewer = async function (id) {
     modal.classList.add('flex');
 
     try {
-        const res = await fetch(API_BASE_URL + `/api/admin/notes`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const notes = await res.json();
-        const note = notes.find(n => n._id === id);
+        const res = await fetch(API_BASE_URL + `/api/notes/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const note = await res.json();
 
         if (note) {
             let noteBody = '';
             if (note.content && note.content.pages) {
-                // Render Multi-page A4 Layout
                 noteBody = `
-                    <div class="a4-viewer-container flex flex-col items-center gap-10 py-12 bg-slate-900/50 rounded-3xl border border-white/5">
+                    <div class="flex flex-col items-center gap-16 py-20 bg-slate-950/20 backdrop-blur-xl a4-viewer-container">
                         ${note.content.pages.map((p, idx) => `
-                            <div class="a4-page-static bg-white shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] relative overflow-hidden shrink-0 group/page" style="width: 210mm; min-height: 297mm;">
-                                <div class="absolute top-4 right-4 text-[8px] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover/page:opacity-100 transition-opacity">Page ${idx + 1}</div>
-                                <div class="p-[20mm] h-full">
-                                    ${p}
-                                </div>
+                            <div class="a4-page-static bg-white shadow-2xl relative overflow-hidden shrink-0 bg-${p.texture || 'plain'}" style="width: 794px; height: 1123px;">
+                                ${(p.blocks || []).map(b => window.renderZenithNoteBlock(b)).join('')}
+                                <div class="absolute bottom-10 left-10 text-[9px] font-black text-slate-200 uppercase tracking-[0.5em] pointer-events-none">Sheet #0${idx + 1} // ${note.title}</div>
                             </div>
                         `).join('')}
                     </div>
                     <style>
-                        .a4-page-static .content-box { position: absolute; pointer-events: none; }
-                        .a4-page-static .box-content { width: 100%; height: 100%; }
-                        .a4-page-static .resize-handle { display: none; }
-                        .a4-page-static img { max-width: 100%; height: auto; }
-                        
-                        /* Responsive scaling for A4 */
-                        @media screen and (max-width: 230mm) {
-                            .a4-page-static { 
-                                width: 95vw !important; 
-                                height: auto !important;
-                                min-height: 134vw !important;
-                                padding: 5vw !important;
-                            }
-                            .a4-page-static .p-\\[20mm\\] {
-                                padding: 5vw !important;
-                            }
-                        }
+                        .a4-page-static { transform-origin: top center; transition: transform 0.3s ease; }
+                        .bg-lined { background-image: linear-gradient(#e2e8f0 1px, transparent 1px); background-size: 100% 28px; }
+                        .bg-grid { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 24px 24px; }
+                        .bg-dots { background-image: radial-gradient(#94a3b8 1.5px, transparent 0); background-size: 24px 24px; }
+                        .thought-tail-static { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 30px; height: 30px; z-index: -1; background: inherit; border-bottom: inherit; border-right: inherit; }
+                        .code-static { border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+                        @media screen and (max-width: 900px) { .a4-page-static { transform: scale(0.9); } }
+                        @media screen and (max-width: 800px) { .a4-page-static { transform: scale(0.8); } }
+                        @media screen and (max-width: 700px) { .a4-page-static { transform: scale(0.7); } }
+                        @media screen and (max-width: 600px) { .a4-page-static { transform: scale(0.6); } }
                     </style>
                 `;
-            } else {
+            }
+            else {
                 // Fallback for old simple notes
                 noteBody = `
                     <div class="glass-card p-12 rounded-[3rem] border-white/5 bg-white/5">
@@ -843,7 +865,10 @@ window.openNoteViewer = async function (id) {
             }
 
             content.innerHTML = `
-                <div class="min-h-screen bg-black text-white selection:bg-blue-600/30 font-['Plus_Jakarta_Sans'] relative">
+                <div class="min-h-screen bg-black text-white selection:bg-blue-600/30 font-['Poppins'] relative notes-body-container">
+                    <!-- Fonts -->
+                    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Lora:ital@0;1&family=Roboto+Mono&family=Inter:wght@400;600;700&family=Oswald:wght@500&family=Raleway:wght@400;700&family=Ubuntu:wght@400;700&family=Open+Sans:wght@400;700&family=Dancing+Script&family=Merriweather&display=swap" rel="stylesheet">
+
                     <!-- Top Navigation Bar (Fixed for full-screen feel - FIXED Z-INDEX) -->
                     <nav class="sticky top-0 z-[1000] px-10 py-6 bg-black border-b border-white/10 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,1)]">
                         <div class="flex items-center gap-8">
@@ -858,7 +883,7 @@ window.openNoteViewer = async function (id) {
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <button onclick="downloadNotePDF('${note._id}')" class="px-8 py-4 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500 transition shadow-2xl shadow-blue-600/30 flex items-center gap-3 group">
+                            <button onclick="downloadNotePDF(event, '${note._id}')" class="px-8 py-4 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500 transition shadow-2xl shadow-blue-600/30 flex items-center gap-3 group">
                                 <i class="fas fa-file-pdf group-hover:scale-110 transition-transform"></i> Export PDF
                             </button>
                         </div>
@@ -1187,8 +1212,9 @@ window.submitCheatCode = async function () {
 };
 
 // Enhanced Note Rendering (A4 Style)
-window.renderNeuralNotes = async function () {
-    const canvas = document.getElementById('tab-canvas');
+window.renderNeuralNotes = async function (targetId = 'tab-canvas') {
+    const canvas = document.getElementById(targetId);
+    if (!canvas) return;
     canvas.innerHTML = `<div class="flex justify-center py-12"><div class="w-8 h-8 border-2 border-slate-700 border-t-blue-600 rounded-full animate-spin"></div></div>`;
 
     try {
@@ -1214,18 +1240,16 @@ window.renderNeuralNotes = async function () {
                                 <h3 class="text-2xl font-black text-white uppercase tracking-tight">${note.title}</h3>
                                 <p class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.3em] mt-1">Neural Documentation</p>
                             </div>
-                            <button onclick="downloadNotePDF('${note._id}')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2">
+                            <button onclick="downloadNotePDF(event, '${note._id}')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2">
                                 <i class="fas fa-file-pdf text-red-500"></i> Download PDF
                             </button>
                         </div>
                         
-                        <div class="note-a4-container space-y-8 flex flex-col items-center">
-                            ${note.content.pages.map((p, idx) => `
-                                <div class="w-full max-w-[800px] aspect-[1/1.414] bg-white text-gray-800 p-12 shadow-2xl relative overflow-hidden page-transition" style="border-radius: 4px;">
-                                    <div class="absolute top-0 right-0 p-4 text-[8px] font-bold text-gray-300 uppercase tracking-widest">Page ${idx + 1}</div>
-                                    <div class="note-page-content h-full">
-                                        ${p.html}
-                                    </div>
+                        <div class="a4-viewer-container space-y-8 flex flex-col items-center">
+                            ${(note.content?.pages || []).map((p, idx) => `
+                                <div class="a4-page-static bg-white shadow-2xl relative overflow-hidden shrink-0 bg-${p.texture || 'plain'}" style="width: 794px; height: 1123px; transform: scale(0.9); transform-origin: top center; border-radius: 4px;">
+                                    ${(p.blocks || []).map(b => window.renderZenithNoteBlock(b)).join('')}
+                                    <div class="absolute bottom-10 left-10 text-[9px] font-black text-slate-200 uppercase tracking-[0.5em] pointer-events-none">Sheet #0${idx + 1} // ${note.title}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1238,36 +1262,78 @@ window.renderNeuralNotes = async function () {
     }
 };
 
-window.downloadNotePDF = function (noteId) {
+window.downloadNotePDF = function (event, noteId) {
     if (window.showToast) showToast('Formatting Neural Record...', 'info');
 
-    const noteEl = event.currentTarget.closest('.min-h-screen');
-    const noteTitle = noteEl.querySelector('nav h2').innerText;
+    const e = event || window.event;
+    // Support finding in modal wrap OR inline card wrap
+    const noteEl = e ? (e.currentTarget.closest('.notes-body-container') || e.currentTarget.closest('.bg-white/5')) : document.querySelector('.notes-body-container');
+    if (!noteEl) return showToast('Export Failed: Context lost.', 'error');
 
-    // Attempt to find Course Name from the Hub or parent context
-    let courseName = "ZENITH CORE CURRICULUM";
-    const courseTitleEl = document.getElementById('page-title'); // Usually shows "Academic Core" or Course Title
-    if (courseTitleEl) courseName = courseTitleEl.innerText;
+    // Find Title: Modal Nav h2 OR Card h3
+    const titleSource = noteEl.querySelector('nav h2') || noteEl.querySelector('h3');
+    const noteTitle = titleSource ? titleSource.innerText : "Neural Record";
+
+    // Attempt to find Course Name
+    let courseName = document.getElementById('page-title')?.innerText || "ZENITH CORE CURRICULUM";
+
+    // Anti-Leak Data Extraction (Security Layer)
+    const downloaderName = document.getElementById('user-name')?.innerText?.trim() || "ZENITH OPERATIVE";
+    const downloadId = `ZN-${new Date().getTime().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+    const downloadDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
     const pagesContainer = noteEl.querySelector('.a4-viewer-container');
-    if (!pagesContainer) {
-        if (window.showToast) showToast('Export Failed: Record Container missing.', 'error');
-        return;
-    }
-    const pagesHtml = pagesContainer.innerHTML;
+    if (!pagesContainer) return showToast('Export Failed: Record Container missing.', 'error');
 
-    // Create Hidden Iframe for Seamless Export
-    let printFrame = document.getElementById('zenith-print-frame');
-    if (printFrame) printFrame.remove();
+    // Create New Tab for "Next Page" experience
+    const exportWin = window.open('', '_blank');
+    if (!exportWin) return showToast('Pop-up blocked: Please allow redirects.', 'error');
 
-    printFrame = document.createElement('iframe');
-    printFrame.id = 'zenith-print-frame';
-    printFrame.style.position = 'fixed';
-    printFrame.style.opacity = '0';
-    document.body.appendChild(printFrame);
-
-    const doc = printFrame.contentWindow.document;
+    const doc = exportWin.document;
     doc.open();
+
+    const pageEls = pagesContainer.querySelectorAll('.a4-page-static');
+    let pagesCombinedHtml = '';
+
+    pageEls.forEach((p, idx) => {
+        const content = p.innerHTML;
+        const textureClass = Array.from(p.classList).find(c => c.startsWith('bg-')) || 'bg-plain';
+
+        pagesCombinedHtml += `
+            <div class="note-page ${textureClass}">
+                <div class="watermark">ZENITH INTELLIGENCE</div>
+                
+                ${idx === 0 ? `
+                    <div class="registry-header">
+                        <div style="font-size: 10px; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5em; margin-bottom: 12px;">ZENITH.OS // NEURAL REGISTRY</div>
+                        <h1 style="font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 8px; color: #0f172a;">${noteTitle}</h1>
+                        <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">Course: ${courseName}</div>
+                        <div style="height: 4px; width: 60px; background: #3b82f6; margin: 0 auto 20px auto; border-radius: 2px;"></div>
+                        <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">Download Date: ${downloadDate}</div>
+                    </div>
+                ` : '<div style="height: 60px;"></div>'}
+
+                <div class="note-content">
+                    ${content}
+                </div>
+
+                <!-- Security Footer (Anti-Leak) -->
+                <div class="security-footer">
+                    <div class="flex justify-between items-end w-full px-12 pb-8">
+                        <div class="text-left">
+                            <div style="font-size: 8px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 4px;">© 2026 ZENITH INTELLIGENCE SYSTEMS // CORE CONTENT</div>
+                            <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em;">LICENSED TO: <span style="color: #3b82f6;">${downloaderName}</span></div>
+                        </div>
+                        <div class="text-right">
+                            <div style="font-size: 8px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">SIGNATURE ID: ${downloadId}</div>
+                            <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3em;">SHEET #0${idx + 1}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
     doc.write(`
         <html>
             <head>
@@ -1275,95 +1341,124 @@ window.downloadNotePDF = function (noteId) {
                 <script src="https://cdn.tailwindcss.com"></script>
                 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@800&display=swap" rel="stylesheet">
                 <style>
-                    body { background: white; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+                    body { background: #f8fafc; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; padding: 50px 0; }
+                    
                     .note-page { 
-                        background: white; 
-                        margin: 0 auto; 
-                        width: 210mm;
-                        height: 297mm;
+                        background: white !important; 
+                        margin: 0 auto 50px auto; 
+                        width: 794px; 
+                        height: 1123px; 
+                        position: relative; 
+                        overflow: hidden !important; 
+                        padding: 0; 
+                        page-break-after: always; 
+                        color: black !important; 
+                        box-sizing: border-box; 
+                        box-shadow: 0 40px 100px -20px rgba(0,0,0,0.15);
+                    }
+                    
+                    .note-content { 
+                        position: relative; 
+                        width: 100%; 
+                        height: 100%; 
+                    }
+                    
+                    .watermark { 
+                        position: absolute; 
+                        top: 50%; 
+                        left: 50%; 
+                        transform: translate(-50%, -50%) rotate(-45deg); 
+                        font-size: 80px; 
+                        font-weight: 900; 
+                        color: rgba(0, 0, 0, 0.03); 
+                        white-space: nowrap; 
+                        pointer-events: none; 
+                        z-index: 1000; 
+                        text-transform: uppercase; 
+                        letter-spacing: 0.25em; 
+                    }
+                    
+                    .registry-header { 
+                        text-align: center; 
+                        margin-bottom: 30px; 
+                        padding: 70px 40px 40px 40px; 
+                        border-bottom: 2px solid #f1f5f9; 
                         position: relative;
-                        overflow: hidden;
-                        padding: 20mm;
-                        page-break-after: always;
-                        color: black !important;
-                        box-sizing: border-box;
+                        z-index: 10;
                     }
-                    .watermark {
-                        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-                        font-size: 80px; font-weight: 900; color: rgba(0, 0, 0, 0.03);
-                        white-space: nowrap; pointer-events: none; z-index: 1000; text-transform: uppercase; letter-spacing: 0.25em;
+                    
+                    .security-footer { 
+                        position: absolute; 
+                        bottom: 0; 
+                        left: 0; 
+                        right: 0; 
+                        height: 100px; 
+                        background: white !important; 
+                        border-top: 1px solid #f1f5f9; 
+                        display: flex; 
+                        align-items: flex-end; 
+                        z-index: 1001; 
                     }
-                    .registry-header {
-                        text-align: center;
-                        margin-bottom: 40px;
-                        padding-bottom: 30px;
-                        border-bottom: 2px solid #f1f5f9;
-                    }
+                    
+                    .bg-lined { background-image: linear-gradient(#f1f5f9 1px, transparent 1px) !important; background-size: 100% 28px !important; }
+                    .bg-grid { background-image: radial-gradient(#f1f5f9 1px, transparent 1px) !important; background-size: 24px 24px !important; }
+                    .bg-dots { background-image: radial-gradient(#f1f5f9 1.5px, transparent 0) !important; background-size: 24px 24px !important; }
+                    
+                    .white-space-pre-wrap { white-space: pre-wrap !important; }
+                    
                     @media print {
-                        body { background: white; color: black; }
-                        .note-page { width: 210mm; height: 297mm; padding: 20mm; }
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                        @page { margin: 0; size: auto; }
+                        body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+                        .note-page { 
+                            width: 794px; 
+                            height: 1123px; 
+                            margin: 0 !important; 
+                            box-shadow: none !important; 
+                            border: none !important; 
+                            overflow: hidden !important;
+                            page-break-after: always;
+                            box-sizing: border-box;
+                        }
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important;
                     }
                 </style>
             </head>
-            <body>
-                <div class="note-page">
-                    <div class="watermark">ZENITH INTELLIGENCE</div>
-                    
-                    <!-- Centered Minimalist Header -->
-                    <div class="registry-header">
-                        <div style="font-size: 10px; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5em; margin-bottom: 12px;">
-                            ZENITH.OS // NEURAL REGISTRY
-                        </div>
-                        <h1 style="font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 8px; color: #0f172a;">
-                            ${noteTitle}
-                        </h1>
-                        <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">
-                            Course: ${courseName}
-                        </div>
-                        <div style="height: 4px; width: 60px; background: #3b82f6; margin: 0 auto 20px auto; border-radius: 2px;"></div>
-                        <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em;">
-                            Download Day: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </div>
-                    </div>
-
-                    <!-- Content (Starting directly below header) -->
-                    ${pagesHtml.replace(/a4-page-static/g, 'content-wrapper').replace(/bg-white shadow-\[0_30px_60px_-15px_rgba\(0,0,0,0.5\)\]/g, '').replace(/style="width: 210mm; min-height: 297mm;"/g, '').replace(/<div class="absolute top-4 right-4 text-\[8px\] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover\/page:opacity-100 transition-opacity">Page \d+<\/div>/g, '').replace(/(<div class="content-wrapper[^>]*>)/g, '$1<div class="watermark">ZENITH INTELLIGENCE</div>').replace(/<div class="p-\[20mm\] h-full">/g, '<div class="note-content">').replace(/<\/div>\s*<\/div>\s*<\/div>/g, '</div></div>')}
-                </div>
-                
-                <!-- If multi-page, handle remaining pages -->
-                ${pagesHtml.includes('a4-page-static') && pagesHtml.split('a4-page-static').length > 2 ?
-            pagesHtml.split(/a4-page-static/).slice(2).map(p => `
-                        <div class="note-page">
-                            <div class="watermark">ZENITH INTELLIGENCE</div>
-                            <div class="note-content">
-                                ${p.replace(/bg-white shadow-\[0_30px_60px_-15px_rgba\(0,0,0,0.5\)\]/g, '').replace(/style="width: 210mm; min-height: 297mm;"/g, '').replace(/<div class="absolute top-4 right-4 text-\[8px\] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover\/page:opacity-100 transition-opacity">Page \d+<\/div>/g, '').replace(/<div class="p-\[20mm\] h-full">/g, '').replace(/<\/div>\s*<\/div>/g, '')}
-                            </div>
-                        </div>
-                    `).join('') : ''
-        }
+            <body class="white-space-pre-wrap">
+                ${pagesCombinedHtml}
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.focus();
+                            window.print();
+                        }, 1000);
+                    };
+                </script>
             </body>
         </html>
     `);
     doc.close();
-
-    printFrame.onload = function () {
-        setTimeout(() => {
-            printFrame.contentWindow.focus();
-            printFrame.contentWindow.print();
-            if (window.showToast) showToast('Registry Exported Successfully', 'success');
-        }, 800);
-    };
+    showToast('Security Registry Dispatched', 'success');
 };
-/ /   R e g i s t r y   P r o t o c o l   v 7 . 1 :   L o g i c   i n i t i a l i z e d  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 2 :   M e t a d a t a   p r o c e s s i n g   r e a d y  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 3 :   I f r a m e   e x p o r t   r e f i n e m e n t  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 4 :   B r a n d i n g   c o n s i s t e n c y   c h e c k  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 5 :   C S S   p r i n t   l a y e r   v e r i f i e d  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 6 :   E v e n t   h a n d l i n g   d o c u m e n t a t i o n  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 7 :   M u l t i - p a g e   l o g i c   c l a r i f i c a t i o n  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 8 :   Z e n i t h   O S   v e r s i o n i n g   l o g  
- / /   R e g i s t r y   P r o t o c o l   v 7 . 9 :   N e u r a l   R e g i s t r y   p r o t o c o l   c o m m e n t  
- / /   R e g i s t r y   P r o t o c o l   v 8 . 0 :   F i n a l   s y s t e m   s y n c h r o n i z a t i o n  
- 
+
+window.renderZenithNoteBlock = function (b) {
+    if (!b) return '';
+    var style = 'position:absolute; left:' + b.x + 'px; top:' + b.y + 'px; width:' + b.w + 'px; font-size:' + (b.styles?.fontSize || 16) + 'px; font-family:' + (b.styles?.fontFamily || 'font-poppins') + '; color:' + (b.styles?.color || '#1e293b') + '; transform:rotate(' + (b.styles?.rotation || 0) + 'deg); opacity:' + (b.styles?.opacity || 1) + '; z-index:' + (b.zIndex || 10) + '; white-space: pre-wrap;';
+    if (b.styles?.bgColor) style += 'background-color:' + b.styles.bgColor + ';';
+    if (b.styles?.borderRadius) style += 'border-radius:' + b.styles.borderRadius + 'px;';
+    if (b.styles?.padding) style += 'padding:' + (typeof b.styles.padding === 'string' ? b.styles.padding : b.styles.padding + 'px') + ';';
+    if (b.styles?.borderLeft) style += 'border-left:' + b.styles.borderLeft + ';';
+    if (b.styles?.borderWidth) style += 'border:' + b.styles.borderWidth + 'px solid ' + b.styles.borderColor + ';';
+
+    var content = '';
+    if (b.type === 'image') content = '<img src="' + b.content + '" style="width:100%; height:100%; object-fit:contain; border-radius:inherit; display:block;">';
+    else if (b.type === 'divider') content = '<div style="width:100%; height:2px; background:#e2e8f0;"></div>';
+    else if (b.type === 'code') {
+        content = '<div style="background:#0f172a; padding:8px 12px; font-size:10px; color:#94a3b8; font-weight:bold; border-bottom:1px solid #334155; display:flex; justify-content:space-between;"><span>' + (b.title || 'snippet.txt') + '</span></div><div style="padding:15px; color:#38bdf8; font-family:monospace; white-space:pre; font-size:14px; background:#1e293b;">' + b.content + '</div>';
+    }
+    else if (b.type === 'thought') {
+        content = '<div style="display:flex; align-items:center; justify-content:center; text-align:center; height:100%;">' + b.content + '</div><div class="thought-tail-static"></div>';
+    }
+    else content = b.content;
+    return '<div style="' + style + '" class="' + b.type + '-static">' + content + '</div>';
+};
