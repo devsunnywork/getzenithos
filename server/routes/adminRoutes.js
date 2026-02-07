@@ -7,6 +7,7 @@ const Lecture = require('../models/Lecture');
 const Setting = require('../models/Setting');
 const Transaction = require('../models/Transaction');
 const Support = require('../models/Support');
+const Note = require('../models/Note');
 const { auth, isAdmin } = require('../middleware/authMiddleware');
 
 // Protect all admin routes
@@ -58,11 +59,23 @@ router.get('/users/:id/deep', async (req, res) => {
 router.patch('/users/:id/moderation', async (req, res) => {
     try {
         const { status, blockedReason, blockedUntil } = req.body;
-        const user = await User.findByIdAndUpdate(req.params.id, {
-            status,
-            blockedReason,
-            blockedUntil: blockedUntil ? new Date(blockedUntil) : null
-        }, { new: true });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
+
+        user.status = status || user.status;
+        user.blockedReason = blockedReason !== undefined ? blockedReason : user.blockedReason;
+        if (blockedUntil !== undefined) user.blockedUntil = blockedUntil ? new Date(blockedUntil) : null;
+
+        await user.save();
+        res.json(user);
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.patch('/users/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
         res.json(user);
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
@@ -76,9 +89,101 @@ router.patch('/users/:id/role', async (req, res) => {
 
 router.delete('/users/:id', async (req, res) => {
     try {
+        const user = await User.findById(req.params.id);
+        if (user.role === 'admin') return res.status(403).json({ message: 'Cannot terminate another admin.' });
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'Operative terminated.' });
     } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.patch('/users/:id/balance', async (req, res) => {
+    try {
+        const { amount, type, reason } = req.body; // type: 'add' or 'subtract'
+        const change = type === 'add' ? Number(amount) : -Number(amount);
+        const user = await User.findByIdAndUpdate(req.params.id, { $inc: { balance: change } }, { new: true });
+
+        // Log transaction
+        const tx = new Transaction({
+            user: req.params.id,
+            type: type === 'add' ? 'recharge' : 'purchase',
+            amount: Math.abs(change),
+            item: reason || 'Manual Balance Adjustment'
+        });
+        await tx.save();
+
+        res.json(user);
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.patch('/users/:id/feature-access', async (req, res) => {
+    try {
+        const { feature, status, reason } = req.body;
+        const update = {};
+        update[`featureAccess.${feature}`] = { status, reason };
+        const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true });
+        res.json(user);
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.post('/users/:id/courses/:courseId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
+
+        if (user.enrolledCourses.includes(req.params.courseId)) {
+            return res.status(400).json({ message: 'Module already authorized for this operative.' });
+        }
+        user.enrolledCourses.push(req.params.courseId);
+        // Also initialize progress if not exists
+        if (!user.courseProgress.some(p => p.courseId.toString() === req.params.courseId)) {
+            user.courseProgress.push({ courseId: req.params.courseId });
+        }
+        await user.save();
+        res.json({ message: 'Module Authorized.', user });
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.post('/users/:id/grant', async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
+
+        if (user.enrolledCourses.includes(courseId)) {
+            return res.status(400).json({ message: 'Module already authorized.' });
+        }
+        user.enrolledCourses.push(courseId);
+        if (!user.courseProgress.some(p => p.courseId.toString() === courseId)) {
+            user.courseProgress.push({ courseId });
+        }
+        await user.save();
+        res.json({ message: 'Module Authorized.', user });
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.post('/users/:id/revoke', async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
+
+        user.enrolledCourses = user.enrolledCourses.filter(c => c.toString() !== courseId);
+        user.courseProgress = user.courseProgress.filter(p => p.courseId.toString() !== courseId);
+        await user.save();
+        res.json({ message: 'Module Access Revoked.', user });
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+router.delete('/users/:id/courses/:courseId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Operative not found.' });
+
+        user.enrolledCourses = user.enrolledCourses.filter(c => c.toString() !== req.params.courseId);
+        user.courseProgress = user.courseProgress.filter(p => p.courseId.toString() !== req.params.courseId);
+        await user.save();
+        res.json({ message: 'Module Access Revoked.', user });
+    } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
 // --- CONTENT PRODUCTION STUDIO ---
@@ -172,6 +277,44 @@ router.delete('/lectures/:id', async (req, res) => {
         const lecture = await Lecture.findByIdAndDelete(req.params.id);
         await Unit.findByIdAndUpdate(lecture.unit, { $pull: { lectures: lecture._id } });
         res.json({ message: 'Lecture deleted.' });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// --- NOTE STUDIO ---
+
+router.get('/notes', async (req, res) => {
+    try {
+        const notes = await Note.find().populate('course', 'title');
+        res.json(notes);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.post('/notes', async (req, res) => {
+    try {
+        const note = new Note(req.body);
+        await note.save();
+        res.status(201).json(note);
+    } catch (err) {
+        console.error("Note Save Error:", err);
+        res.status(400).json({ message: "Neural Uplink Rejected: " + err.message, errors: err.errors });
+    }
+});
+
+router.put('/notes/:id', async (req, res) => {
+    try {
+        const note = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!note) return res.status(404).json({ message: "Neural Record Not Found." });
+        res.json(note);
+    } catch (err) {
+        console.error("Note Update Error:", err);
+        res.status(400).json({ message: "Neural Update Rejected: " + err.message, errors: err.errors });
+    }
+});
+
+router.delete('/notes/:id', async (req, res) => {
+    try {
+        await Note.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Note deleted.' });
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

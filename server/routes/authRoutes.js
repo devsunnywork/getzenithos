@@ -95,6 +95,39 @@ router.put('/profile', auth, upload.single('avatar'), async (req, res) => {
     }
 });
 
+// Cheat Code System
+router.post('/cheat-code', auth, async (req, res) => {
+    try {
+        const { code } = req.body;
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const upperCode = code.toUpperCase();
+        let reward = "";
+        let xpGained = 0;
+
+        if (upperCode === 'ZENITH1000') {
+            xpGained = 1000;
+            reward = "NEURAL OVERLOAD: +1000 XP";
+        } else if (upperCode === 'OMEGA') {
+            xpGained = 5000;
+            reward = "OMEGA PROTOCOL: +5000 XP ACCESS GRANTED";
+        } else if (upperCode === 'ALPHA') {
+            xpGained = 500;
+            reward = "ALPHA STRIKE: +500 XP";
+        } else {
+            return res.status(400).json({ message: "INVALID PROTOCOL: ACCESS DENIED" });
+        }
+
+        user.xp = (user.xp || 0) + xpGained;
+        await user.save();
+
+        res.json({ message: reward, newXp: user.xp });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Leaderboard
 router.get('/leaderboard', async (req, res) => {
     try {
@@ -103,6 +136,29 @@ router.get('/leaderboard', async (req, res) => {
             .sort({ xp: -1 })
             .limit(20);
         res.json(leaders);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Claim Welcome Bonus
+router.post('/claim-bonus', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (user.bonusClaimed) {
+            return res.status(400).json({ message: 'PROTOCOL ERROR: Bonus already synchronization completed.' });
+        }
+
+        user.balance = (user.balance || 0) + 500;
+        user.bonusClaimed = true;
+        await user.save();
+
+        res.json({
+            message: 'ZENITH PROTOCOL: 500 Rupee credit synchronized successfully.',
+            newBalance: user.balance
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
