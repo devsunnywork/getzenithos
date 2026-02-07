@@ -7,7 +7,7 @@
         if (!token) return window.location.href = '/';
 
         // Use the global API_BASE_URL from config.js
-        fetch(API_BASE_URL + '/api/auth/profile', {
+        fetch(`${API_BASE_URL}/api/auth/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => {
             if (!res.ok) return window.location.href = '/';
@@ -26,7 +26,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Z-ADMIN // COMMAND CENTER v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Lora:ital@0;1&family=Roboto+Mono&family=Inter:wght@400;600;700&family=Oswald:wght@500&family=Raleway:wght@400;700&family=Ubuntu:wght@400;700&family=Open+Sans:wght@400;700&family=Dancing+Script&family=Merriweather&display=swap"
+        rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -99,6 +105,209 @@
             font-weight: 600;
         }
 
+        /* --- ADVANCED NOTE STUDIO PRO STYLES --- */
+        .workspace-area {
+            background: #e2e8f0;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow-y: auto;
+            position: relative;
+            padding: 50px 0;
+            cursor: default;
+        }
+
+        .workspace-area.grid-active {
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 0 auto 50px auto;
+            position: relative;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25), 0 18px 36px -18px rgba(0, 0, 0, 0.3);
+            color: #1e293b;
+            padding: 20mm;
+            box-sizing: border-box;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* --- Page Textures --- */
+        .page-texture-lined {
+            background-image: linear-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 100% 28px;
+            background-position: 0 40px;
+        }
+
+        .page-texture-grid {
+            background-image:
+                linear-gradient(#e2e8f0 1px, transparent 1px),
+                linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+            background-size: 25px 25px;
+        }
+
+        .page-texture-dot {
+            background-image: radial-gradient(#cbd5e1 1.5px, transparent 0);
+            background-size: 25px 25px;
+        }
+
+        .delete-page-btn {
+            position: absolute;
+            top: 20px;
+            right: -60px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            color: #ef4444;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .a4-page:hover .delete-page-btn {
+            right: 20px;
+            opacity: 1;
+        }
+
+        .content-box {
+            position: absolute;
+            min-width: 40px;
+            min-height: 20px;
+            cursor: move;
+            border: 2px solid transparent;
+            z-index: 10;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .content-box.selected {
+            border: 2px solid #6366f1 !important;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            z-index: 1000 !important;
+        }
+
+        .box-content {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* --- Custom Block Styles --- */
+        .sticky-note {
+            background: #fef08a;
+            padding: 20px;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.05);
+            transform: rotate(-1deg);
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Source Code Pro', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .thought-bubble {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #6366f1;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 2px;
+            cursor: nwse-resize;
+            display: none;
+            border: 2px solid white;
+        }
+
+        .rotate-handle {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #6366f1;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 50%;
+            cursor: grab;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .selected .resize-handle,
+        .selected .rotate-handle {
+            display: flex;
+        }
+
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .tool-card {
+            background: white;
+            border: 1px solid #f1f5f9;
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        #toast-admin {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: #1e293b;
+            color: white;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            z-index: 10000;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #toast-admin.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
         .input-zenith:focus {
             border-color: #ef4444;
             background: rgba(239, 68, 68, 0.03);
@@ -161,6 +370,11 @@
                 class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
                 id="nav-courses">
                 <i class="fas fa-rocket w-6"></i> Content Studio
+            </button>
+            <button onclick="showTab('notes')"
+                class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
+                id="nav-notes">
+                <i class="fas fa-edit w-6"></i> Note Studio
             </button>
             <button onclick="showTab('payments')"
                 class="w-full flex items-center gap-4 px-6 py-4 text-slate-400 hover:text-white sidebar-item transition rounded-2xl mb-2"
@@ -232,7 +446,7 @@
     <!-- Hyper Modal (System-wide Modal Engine) -->
     <div id="hyper-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-12 modal-blur">
         <div
-            class="glass-card w-full max-w-6xl rounded-[4rem] p-16 relative flex flex-col h-[90vh] shadow-[0_0_100px_rgba(239,68,68,0.1)] border-white/10 animate-in zoom-in-95 duration-300">
+            class="modal-container glass-card w-full max-w-6xl rounded-[4rem] p-16 relative flex flex-col h-[90vh] shadow-[0_0_100px_rgba(239,68,68,0.1)] border-white/10 animate-in zoom-in-95 duration-300">
             <button onclick="closeModal()" class="absolute top-12 right-12 text-slate-500 hover:text-white transition">
                 <i class="fas fa-times text-3xl"></i>
             </button>
@@ -263,10 +477,10 @@
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                .full-screen-modal {
+                .full-screen-modal, #hyper-modal.is-maximized {
                     padding: 0 !important;
                 }
-                .full-screen-modal > div {
+                .full-screen-modal > .modal-container, #hyper-modal.is-maximized > .modal-container {
                     max-width: 100vw !important;
                     width: 100vw !important;
                     height: 100vh !important;
@@ -274,6 +488,10 @@
                     margin: 0 !important;
                     border-radius: 0 !important;
                     border: none !important;
+                    padding: 0 !important;
+                }
+                .modal-container {
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 .map-fullscreen-mode {
                     position: fixed;
@@ -291,7 +509,7 @@
             ZLoader.show("Securing Uplink...");
             try {
                 // Verify admin status first
-                const userRes = await fetch(API_BASE_URL + '/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+                const userRes = await fetch(`${API_BASE_URL}/api/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!userRes.ok) {
                     const err = await userRes.json();
                     alert("SECURITY BREACH: " + (err.message || "AUTHENTICATION FAILED").toUpperCase());
@@ -327,13 +545,13 @@
         async function sync() {
             try {
                 const results = await Promise.all([
-                    fetch(API_BASE_URL + '/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/admin/courses', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/explore/skills', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/explore/placement/jobs', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(API_BASE_URL + '/api/explore/placement/prep/6979d99d28ff47f9e031d81b', { headers: { 'Authorization': `Bearer ${token}` } }) // Dummy fetch for prep
+                    fetch(`${API_BASE_URL}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/admin/users`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/admin/courses`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/explore/skills`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/admin/settings`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/explore/placement/jobs`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/explore/placement/prep/6979d99d28ff47f9e031d81b`, { headers: { 'Authorization': `Bearer ${token}` } }) // Dummy fetch for prep
                 ]);
 
                 // Check all responses
@@ -344,7 +562,13 @@
                     }
                 }
 
-                const [stats, users, courses, skills, settings, jobs, questions] = await Promise.all(results.map(r => r.json()));
+                const [stats, users, courses, skills, settingsArr, jobs, questions] = await Promise.all(results.map(r => r.json()));
+
+                // Convert settings array to object for easy access
+                const settings = {};
+                if (Array.isArray(settingsArr)) {
+                    settingsArr.forEach(s => settings[s.key] = s.value);
+                }
 
                 state = { stats, users, courses, skills, settings, jobs, questions };
 
@@ -375,6 +599,7 @@
                 dashboard: "Strategic Intel",
                 users: "Operative Roster",
                 courses: "Production Foundry",
+                notes: "Note Editor Studio",
                 payments: "Fiscal Records",
                 support: "Support Terminal",
                 themes: "Core Branding",
@@ -388,6 +613,7 @@
             if (tab === 'dashboard') renderDashboard();
             if (tab === 'users') renderUsers();
             if (tab === 'courses') renderCourses();
+            if (tab === 'notes') renderNoteStudio();
             if (tab === 'payments') renderPayments();
             if (tab === 'support') renderSupport();
             if (tab === 'themes') renderThemes();
@@ -430,7 +656,7 @@
 
         async function fetchDashboardTxs() {
             try {
-                const res = await fetch(API_BASE_URL + '/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_BASE_URL}/api/admin/transactions`, { headers: { 'Authorization': `Bearer ${token}` } });
                 if (!res.ok) throw new Error("Failed to fetch transactions");
                 const txs = await res.json();
                 const container = document.getElementById('dashboard-txs');
@@ -462,6 +688,353 @@
             }
         }
 
+        // --- MODULAR ACTION MODAL SYSTEM ---
+        function openActionModal({ title, subtitle, contentHtml, onConfirm, confirmText = 'Execute Protocol' }) {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-8';
+            overlay.innerHTML = `
+                <div class="glass-card p-16 rounded-[4rem] border-white/10 text-center max-w-2xl w-full animate-in fade-in zoom-in-95 duration-500 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                    <div class="mb-12">
+                        <h3 class="text-xs font-black text-red-500 uppercase tracking-[0.5em] mb-4">${title}</h3>
+                        <p class="text-3xl font-black uppercase syne tracking-tight text-white mb-2">${subtitle}</p>
+                        <div class="h-1 w-20 bg-red-600 mx-auto rounded-full"></div>
+                    </div>
+                    
+                    <div class="text-left mb-12">
+                        ${contentHtml}
+                    </div>
+                    
+                    <div class="flex gap-6">
+                        <button id="z-action-confirm" class="flex-grow py-6 bg-red-600 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] hover:bg-red-700 transition shadow-2xl shadow-red-600/20">${confirmText}</button>
+                        <button id="z-action-cancel" class="px-10 py-6 bg-white/5 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] hover:bg-white/10 transition">Abort</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const confirmBtn = overlay.querySelector('#z-action-confirm');
+            const cancelBtn = overlay.querySelector('#z-action-cancel');
+
+            confirmBtn.onclick = () => { if (onConfirm()) overlay.remove(); };
+            cancelBtn.onclick = () => overlay.remove();
+        }
+
+        async function viewUserDetail(id) {
+            openModal();
+            document.getElementById('modal-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-[70vh]">
+                    <div class="w-20 h-20 border-4 border-red-600/10 border-t-red-600 rounded-full animate-spin mb-8"></div>
+                    <div class="text-xs font-black text-slate-500 uppercase tracking-[1em] animate-pulse">Establishing Neural Uplink...</div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error(`Failed to fetch user details: ${res.status}`);
+                const { user, transactions } = await res.json();
+
+                const coursesRes = await fetch(`${API_BASE_URL}/api/admin/courses`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!coursesRes.ok) throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
+                const allCourses = await coursesRes.json();
+
+                window.currentOperative = user;
+                window.allModules = allCourses;
+
+                document.getElementById('modal-content').innerHTML = `
+                <div class="p-12 md:p-20 text-left">
+                    <!-- HEADER -->
+                    <div class="flex flex-col md:flex-row justify-between items-end gap-12 mb-32 border-b border-white/5 pb-20">
+                        <div class="flex gap-16 items-center">
+                            <div class="w-48 h-48 rounded-[4rem] overflow-hidden bg-white/5 border-2 border-white/10 p-1 shadow-[0_0_50px_rgba(239,68,68,0.1)]">
+                                <img src="${user.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.username}" class="w-full h-full object-cover rounded-[3.5rem]">
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-4 mb-6">
+                                    <span class="bg-red-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em]">Operative Profile</span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full ${user.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}"></div>
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">${user.status.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <h1 class="text-8xl font-black tracking-tighter uppercase syne mb-4">${user.username}</h1>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">${user.email}</p>
+                            </div>
+                        </div>
+                        <div class="text-right space-y-4">
+                            <div class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Neural Reference</div>
+                            <div class="text-sm font-mono text-slate-400 select-all">${user._id}</div>
+                        </div>
+                    </div>
+
+                    <!-- GRID -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                        
+                        <!-- TELEMETRY -->
+                        <div class="glass-card p-12 rounded-[4rem] border-white/5 group hover:border-red-600/20 transition-all duration-500">
+                            <div class="flex justify-between items-start mb-12">
+                                <div class="w-16 h-16 bg-red-600/10 rounded-3xl flex items-center justify-center text-red-500 text-xl"><i class="fas fa-activity"></i></div>
+                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Live Telemetry</span>
+                            </div>
+                            <div class="space-y-8">
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Fiscal Volume</div>
+                                    <div class="text-5xl font-black text-white syne tracking-tighter">₹${user.balance}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Neural XP</div>
+                                    <div class="text-5xl font-black text-blue-500 syne tracking-tighter">${user.xp}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Uptime Duration</div>
+                                    <div class="text-3xl font-black text-yellow-500 syne tracking-tighter">${(user.totalWatchTime / 60).toFixed(1)} <span class="text-sm text-slate-600 uppercase">min</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FINANCES -->
+                        <div class="glass-card p-12 rounded-[4rem] border-green-600/5 group hover:border-green-600/20 transition-all duration-500 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-12">
+                                    <div class="w-16 h-16 bg-green-600/10 rounded-3xl flex items-center justify-center text-green-500 text-xl"><i class="fas fa-wallet"></i></div>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Financial Hub</span>
+                                </div>
+                                <h3 class="text-2xl font-black uppercase syne tracking-tight mb-4">Fiscal Correction</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Adjust operative balance and log transaction data manually.</p>
+                            </div>
+                            <button onclick="launchFiscalModal()" class="w-full py-6 bg-green-600 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-green-700 transition shadow-2xl shadow-green-600/20">Access Terminal</button>
+                        </div>
+
+                        <!-- ACCESS -->
+                        <div class="glass-card p-12 rounded-[4rem] border-blue-600/5 group hover:border-blue-600/20 transition-all duration-500 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-12">
+                                    <div class="w-16 h-16 bg-blue-600/10 rounded-3xl flex items-center justify-center text-blue-500 text-xl"><i class="fas fa-shield-halved"></i></div>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Access Security</span>
+                                </div>
+                                <h3 class="text-2xl font-black uppercase syne tracking-tight mb-4">Neural Override</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Restrict or authorize core subsystems and feature nodes.</p>
+                            </div>
+                            <button onclick="launchAccessModal()" class="w-full py-6 bg-blue-600 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition shadow-2xl shadow-blue-600/20">Manage Subsystems</button>
+                        </div>
+
+                        <!-- DEPLOYMENT -->
+                        <div class="glass-card p-12 rounded-[4rem] border-purple-600/5 group hover:border-purple-600/20 transition-all duration-500 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-12">
+                                    <div class="w-16 h-16 bg-purple-600/10 rounded-3xl flex items-center justify-center text-purple-500 text-xl"><i class="fas fa-rocket"></i></div>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Deployment Node</span>
+                                </div>
+                                <h3 class="text-2xl font-black uppercase syne tracking-tight mb-4">Module Granting</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Directly authorize training modules and monitor sync status.</p>
+                            </div>
+                            <button onclick="launchDeploymentModal()" class="w-full py-6 bg-purple-600 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-purple-700 transition shadow-2xl shadow-purple-600/20">Open Deployment</button>
+                        </div>
+
+                        <!-- LOGS -->
+                        <div class="glass-card p-12 rounded-[4rem] border-white/5 group hover:border-white/10 transition-all duration-500 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-12">
+                                    <div class="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center text-slate-400 text-xl"><i class="fas fa-list-ul"></i></div>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">System Logs</span>
+                                </div>
+                                <h3 class="text-2xl font-black uppercase syne tracking-tight mb-4">Fiscal Ledger</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Analyze the complete fiscal movement history for this operative.</p>
+                            </div>
+                            <button onclick="launchLedgerModal()" class="w-full py-6 bg-white/5 border border-white/10 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition">View Ledger</button>
+                        </div>
+
+                        <!-- LIFECYCLE -->
+                        <div class="glass-card p-12 rounded-[4rem] border-red-600/5 group hover:border-red-600/20 transition-all duration-500 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-12">
+                                    <div class="w-16 h-16 bg-red-600/10 rounded-3xl flex items-center justify-center text-red-500 text-xl"><i class="fas fa-skull"></i></div>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Lifecycle Control</span>
+                                </div>
+                                <h3 class="text-2xl font-black uppercase syne tracking-tight mb-4">Operative Exit</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Execute permanent termination or suspension protocols.</p>
+                            </div>
+                            <div class="flex gap-4">
+                                <button onclick="toggleUserLock('${user._id}', '${user.status}')" class="flex-grow py-5 bg-white/5 border border-red-600/10 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-red-600/20 transition">${user.status === 'active' ? 'Lock' : 'Unseal'}</button>
+                                <button onclick="purgeUser('${user._id}')" class="px-8 py-5 bg-red-600/20 text-red-500 rounded-3xl font-black hover:bg-red-600 hover:text-white transition"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+
+            } catch (err) {
+                console.error("Deep Telemetry Error", err);
+                showToast("COULD NOT ESTABLISH LINK", "error");
+            }
+        }
+
+        // --- SUB-MODAL LAUNCHERS ---
+
+        function launchFiscalModal() {
+            const user = window.currentOperative;
+            openActionModal({
+                title: 'Financial Terminal',
+                subtitle: 'Adjust Operative Credits',
+                contentHtml: `
+                    <div class="space-y-10">
+                        <div class="bg-white/5 p-10 rounded-[3rem] border border-white/5 flex justify-between items-center">
+                            <span class="text-xs font-black uppercase tracking-widest text-slate-500">Current Balance</span>
+                            <span class="text-4xl font-black text-green-500 syne">₹${user.balance}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-8">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Amount to Sync</label>
+                                <input id="f-amount" type="number" class="input-zenith py-5" placeholder="0.00">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Directive Type</label>
+                                <select id="f-type" class="input-zenith py-5">
+                                    <option value="add">CREDIT / ADD</option>
+                                    <option value="subtract">DEBIT / SUBTRACT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Authorization Reason</label>
+                            <input id="f-reason" type="text" class="input-zenith py-5" placeholder="Description for global ledger...">
+                        </div>
+                    </div>
+                `,
+                onConfirm: async () => {
+                    const amount = document.getElementById('f-amount').value;
+                    const type = document.getElementById('f-type').value;
+                    const reason = document.getElementById('f-reason').value;
+                    if (!amount || amount <= 0) { showToast("INVALID VOLUME", "error"); return false; }
+
+                    try {
+                        ZLoader.show("Syncing Fiscal Data...");
+                        const res = await fetch(`${API_BASE_URL}/api/admin/users/${user._id}/balance`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ amount, type, reason })
+                        });
+                        ZLoader.hide();
+                        if (res.ok) {
+                            showToast("FISCAL PROTOCOL SYNCED", "success");
+                            viewUserDetail(user._id);
+                            return true;
+                        }
+                    } catch (e) { ZLoader.hide(); showToast("LINK ERROR", "error"); return false; }
+                }
+            });
+        }
+
+        function launchAccessModal() {
+            const user = window.currentOperative;
+            const fa = user.featureAccess || {};
+            openActionModal({
+                title: 'Security Override',
+                subtitle: 'Neural Subsystem Access',
+                contentHtml: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+                        ${['courses', 'profile', 'skills', 'video', 'chat'].map(f => `
+                            <div class="p-8 bg-white/5 rounded-[3rem] border border-white/5 flex justify-between items-center group">
+                                <div>
+                                    <div class="text-xs font-black uppercase tracking-widest mb-1">${f}</div>
+                                    <div class="text-[9px] font-bold ${fa[f]?.status === 'active' ? 'text-green-500' : 'text-red-500'} uppercase">${fa[f]?.status || 'active'}</div>
+                                </div>
+                                <button onclick="toggleFeatureAccess('${user._id}', '${f}', '${fa[f]?.status || 'active'}')" class="px-6 py-3 bg-white/5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition">
+                                    Toggle Access
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `,
+                confirmText: 'Done / Finalize',
+                onConfirm: () => { return true; }
+            });
+        }
+
+        function launchDeploymentModal() {
+            const user = window.currentOperative;
+            const allModules = window.allModules;
+            openActionModal({
+                title: 'Deployment Hub',
+                subtitle: 'Neural Module Granting',
+                contentHtml: `
+                    <div class="space-y-10">
+                        <div class="flex gap-4">
+                            <select id="d-module" class="input-zenith py-5">
+                                <option value="">Select Subsystem...</option>
+                                ${allModules.map(m => `<option value="${m._id}">${m.title.toUpperCase()}</option>`).join('')}
+                            </select>
+                            <button onclick="executeGrant('${user._id}')" class="px-10 bg-purple-600 rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-purple-500 transition shadow-lg shadow-purple-600/20">Grant</button>
+                        </div>
+                        <div class="bg-white/5 p-2 rounded-[3.5rem] border border-white/5">
+                            <div class="p-8 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Subsystems</div>
+                            <div class="max-h-60 overflow-y-auto custom-scrollbar p-6 space-y-3">
+                                ${user.enrolledCourses.map(c => `
+                                    <div class="p-5 bg-white/5 rounded-3xl border border-white/5 flex justify-between items-center">
+                                        <div class="text-[10px] font-black uppercase tracking-tight truncate max-w-[200px]">${c.title}</div>
+                                        <button onclick="revokeCourse('${user._id}', '${c._id}')" class="text-red-500 hover:text-red-400 transition ml-4"><i class="fas fa-trash-alt"></i></button>
+                                    </div>
+                                `).join('') || '<div class="p-10 text-center text-slate-700 italic text-xs uppercase tracking-widest font-black">No Manual Grants</div>'}
+                            </div>
+                        </div>
+                    </div>
+                `,
+                confirmText: 'Sync Complete',
+                onConfirm: () => { return true; }
+            });
+        }
+
+        function launchLedgerModal() {
+            const user = window.currentOperative;
+            ZLoader.show("Accessing Neural Ledger...");
+            fetch(`${API_BASE_URL}/api/admin/users/${user._id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } })
+                .then(r => r.json())
+                .then(({ transactions }) => {
+                    ZLoader.hide();
+                    openActionModal({
+                        title: 'Strategic Ledger',
+                        subtitle: 'Fiscal Movement History',
+                        contentHtml: `
+                        <div class="glass-card rounded-[3.5rem] overflow-hidden border-white/5">
+                            <div class="max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                <table class="w-full text-left">
+                                    <thead class="bg-white/5 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Directive Data</th>
+                                            <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest text-right">Volume (₹)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${transactions.map(t => `
+                                            <tr class="border-t border-white/5 hover:bg-white/5 transition">
+                                                <td class="p-8">
+                                                    <div class="text-xs font-black uppercase text-white mb-1">${t.item || 'System Correction'}</div>
+                                                    <div class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">${new Date(t.createdAt).toLocaleString()}</div>
+                                                </td>
+                                                <td class="p-8 text-right">
+                                                    <div class="text-lg font-black ${t.type === 'recharge' ? 'text-green-500' : 'text-red-500'} syne">₹${t.amount}</div>
+                                                    <div class="text-[8px] font-black uppercase text-slate-600">${t.type}</div>
+                                                </td>
+                                            </tr>
+                                        `).join('') || '<tr><td colspan="2" class="p-20 text-center text-slate-800 uppercase text-[10px] font-black tracking-widest">No Historical Data</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `,
+                        confirmText: 'Done Examining',
+                        onConfirm: () => { return true; }
+                    });
+                });
+        }
+
+        // --- SUB-HELPER WRAPPERS ---
+        async function executeGrant(uId) {
+            const cId = document.getElementById('d-module').value;
+            if (!cId) return;
+            await grantCourse(uId, cId);
+        }
+
         // --- USERS ---
         function renderUsers() {
             document.getElementById('content-area').innerHTML = `
@@ -477,112 +1050,201 @@
                         </thead>
                         <tbody class="divide-y divide-white/5">
                             ${state.users.map(u => `
-                                <tr class="hover:bg-white/5 transition group">
-                                    <td class="p-10">
-                                        <div class="font-black text-xl tracking-tighter">${u.username.toUpperCase()}</div>
-                                        <div class="text-xs text-slate-500 font-bold">${u.email}</div>
-                                    </td>
-                                    <td class="p-10">
-                                        <div class="text-xl font-black text-green-500">₹${(u.balance || 0).toLocaleString()}</div>
-                                        <div class="text-[9px] text-slate-600 uppercase font-black">Credits Available</div>
-                                    </td>
-                                    <td class="p-10">
-                                        <div class="flex items-center gap-3">
-                                            <span class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'bg-red-600/20 text-red-500' : 'bg-blue-600/20 text-blue-500'}">${u.role}</span>
-                                            <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5" title="Last Seen: ${u.lastSeen ? new Date(u.lastSeen).toLocaleString() : 'Never'}">
-                                                <div class="w-2 h-2 rounded-full ${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-slate-700'}"></div>
-                                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'LIVE' : 'OFFLINE'}</span>
-                                            </div>
+                            <tr class="hover:bg-white/5 transition group">
+                                <td class="p-10">
+                                    <div class="font-black text-xl tracking-tighter">${u.username.toUpperCase()}</div>
+                                    <div class="text-xs text-slate-500 font-bold">${u.email}</div>
+                                </td>
+                                <td class="p-10">
+                                    <div class="text-xl font-black text-green-500">₹${(u.balance || 0).toLocaleString()}</div>
+                                    <div class="text-[9px] text-slate-600 uppercase font-black">Credits Available</div>
+                                </td>
+                                <td class="p-10">
+                                    <div class="flex items-center gap-3">
+                                        <span class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'bg-red-600/20 text-red-500' : 'bg-blue-600/20 text-blue-500'}">${u.role}</span>
+                                        <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5" title="Last Seen: ${u.lastSeen ? new Date(u.lastSeen).toLocaleString() : 'Never'}">
+                                            <div class="w-2 h-2 rounded-full ${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-slate-700'}"></div>
+                                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${u.lastSeen && (new Date() - new Date(u.lastSeen) < 5 * 60 * 1000) ? 'LIVE' : 'OFFLINE'}</span>
                                         </div>
-                                    </td>
-                                    <td class="p-10 text-right pr-20 space-x-8">
-                                        <button onclick="viewUserDetail('${u._id}')" class="text-[10px] font-black uppercase text-blue-500 hover:tracking-widest transition-all">Inspect detail</button>
-                                        <button onclick="moderateUser('${u._id}')" class="text-[10px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Moderate</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
+                                    </div>
+                                </td>
+                                <td class="p-10 text-right pr-20 space-x-8">
+                                    <button onclick="viewUserDetail('${u._id}')" class="text-[10px] font-black uppercase text-blue-500 hover:tracking-widest transition-all">Inspect detail</button>
+                                    <button onclick="moderateUser('${u._id}')" class="text-[10px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Moderate</button>
+                                </td>
+                            </tr>
+                        `).join('')}
                         </tbody>
                     </table>
                 </div>
             `;
         }
 
-        async function viewUserDetail(id) {
-            openModal();
-            document.getElementById('modal-content').innerHTML = `<div class="p-20 text-center animate-pulse uppercase font-black tracking-widest text-slate-500">Accessing operative data tunnel...</div>`;
-            const res = await fetch(API_BASE_URL + `/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const { user, transactions } = await res.json();
-
-            document.getElementById('modal-content').innerHTML = `
-                <div class="flex justify-between items-start mb-16">
-                    <div>
-                        <span class="bg-red-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest mb-6 inline-block">Deep Telemetry</span>
-                        <h2 class="text-6xl font-black tracking-tighter uppercase">${user.username}</h2>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">OPERATIVE ID</div>
-                        <div class="font-mono text-xs text-slate-400">${user._id}</div>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
-
-                    <div class="lg:col-span-1 space-y-12">
-                        <div class="glass-card p-10 rounded-[3rem]">
-                            <h3 class="text-xl font-black mb-8 uppercase tracking-tight">Identity Profile</h3>
-                            <div class="space-y-4">
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Full Name: <span class="text-white">${user.profile?.personalInfo?.fullName || 'N/A'}</span></p>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Title: <span class="text-white">${user.profile?.personalInfo?.jobTitle || 'N/A'}</span></p>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Phone: <span class="text-white">${user.profile?.personalInfo?.phone || 'N/A'}</span></p>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location: <span class="text-white">${user.profile?.personalInfo?.city || 'N/A'}</span></p>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bio: <span class="text-white block mt-2 p-2 bg-white/5 rounded-lg normal-case font-normal">${user.profile?.bio || 'No bio.'}</span></p>
-                                <div class="flex gap-2 mt-4">
-                                    ${user.profile?.personalInfo?.github ? `<a href="https://github.com/${user.profile.personalInfo.github}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-white transition"><i class="fab fa-github"></i></a>` : ''}
-                                    ${user.profile?.personalInfo?.linkedin ? `<a href="https://linkedin.com/in/${user.profile.personalInfo.linkedin}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-blue-500 transition"><i class="fab fa-linkedin"></i></a>` : ''}
-                                    ${user.profile?.personalInfo?.website ? `<a href="${user.profile.personalInfo.website}" target="_blank" class="px-3 py-2 bg-white/10 rounded-lg text-xs hover:text-green-500 transition"><i class="fas fa-globe"></i></a>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-10 rounded-[3rem]">
-                            <h3 class="text-xl font-black mb-8 uppercase tracking-tight">Progress Log</h3>
-                            <div class="space-y-4 text-xs font-bold text-slate-500">
-                                ${user.courseProgress.map(p => `
-                                    <div class="flex justify-between">
-                                        <span>${p.courseId?.title.toUpperCase()}</span>
-                                        <span class="text-blue-500">${p.completedLectures.length} SUBSYSTEMS SYNCED</span>
-                                    </div>
-                                `).join('') || 'Awaiting initial sync...'}
-                            </div>
-                        </div>
-                    </div>
+        // --- CUSTOM MODAL & INPUT SYSTEM ---
+        function openZenithInput({ title, subtitle, placeholder, type = 'text', confirmText = 'Confirm', cancelText = 'Cancel' }, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 z-[200] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6';
+            overlay.innerHTML = `
+                <div class="glass-card p-12 rounded-[3.5rem] border-white/10 text-center max-w-lg w-full animate-in zoom-in-95 duration-300">
+                    <h3 class="text-xs font-black text-red-500 uppercase tracking-[0.4em] mb-4">${title}</h3>
+                    <p class="text-xl font-black uppercase syne tracking-tight mb-8 text-white">${subtitle}</p>
                     
-                    <div class="lg:col-span-2">
-                        <h3 class="text-2xl font-black mb-10 uppercase tracking-tight">Fiscal Ledger</h3>
-                        <div class="glass-card rounded-[3rem] overflow-hidden border-white/5">
-                            <table class="w-full text-left">
-                                <thead class="bg-white/5">
-                                    <tr>
-                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Method</th>
-                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Type</th>
-                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Amount</th>
-                                        <th class="p-8 text-[10px] font-black uppercase text-slate-600 tracking-widest">Timestamp</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${transactions.map(t => `
-                                        <tr class="border-t border-white/5">
-                                            <td class="p-8 font-bold text-sm uppercase">${t.item || 'Generic'}</td>
-                                            <td class="p-8 font-bold text-sm uppercase text-blue-500">${t.type}</td>
-                                            <td class="p-8 font-black text-sm">₹${t.amount}</td>
-                                            <td class="p-8 text-xs text-slate-500">${new Date(t.createdAt).toLocaleString()}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                    ${type === 'none' ? '' : `
+                        <div class="mb-10 text-left">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-2">Input Field</label>
+                            <input id="z-input-field" type="${type}" placeholder="${placeholder}" class="input-zenith py-4 text-sm" autofocus>
                         </div>
+                    `}
+
+                    <div class="flex gap-4">
+                        <button id="z-input-confirm" class="flex-grow py-5 bg-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition shadow-lg shadow-red-600/20">${confirmText}</button>
+                        <button id="z-input-cancel" class="flex-grow py-5 bg-white/5 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition">${cancelText}</button>
                     </div>
                 </div>
             `;
+            document.body.appendChild(overlay);
+
+            const input = overlay.querySelector('#z-input-field');
+            const confirmBtn = overlay.querySelector('#z-input-confirm');
+            const cancelBtn = overlay.querySelector('#z-input-cancel');
+
+            confirmBtn.onclick = () => {
+                const val = input ? input.value : true;
+                if (type !== 'none' && !val) return;
+                onConfirm(val);
+                overlay.remove();
+            };
+
+            cancelBtn.onclick = () => overlay.remove();
+
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') confirmBtn.click();
+                });
+            }
+        }
+
+        // --- USER CONTROL HELPERS ---
+
+        async function adjustBalance(id, amount, type, reason) {
+            try {
+                ZLoader.show("Syncing Credits...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/balance`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, type, reason })
+                });
+                ZLoader.hide();
+                if (res.ok) {
+                    showToast("Ledger Synchronized.", "success");
+                    await viewUserDetail(id);
+                }
+            } catch (e) { ZLoader.hide(); showToast("Ledger Error.", "error"); }
+        }
+
+        async function toggleUserLock(id, currentStatus) {
+            try {
+                const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
+                ZLoader.show("Syncing Directives...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                ZLoader.hide();
+                if (res.ok) {
+                    showToast(`User ${newStatus.toUpperCase()}.`, "success");
+                    await viewUserDetail(id);
+                }
+            } catch (e) { ZLoader.hide(); showToast("Status Override Failed.", "error"); }
+        }
+
+        async function toggleFeatureAccess(userId, feature, currentStatus) {
+            try {
+                const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
+                ZLoader.show("Overriding Neural Access...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/feature-access`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feature, status: newStatus })
+                });
+                if (res.ok) {
+                    showToast(`Feature ${feature.toUpperCase()} ${newStatus.toUpperCase()}.`, "success");
+                    // Refresh current user data to reflect changes in modal
+                    const updatedUserRes = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const { user } = await updatedUserRes.json();
+                    window.currentOperative = user;
+                    ZLoader.hide();
+                    launchAccessModal(); // Relaunch to update UI
+                } else {
+                    ZLoader.hide();
+                    showToast("Access Override Denied.", "error");
+                }
+            } catch (e) { ZLoader.hide(); showToast("Feature Toggle Failed.", "error"); }
+        }
+
+        async function grantCourse(userId, courseId) {
+            if (!courseId) return;
+            try {
+                ZLoader.show("Initializing Deployment...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/grant`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseId })
+                });
+                ZLoader.hide();
+                if (res.ok) {
+                    showToast("Module Granted.", "success");
+                    await viewUserDetail(userId);
+                    launchDeploymentModal();
+                } else {
+                    const err = await res.json();
+                    showToast(err.message || "Grant Failed", "error");
+                }
+            } catch (e) { ZLoader.hide(); showToast("Module Grant Failed.", "error"); }
+        }
+
+
+        async function revokeCourse(userId, courseId) {
+            try {
+                ZLoader.show("Recall in Progress...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/revoke`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseId })
+                });
+                ZLoader.hide();
+                if (res.ok) {
+                    showToast("Module Revoked.", "success");
+                    await viewUserDetail(userId);
+                    launchDeploymentModal();
+                }
+            } catch (e) { ZLoader.hide(); showToast("Module Revocation Failed.", "error"); }
+        }
+
+        async function purgeUser(id) {
+            openActionModal({
+                title: 'Termination Protocol',
+                subtitle: 'Permanent Neural Wipe',
+                contentHtml: `<p class="text-slate-400 uppercase text-[10px] font-black tracking-widest leading-loose">Are you certain you wish to purge this operative? All neural signatures and fiscal records will be permanently erased from the constellation.</p>`,
+                confirmText: 'Execute Purge',
+                onConfirm: async () => {
+                    try {
+                        ZLoader.show("Purging Operative...");
+                        const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        ZLoader.hide();
+                        if (res.ok) {
+                            showToast("Operative Purged.", "success");
+                            closeModal();
+                            sync().then(renderUsers);
+                            return true;
+                        }
+                    } catch (e) { ZLoader.hide(); showToast("Purge Failed.", "error"); return false; }
+                }
+            });
         }
 
         // --- COURSES ---
@@ -713,7 +1375,7 @@
                         formData.append('thumbnail', imgFile);
 
                         const xhr = new XMLHttpRequest();
-                        xhr.open('POST', `/api/admin/courses/${savedCourse._id}/thumbnail`, true);
+                        xhr.open('POST', `${API_BASE_URL}/api/admin/courses/${savedCourse._id}/thumbnail`, true);
                         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
                         xhr.upload.onprogress = (event) => {
@@ -757,7 +1419,7 @@
 
         async function openProductionStudio(id) {
             openModal();
-            const res = await fetch(API_BASE_URL + `/api/courses/${id}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(`${API_BASE_URL}/api/courses/${id}/content`, { headers: { 'Authorization': `Bearer ${token}` } });
             const course = await res.json();
             window.activeCourse = course;
 
@@ -827,7 +1489,7 @@
             document.getElementById('unit-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('u-title').value;
-                const res = await fetch(API_BASE_URL + `/api/admin/courses/${window.activeCourse._id}/units`, {
+                const res = await fetch(`${API_BASE_URL}/api/admin/courses/${window.activeCourse._id}/units`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title })
@@ -889,7 +1551,7 @@
                 };
 
                 const method = lecId ? 'PATCH' : 'POST';
-                const url = lecId ? `/api/admin/lectures/${lecId}` : `/api/admin/units/${unitId}/lectures`;
+                const url = lecId ? `${API_BASE_URL}/api/admin/lectures/${lecId}` : `${API_BASE_URL}/api/admin/units/${unitId}/lectures`;
 
                 await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
                 showToast(lecId ? "SUB-SYSTEM UPDATED." : "SUB-SYSTEM COMMITTED.", "success");
@@ -899,16 +1561,706 @@
 
         async function deleteUnit(id) {
             openZenithConfirm("PURGE TACTICAL UNIT?", async () => {
-                await fetch(API_BASE_URL + `/api/admin/units/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                await fetch(`${API_BASE_URL}/api/admin/units/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
                 showToast("UNIT PURGED.", "success");
                 openProductionStudio(window.activeCourse._id);
             });
         }
         async function deleteLecture(id) {
-            openZenithConfirm("REMOVE SUB-SYSTEM?", async () => {
-                await fetch(API_BASE_URL + `/api/admin/lectures/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            openZenithConfirm("PURGE LECTURE NODE?", async () => {
+                await fetch(`${API_BASE_URL}/api/admin/lectures/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
                 showToast("SUB-SYSTEM REMOVED.", "success");
                 openProductionStudio(window.activeCourse._id);
+            });
+        }
+
+        // --- NOTE STUDIO ---
+        async function renderNoteStudio() {
+            const res = await fetch(`${API_BASE_URL}/api/admin/notes`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const notes = await res.json();
+
+            document.getElementById('action-bar').innerHTML = `
+                <button onclick="openNoteEditor()" class="px-8 py-4 bg-red-600 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-red-600/30">+ Initialize Note</button>
+            `;
+
+            document.getElementById('content-area').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    ${notes.length ? notes.map(n => `
+                        <div class="glass-card p-10 rounded-[3rem] border-white/5 group hover:border-red-500/30 transition-all flex flex-col justify-between h-[380px] bg-white/5 backdrop-blur-md">
+                            <div>
+                                <div class="flex justify-between items-start mb-6">
+                                    <div class="w-14 h-14 bg-red-600/10 rounded-2xl flex items-center justify-center border border-red-500/20 group-hover:bg-red-600 group-hover:scale-110 transition-all shadow-lg shadow-red-600/10">
+                                        <i class="fas fa-file-alt text-xl text-red-500 group-hover:text-white"></i>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white/5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-500 border border-white/5">${n.course?.title || 'Unknown Course'}</span>
+                                </div>
+                                <h3 class="text-2xl font-black text-white uppercase tracking-tight mb-4 line-clamp-2 leading-tight">${n.title}</h3>
+                                <div class="flex items-center gap-3">
+                                    <span class="px-2 py-1 bg-white/5 rounded text-[8px] font-bold uppercase tracking-widest text-slate-600">v1.0</span>
+                                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Sync: ${new Date(n.updatedAt).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-4 pt-8">
+                                <button onclick="openNoteEditor('${n._id}')" class="flex-grow py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-xl hover:shadow-red-600/20 transition-all transform active:scale-95">Enter Interface</button>
+                                <button onclick="deleteNote('${n._id}')" class="px-6 py-5 text-red-500 hover:bg-red-600/10 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-red-500/20"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>
+                    `).join('') : `
+                        <div class="col-span-full p-32 text-center border-2 border-dashed border-white/5 rounded-[4rem]">
+                            <i class="fas fa-edit text-6xl text-slate-800 mb-8"></i>
+                            <h3 class="text-2xl font-black uppercase syne tracking-tight text-white mb-4">No Neural Notes Detected</h3>
+                            <button onclick="openNoteEditor()" class="px-10 py-5 bg-red-600 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-red-600/40">Initialize First Note</button>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // --- ADVANCED NOTE STUDIO PRO ENGINE ---
+        async function openNoteEditor(id = null) {
+            ZLoader.show("Initializing Studio Interface...");
+            window.activeNote = {
+                _id: id, title: '', course: '',
+                content: { pages: [{ id: Date.now(), texture: 'plain', blocks: [] }], activePageIndex: 0, selectedId: null }
+            };
+
+            if (id && id !== 'null') {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/admin/notes`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const notes = await res.json();
+                    const note = notes.find(n => n._id === id);
+                    if (note) {
+                        window.activeNote._id = note._id;
+                        window.activeNote.title = note.title;
+                        window.activeNote.course = note.course?._id || note.course;
+
+                        // Robust state normalization
+                        if (note.content && note.content.pages) {
+                            window.activeNote.content = note.content;
+                            if (typeof window.activeNote.content.activePageIndex !== 'number') window.activeNote.content.activePageIndex = 0;
+                            if (window.activeNote.content.activePageIndex >= note.content.pages.length) window.activeNote.content.activePageIndex = 0;
+                            window.activeNote.content.pages.forEach(p => { if (!p.blocks) p.blocks = []; });
+                        }
+                    }
+                } catch (e) { showToast("FAILED TO LOAD NEURAL STATE", "error"); }
+            }
+
+            openModal();
+            const modal = document.getElementById('hyper-modal');
+            modal.classList.add('full-screen-modal');
+            renderStudioLayout();
+            renderWorkspace();
+            ZLoader.hide();
+            lucide.createIcons();
+        }
+
+        function renderStudioLayout() {
+            const container = document.getElementById('modal-content');
+            container.innerHTML = `
+                <div class="h-screen flex flex-col overflow-hidden bg-[#f8fafc] text-slate-900 font-['Poppins']">
+                    <!-- Header -->
+                    <header class="h-16 bg-white border-b flex items-center justify-between px-8 z-50 shadow-sm shrink-0">
+                        <div class="flex items-center gap-6">
+                            <button onclick="closeModal(); renderNoteStudio();" class="p-2.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-xl transition-all">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="flex flex-col">
+                                <input id="note-title" type="text" value="${window.activeNote.title}" placeholder="Untitled Note..." oninput="window.activeNote.title = this.value" class="bg-transparent text-sm font-bold outline-none text-slate-900 placeholder:text-slate-300 w-[300px]">
+                                <select id="note-course" onchange="window.activeNote.course = this.value" class="bg-transparent text-[10px] font-bold uppercase tracking-widest text-blue-600 outline-none">
+                                    <option value="" disabled ${!window.activeNote.course ? 'selected' : ''}>Target Course...</option>
+                                    ${state.courses.map(c => `<option value="${c._id}" ${window.activeNote.course === c._id ? 'selected' : ''}>${c.title}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button onclick="saveNotePro()" class="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all text-xs font-bold">
+                                <i class="fas fa-cloud-upload-alt"></i> Commit State
+                            </button>
+                            <button onclick="exportToPDFPro()" class="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-black transition-all text-xs font-bold">
+                                <i data-lucide="printer" size="14"></i> Export PDF
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="flex-1 flex overflow-hidden">
+                        <!-- Sidebar: Assets -->
+                        <aside class="w-72 bg-white border-r flex flex-col shadow-xl z-40">
+                            <div class="p-5 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
+                                <section>
+                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <i data-lucide="plus-circle" size="12"></i> Core Elements
+                                    </h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button onclick="addBlock('text')" class="tool-btn"><i data-lucide="type"></i><span>Text</span></button>
+                                        <button onclick="addBlock('code')" class="tool-btn"><i data-lucide="terminal"></i><span>Code Block</span></button>
+                                        <button onclick="addBlock('sticky')" class="tool-btn"><i data-lucide="sticky-note"></i><span>Sticky</span></button>
+                                        <button onclick="addBlock('thought')" class="tool-btn"><i data-lucide="cloud"></i><span>Thought</span></button>
+                                        <button onclick="addBlock('callout')" class="tool-btn"><i data-lucide="alert-circle"></i><span>Callout</span></button>
+                                        <label class="tool-btn cursor-pointer">
+                                            <i data-lucide="image"></i><span>Media</span>
+                                            <input type="file" id="note-img-upload" class="hidden" accept="image/*" onchange="handleProImageUpload(event)">
+                                        </label>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <i data-lucide="layers" size="12"></i> Components
+                                    </h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button onclick="addBlock('tag')" class="tool-btn"><i data-lucide="tag"></i><span>Badge</span></button>
+                                        <button onclick="addBlock('checklist')" class="tool-btn"><i data-lucide="check-square"></i><span>Task List</span></button>
+                                        <button onclick="addBlock('divider')" class="tool-btn"><i data-lucide="minus"></i><span>Divider</span></button>
+                                        <button onclick="addBlock('quote')" class="tool-btn"><i data-lucide="quote"></i><span>Quote</span></button>
+                                        <button onclick="addBlock('keycap')" class="tool-btn"><i data-lucide="keyboard"></i><span>Shortcut</span></button>
+                                        <button onclick="addBlock('progress')" class="tool-btn"><i data-lucide="activity"></i><span>Status</span></button>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <i data-lucide="palette" size="12"></i> Texture
+                                    </h3>
+                                    <div class="flex gap-2">
+                                        <button onclick="setBg('plain')" class="texture-btn h-12 flex-1 border-2 border-slate-100 rounded-lg hover:border-blue-400" title="Plain"></button>
+                                        <button onclick="setBg('lined')" class="texture-btn h-12 flex-1 border-2 border-slate-100 rounded-lg hover:border-blue-400 bg-lined" title="Lined"></button>
+                                        <button onclick="setBg('grid')" class="texture-btn h-12 flex-1 border-2 border-slate-100 rounded-lg hover:border-blue-400 bg-grid" title="Grid"></button>
+                                        <button onclick="setBg('dots')" class="texture-btn h-12 flex-1 border-2 border-slate-100 rounded-lg hover:border-blue-400 bg-dots" title="Dots"></button>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <i data-lucide="files" size="12"></i> Pages
+                                    </h3>
+                                    <div id="page-list" class="space-y-2"></div>
+                                    <button onclick="addNotePage()" class="w-full mt-4 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-blue-500 hover:text-blue-600 text-sm font-bold transition-all">
+                                        <i data-lucide="plus" size="16"></i> New Sheet
+                                    </button>
+                                </section>
+                            </div>
+                        </aside>
+
+                        <!-- Workspace -->
+                        <main id="note-workspace" class="flex-1 overflow-auto bg-[#f1f5f9] flex flex-col items-center p-16 scroll-smooth custom-scrollbar">
+                            <div id="note-page-container" class="flex flex-col gap-16"></div>
+                        </main>
+
+                        <!-- Sidebar: Properties -->
+                        <aside id="property-panel" class="w-80 bg-white border-l flex flex-col shadow-2xl z-50">
+                            <div class="p-5 border-b bg-slate-50 flex items-center justify-between">
+                                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                    <i data-lucide="sliders" size="18" class="text-blue-600"></i> Editor Controls
+                                </h3>
+                                <button onclick="deselectBlock()" class="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+                                    <i data-lucide="x" size="20"></i>
+                                </button>
+                            </div>
+                            <div id="prop-content" class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                                <div class="flex flex-col items-center justify-center h-full text-slate-400 text-center opacity-60">
+                                    <i data-lucide="mouse-pointer-2" size="40" class="mb-4"></i>
+                                    <p class="text-[10px] font-bold uppercase tracking-widest leading-loose">Select a block<br>to modify properties</p>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+
+                <style>
+                    .font-poppins { font-family: 'Poppins', sans-serif; }
+                    .font-montserrat { font-family: 'Montserrat', sans-serif; }
+                    .font-playfair { font-family: 'Playfair Display', serif; }
+                    .font-lora { font-family: 'Lora', serif; }
+                    .font-oswald { font-family: 'Oswald', sans-serif; }
+                    .font-raleway { font-family: 'Raleway', sans-serif; }
+                    .font-ubuntu { font-family: 'Ubuntu', sans-serif; }
+                    .font-opensans { font-family: 'Open Sans', sans-serif; }
+                    .font-merriweather { font-family: 'Merriweather', serif; }
+                    .font-script { font-family: 'Dancing Script', cursive; }
+                    .font-mono { font-family: 'Roboto Mono', monospace; }
+
+                    .a4-page { width: 794px; height: 1123px; background-color: white; position: relative; box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15); margin: 0 auto; overflow: hidden; shrink-0; transition: all 0.3s ease; }
+                    .bg-lined { background-image: linear-gradient(#e2e8f0 1px, transparent 1px); background-size: 100% 28px; }
+                    .bg-grid { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 24px 24px; }
+                    .bg-dots { background-image: radial-gradient(#94a3b8 1.5px, transparent 0); background-size: 24px 24px; }
+
+                    .content-box { position: absolute; cursor: grab; user-select: none; }
+                    .content-box.selected { outline: 2px solid #3b82f6; outline-offset: 4px; z-index: 1000 !important; }
+                    
+                    .resize-handle { position: absolute; bottom: -8px; right: -8px; width: 16px; height: 16px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; cursor: nwse-resize; display: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+                    .selected .resize-handle { display: block; }
+                    
+                    .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; color: #64748b; transition: all 0.2s ease; background: white; }
+                    .tool-btn:hover { border-color: #3b82f6; background-color: #f0f7ff; color: #2563eb; transform: translateY(-2px); }
+                    .tool-btn span { font-size: 10px; font-weight: 600; margin-top: 6px; }
+
+                    .code-container { display: flex; flex-direction: column; background: #1e293b !important; border-radius: 8px; overflow: hidden; border: 1px solid #334155; }
+                    .code-header { background: #0f172a !important; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; color: #94a3b8 !important; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+                    .code-dots { display: flex; gap: 6px; }
+                    .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+                    .prop-label { display: block; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+                </style>
+            `;
+        }
+
+        function getActivePage() {
+            const state = window.activeNote.content;
+            if (!state || !state.pages) return null;
+            if (state.activePageIndex === undefined || state.activePageIndex === null) state.activePageIndex = 0;
+            if (state.activePageIndex >= state.pages.length) state.activePageIndex = 0;
+            const page = state.pages[state.activePageIndex];
+            if (page && !page.blocks) page.blocks = [];
+            return page;
+        }
+
+        let selectedBlockId = null;
+        let isNoteRotating = false;
+        let currentRotation = 0;
+
+        async function renderWorkspace() {
+            const container = document.getElementById('note-page-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const state = window.activeNote.content;
+            state.pages.forEach((page, idx) => {
+                const pageEl = document.createElement('div');
+                pageEl.id = `page-${page.id}`;
+                pageEl.className = `a4-page bg-${page.texture || 'plain'} ${idx === state.activePageIndex ? 'ring-8 ring-blue-500/10' : ''}`;
+                pageEl.onclick = (e) => {
+                    if (e.target === pageEl) {
+                        state.activePageIndex = idx;
+                        renderWorkspace();
+                    }
+                };
+
+                (page.blocks || []).forEach(block => pageEl.appendChild(createBlockElement(block, idx)));
+                container.appendChild(pageEl);
+            });
+
+            updatePageSidebar();
+            updatePropertiesPanel();
+            lucide.createIcons();
+        }
+
+        function createBlockElement(block, pageIdx) {
+            const state = window.activeNote.content;
+            const div = document.createElement('div');
+            div.id = `block-${block.id}`;
+            div.className = `content-box ${state.selectedId === block.id ? 'selected' : ''} group`;
+            div.style.left = block.x + 'px';
+            div.style.top = block.y + 'px';
+            div.style.width = block.w + 'px';
+            div.style.height = block.h + 'px';
+            div.style.zIndex = block.zIndex || 10;
+            div.style.transform = `rotate(${block.styles?.rotation || 0}deg)`;
+            div.style.opacity = block.styles?.opacity || 1;
+
+            const content = document.createElement('div');
+            content.className = `w-full h-full relative overflow-hidden whitespace-pre-wrap ${block.styles?.fontFamily || 'font-poppins'}`;
+            content.style.fontSize = (block.styles?.fontSize || 16) + 'px';
+            content.style.color = block.styles?.color || '#1e293b';
+            content.style.backgroundColor = block.styles?.bgColor || 'transparent';
+            content.style.borderRadius = (block.styles?.borderRadius || 0) + 'px';
+            content.style.padding = typeof block.styles?.padding === 'string' ? block.styles.padding : (block.styles?.padding || 0) + 'px';
+            if (block.styles?.borderLeft) content.style.borderLeft = block.styles.borderLeft;
+            if (block.styles?.borderWidth) content.style.border = `${block.styles.borderWidth}px solid ${block.styles.borderColor}`;
+
+            if (block.type === 'code') {
+                content.className = 'code-container w-full h-full';
+                content.innerHTML = `
+                    <div class="code-header">
+                        <div class="code-dots"><div class="code-dot bg-red-500"></div><div class="code-dot bg-yellow-500"></div><div class="code-dot bg-green-500"></div></div>
+                        <span class="ml-4 flex-1 opacity-70 truncate">${block.title || 'snippet.txt'}</span>
+                        <button onclick="copyCode('${block.id}')" class="hover:text-white transition-colors no-print"><i data-lucide="copy" size="14"></i></button>
+                    </div>
+                    <div class="p-4 overflow-auto font-mono text-[inherit] text-emerald-400 whitespace-pre leading-relaxed" style="background: #1e293b !important; flex: 1;" contenteditable="true" oninput="updateBlockContent('${block.id}', this.innerText)">${block.content}</div>
+                `;
+            } else if (block.type === 'image') {
+                content.innerHTML = `<img src="${block.content}" class="w-full h-full object-cover rounded-[inherit]">`;
+            } else if (block.type === 'progress') {
+                content.innerHTML = `<div class="p-2" contenteditable="true" oninput="updateBlockContent('${block.id}', this.innerText)">${block.content}</div><div class="h-2 bg-slate-100 rounded-full mx-2"><div class="h-full bg-blue-500 rounded-full w-2/3"></div></div>`;
+            } else if (block.type === 'thought') {
+                content.innerHTML = `<div class="flex items-center justify-center text-center h-full" contenteditable="true" oninput="updateBlockContent('${block.id}', this.innerText)">${block.content}</div><div class="thought-tail no-print shadow-sm"></div>`;
+            } else if (block.type === 'divider') {
+                content.innerHTML = '';
+            } else {
+                content.innerText = block.content;
+                content.contentEditable = true;
+                content.oninput = (e) => updateBlockContent(block.id, e.target.innerText);
+            }
+
+            div.appendChild(content);
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle';
+            div.appendChild(handle);
+
+            div.onmousedown = (e) => startDrag(e, block, pageIdx);
+            handle.onmousedown = (e) => startResize(e, block, pageIdx);
+
+            return div;
+        }
+
+        function updateBlockContent(id, text) {
+            const state = window.activeNote.content;
+            state.pages.forEach(p => {
+                if (!p.blocks) return;
+                const b = p.blocks.find(x => x.id === id);
+                if (b) b.content = text;
+            });
+        }
+
+        function selectBlock(blockId, pageIdx) {
+            const state = window.activeNote.content;
+            if (state.selectedId === blockId && state.activePageIndex === pageIdx) return;
+            state.selectedId = blockId;
+            state.activePageIndex = pageIdx;
+            renderWorkspace();
+        }
+
+        function startDrag(e, block, pageIdx) {
+            if (e.button !== 0) return; // Only Left Click
+
+            if (e.target.closest('button') || e.target.classList.contains('resize-handle')) {
+                selectBlock(block.id, pageIdx);
+                return;
+            }
+
+            const isEditingText = e.target.contentEditable === 'true';
+
+            // Auto-select if not already selected
+            selectBlock(block.id, pageIdx);
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initX = block.x;
+            const initY = block.y;
+            let moved = false;
+
+            const move = (me) => {
+                if (isEditingText && !moved && Math.abs(me.clientX - startX) < 5 && Math.abs(me.clientY - startY) < 5) return;
+                moved = true;
+                block.x = initX + (me.clientX - startX);
+                block.y = initY + (me.clientY - startY);
+                renderWorkspace();
+            };
+            const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+        }
+
+        function startResize(e, block, pageIdx) {
+            if (e.button !== 0) return; // Only Left Click
+            e.stopPropagation();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initW = block.w;
+            const initH = block.h;
+
+            const move = (me) => { block.w = Math.max(50, initW + (me.clientX - startX)); block.h = Math.max(10, initH + (me.clientY - startY)); renderWorkspace(); };
+            const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+        }
+
+        function updatePropertiesPanel() {
+            const panel = document.getElementById('prop-content');
+            if (!panel) return;
+            const state = window.activeNote.content;
+            const page = getActivePage();
+            if (!page) return;
+            const block = page.blocks.find(b => b.id === state.selectedId);
+
+            if (!block) {
+                panel.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 text-center opacity-60"><i data-lucide="mouse-pointer-2" size="40" class="mb-4"></i><p class="text-[10px] font-bold uppercase tracking-widest leading-loose">Select a block<br>to modify properties</p></div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            panel.innerHTML = `
+                <div class="space-y-8 animate-in fade-in slide-in-from-right-4">
+                    <div class="flex gap-3">
+                        <button onclick="duplicateSelected()" class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all"><i data-lucide="copy" size="14"></i> Duplicate</button>
+                        <button onclick="deleteSelected()" class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-all"><i data-lucide="trash-2" size="14"></i> Delete</button>
+                    </div>
+
+                    <div class="space-y-6">
+                        ${block.type === 'code' ? `<div><label class="prop-label">Block Title</label><input type="text" id="prop-title" value="${block.title || ''}" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 outline-none transition-all" placeholder="e.g. index.js"></div>` : ''}
+                        
+                        <div><label class="prop-label">Main Content</label><textarea id="prop-text" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm h-32 focus:border-blue-500 outline-none transition-all resize-none">${block.content}</textarea></div>
+
+                        <div><label class="prop-label">Premium Typography</label><select id="prop-font" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm bg-white focus:border-blue-500 outline-none cursor-pointer">
+                            <option value="font-poppins" ${block.styles?.fontFamily === 'font-poppins' ? 'selected' : ''}>Poppins (Modern)</option>
+                            <option value="font-montserrat" ${block.styles?.fontFamily === 'font-montserrat' ? 'selected' : ''}>Montserrat (Bold)</option>
+                            <option value="font-playfair" ${block.styles?.fontFamily === 'font-playfair' ? 'selected' : ''}>Playfair Display (Elegant)</option>
+                            <option value="font-raleway" ${block.styles?.fontFamily === 'font-raleway' ? 'selected' : ''}>Raleway (Clean)</option>
+                            <option value="font-lora" ${block.styles?.fontFamily === 'font-lora' ? 'selected' : ''}>Lora (Academic)</option>
+                            <option value="font-ubuntu" ${block.styles?.fontFamily === 'font-ubuntu' ? 'selected' : ''}>Ubuntu (Tech)</option>
+                            <option value="font-oswald" ${block.styles?.fontFamily === 'font-oswald' ? 'selected' : ''}>Oswald (Condensed)</option>
+                            <option value="font-merriweather" ${block.styles?.fontFamily === 'font-merriweather' ? 'selected' : ''}>Merriweather (Classic)</option>
+                            <option value="font-opensans" ${block.styles?.fontFamily === 'font-opensans' ? 'selected' : ''}>Open Sans (Standard)</option>
+                            <option value="font-script" ${block.styles?.fontFamily === 'font-script' ? 'selected' : ''}>Artistic Script</option>
+                            <option value="font-mono" ${block.styles?.fontFamily === 'font-mono' ? 'selected' : ''}>Fira Code Mono</option>
+                        </select></div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="prop-label">Size (px)</label><input type="number" id="prop-size" value="${block.styles?.fontSize || 16}" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm"></div>
+                            <div><label class="prop-label">Text Opacity</label><input type="range" id="prop-opacity" min="0.1" max="1" step="0.1" value="${block.styles?.opacity || 1}" class="w-full mt-3 accent-blue-600"></div>
+                        </div>
+
+                        <div><label class="prop-label text-blue-600">Color Palette</label><div class="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100"><div class="flex flex-col items-center gap-1"><span class="text-[9px] font-bold text-slate-400">TEXT</span><input type="color" id="prop-color-text" value="${block.styles?.color || '#1e293b'}" class="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"></div><div class="flex flex-col items-center gap-1"><span class="text-[9px] font-bold text-slate-400">FILL</span><input type="color" id="prop-color-bg" value="${block.styles?.bgColor === 'transparent' ? '#ffffff' : (block.styles?.bgColor || '#ffffff')}" class="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"></div><div class="flex flex-col items-center gap-1"><span class="text-[9px] font-bold text-slate-400">STROKE</span><input type="color" id="prop-color-border" value="${block.styles?.borderColor || '#e2e8f0'}" class="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"></div></div></div>
+
+                        <div><label class="prop-label">Shape Tuning</label><div class="space-y-4"><div><div class="flex justify-between text-[10px] text-slate-400 font-bold mb-2 uppercase"><span>Roundness</span><span id="val-radius">${block.styles?.borderRadius || 0}px</span></div><input type="range" id="prop-radius" min="0" max="100" value="${block.styles?.borderRadius || 0}" class="w-full accent-slate-800"></div><div><div class="flex justify-between text-[10px] text-slate-400 font-bold mb-2 uppercase"><span>Tilt Angle</span><span id="val-rotation">${block.styles?.rotation || 0}</span></div><input type="range" id="prop-rotation" min="-180" max="180" value="${block.styles?.rotation || 0}" class="w-full accent-slate-800"></div></div></div>
+                    </div>
+                </div>
+            `;
+
+            const inputs = ['prop-text', 'prop-title', 'prop-size', 'prop-font', 'prop-radius', 'prop-rotation', 'prop-opacity', 'prop-color-text', 'prop-color-bg', 'prop-color-border'];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.oninput = (e) => {
+                    const val = e.target.value;
+                    if (id === 'prop-text') block.content = val;
+                    if (id === 'prop-title') block.title = val;
+                    if (id === 'prop-size') block.styles.fontSize = parseInt(val);
+                    if (id === 'prop-font') block.styles.fontFamily = val;
+                    if (id === 'prop-radius') block.styles.borderRadius = parseInt(val);
+                    if (id === 'prop-rotation') block.styles.rotation = parseInt(val);
+                    if (id === 'prop-opacity') block.styles.opacity = parseFloat(val);
+                    if (id === 'prop-color-text') block.styles.color = val;
+                    if (id === 'prop-color-bg') block.styles.bgColor = val;
+                    if (id === 'prop-color-border') block.styles.borderColor = val;
+
+                    // Update Workspace DOM directly to prevent re-rendering panel & closing pickers
+                    const blockEl = document.getElementById(`block-${block.id}`);
+                    if (blockEl) {
+                        const content = blockEl.firstChild;
+                        if (id === 'prop-size') content.style.fontSize = val + 'px';
+                        if (id === 'prop-font') { content.className = content.className.replace(/font-\w+/, val); }
+                        if (id === 'prop-radius') content.style.borderRadius = val + 'px';
+                        if (id === 'prop-rotation') blockEl.style.transform = `rotate(${val}deg)`;
+                        if (id === 'prop-opacity') blockEl.style.opacity = val;
+                        if (id === 'prop-color-text') content.style.color = val;
+                        if (id === 'prop-color-bg') content.style.backgroundColor = val;
+                        if (id === 'prop-color-border') content.style.border = `${block.styles.borderWidth || 0}px solid ${val}`;
+                        if (id === 'prop-text') {
+                            const editArea = content.querySelector('[contenteditable="true"]') || content;
+                            if (editArea === content) content.innerText = val;
+                            else editArea.innerText = val;
+                        }
+                        if (id === 'prop-title') {
+                            const titleEl = content.querySelector('.code-header span');
+                            if (titleEl) titleEl.innerText = val;
+                        }
+                    }
+
+                    // For range inputs, update the display value if it exists
+                    const valDisplay = document.getElementById(`val-${id.replace('prop-', '')}`);
+                    if (valDisplay) valDisplay.innerText = val + (id === 'prop-rotation' ? '°' : 'px');
+                };
+            });
+            lucide.createIcons();
+        }
+
+        function updatePageSidebar() {
+            const list = document.getElementById('page-list');
+            if (!list) return;
+            const state = window.activeNote.content;
+            list.innerHTML = '';
+            state.pages.forEach((p, i) => {
+                const container = document.createElement('div');
+                container.className = `group flex items-center gap-2 p-1 rounded-xl transition-all ${state.activePageIndex === i ? 'bg-blue-600 shadow-lg' : 'hover:bg-slate-100'}`;
+
+                const btn = document.createElement('div');
+                btn.className = `flex-1 p-2 cursor-pointer ${state.activePageIndex === i ? 'text-white' : 'text-slate-500'}`;
+                btn.innerHTML = `<span class="text-xs font-bold uppercase tracking-wider">Page ${i + 1}</span>`;
+                btn.onclick = () => {
+                    state.activePageIndex = i;
+                    renderWorkspace();
+                    document.getElementById(`page-${p.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                };
+
+                const delBtn = document.createElement('button');
+                delBtn.className = `p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${state.activePageIndex === i ? 'text-blue-100 hover:bg-blue-500' : 'text-slate-400 hover:bg-slate-200'}`;
+                delBtn.innerHTML = `<i class="fas fa-trash-alt" style="font-size: 10px;"></i>`;
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteNotePage(p.id); };
+
+                container.appendChild(btn);
+                if (state.pages.length > 1) container.appendChild(delBtn);
+                list.appendChild(container);
+            });
+        }
+
+        window.addBlock = (type) => {
+            const state = window.activeNote.content;
+            const page = getActivePage();
+            if (!page) {
+                showToast("SESSION DESYNC: INIT PAGE", "error");
+                window.activeNote.content.pages = [{ id: Date.now(), texture: 'plain', blocks: [] }];
+                window.activeNote.content.activePageIndex = 0;
+                return;
+            }
+            const id = `b-${Date.now()}`;
+            const templates = {
+                text: { content: 'Professional text entry...', styles: { fontSize: 18, color: '#1e293b', bgColor: 'transparent', borderRadius: 0, padding: 10, fontFamily: 'font-poppins', opacity: 1 } },
+                code: { title: 'main.js', content: 'function studio() {\n  return "Modern Workspace";\n}', styles: { fontSize: 14, color: '#e2e8f0', bgColor: '#1e293b', borderRadius: 12, padding: 0, fontFamily: 'font-mono', opacity: 1 } },
+                sticky: { content: 'Important!', styles: { fontSize: 16, color: '#713f12', bgColor: '#fef9c3', borderRadius: 4, padding: 20, rotation: -1, fontFamily: 'font-script', opacity: 1 } },
+                thought: { content: 'New Idea...', styles: { fontSize: 16, color: '#1e293b', bgColor: '#ffffff', borderRadius: 50, padding: 25, fontFamily: 'font-poppins', opacity: 1 } },
+                callout: { content: 'Key Highlight: Studio Pro features active.', styles: { fontSize: 15, color: '#1e40af', bgColor: '#eff6ff', borderRadius: 12, padding: 15, borderLeft: '6px solid #3b82f6', fontFamily: 'font-raleway', opacity: 1 } },
+                tag: { content: 'RELEASED', styles: { fontSize: 10, color: '#ffffff', bgColor: '#10b981', borderRadius: 20, padding: '4px 12px', fontFamily: 'font-montserrat', opacity: 1 } },
+                checklist: { content: '☐ Item 1\n☐ Item 2\n☐ Item 3', styles: { fontSize: 16, color: '#1e293b', bgColor: '#ffffff', borderRadius: 8, padding: 15, fontFamily: 'font-raleway', opacity: 1 } },
+                divider: { content: '', styles: { fontSize: 1, color: '#e2e8f0', bgColor: '#e2e8f0', borderRadius: 2, padding: 0, fontFamily: 'font-sans', opacity: 1 } },
+                quote: { content: 'Design is not just what it looks like. Design is how it works.', styles: { fontSize: 20, color: '#475569', bgColor: 'transparent', borderRadius: 0, padding: 20, borderLeft: '4px solid #cbd5e1', fontFamily: 'font-playfair', opacity: 1 } },
+                keycap: { content: 'CMD + S', styles: { fontSize: 12, color: '#334155', bgColor: '#f1f5f9', borderRadius: 6, padding: '4px 8px', borderColor: '#cbd5e1', borderWidth: 2, fontFamily: 'font-mono', opacity: 1 } },
+                progress: { content: 'Loading Workspace...', styles: { fontSize: 12, color: '#64748b', bgColor: 'transparent', borderRadius: 0, padding: 10, fontFamily: 'font-poppins', opacity: 1 } }
+            };
+
+            const block = {
+                id,
+                type,
+                ...templates[type],
+                x: 150, y: 150, w: type === 'divider' ? 500 : 300, h: type === 'divider' ? 4 : 120,
+                zIndex: (page.blocks || []).length + 1
+            };
+
+            if (!page.blocks) page.blocks = [];
+            page.blocks.push(block);
+            state.selectedId = id;
+            renderWorkspace();
+        };
+
+        window.copyCode = (id) => {
+            const state = window.activeNote.content;
+            const block = state.pages.flatMap(p => p.blocks).find(b => b.id === id);
+            if (block) {
+                navigator.clipboard.writeText(block.content).then(() => showToast("CODE COPIED", "success"));
+            }
+        };
+
+        window.setBg = (mode) => {
+            const state = window.activeNote.content;
+            state.pages[state.activePageIndex].texture = mode;
+            renderWorkspace();
+        };
+
+        window.addNotePage = () => {
+            const state = window.activeNote.content;
+            state.pages.push({ id: Date.now(), texture: 'plain', blocks: [] });
+            state.activePageIndex = state.pages.length - 1;
+            renderWorkspace();
+            showToast("NEW SHEET INITIALIZED", "success");
+        };
+
+        window.deleteNotePage = (id) => {
+            const state = window.activeNote.content;
+            if (state.pages.length <= 1) return showToast("AT LEAST ONE SHEET REQUIRED", "error");
+            openZenithConfirm("DELETE THIS SHEET?", () => {
+                const index = state.pages.findIndex(p => p.id === id);
+                state.pages = state.pages.filter(p => p.id !== id);
+                state.activePageIndex = Math.max(0, index - 1);
+                renderWorkspace();
+            });
+        };
+
+        window.deselectBlock = () => { window.activeNote.content.selectedId = null; renderWorkspace(); };
+        window.deleteSelected = () => {
+            const state = window.activeNote.content;
+            state.pages[state.activePageIndex].blocks = state.pages[state.activePageIndex].blocks.filter(b => b.id !== state.selectedId);
+            state.selectedId = null;
+            renderWorkspace();
+        };
+
+        window.duplicateSelected = () => {
+            const state = window.activeNote.content;
+            const block = state.pages[state.activePageIndex].blocks.find(b => b.id === state.selectedId);
+            if (!block) return;
+            const newBlock = JSON.parse(JSON.stringify(block));
+            newBlock.id = `b-${Date.now()}`;
+            newBlock.x += 30; newBlock.y += 30;
+            state.pages[state.activePageIndex].blocks.push(newBlock);
+            state.selectedId = newBlock.id;
+            renderWorkspace();
+        };
+
+        window.handleProImageUpload = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                const state = window.activeNote.content;
+                const block = { id: `img-${Date.now()}`, type: 'image', content: re.target.result, x: 100, y: 100, w: 300, h: 300, zIndex: 10, styles: { opacity: 1, rotation: 0, borderRadius: 12, padding: 0 } };
+                state.pages[state.activePageIndex].blocks.push(block);
+                state.selectedId = block.id;
+                renderWorkspace();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function saveNotePro() {
+            const title = document.getElementById('note-title').value;
+            const courseId = document.getElementById('note-course').value;
+            if (!title || !courseId) return showToast("TITLE & COURSE REQUIRED", "error");
+            ZLoader.show("Syncing Neural State...");
+            const data = { title, course: courseId, content: window.activeNote.content };
+            const id = window.activeNote._id;
+            const method = (id && id !== 'null') ? 'PUT' : 'POST';
+            const url = (id && id !== 'null') ? `${API_BASE_URL}/api/admin/notes/${id}` : `${API_BASE_URL}/api/admin/notes`;
+            try {
+                const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (res.ok) {
+                    const result = await res.json();
+                    window.activeNote._id = result._id;
+                    showToast("STATE COMMITTED TO CLOUD", "success");
+                } else showToast("SYNC FAILED", "error");
+            } catch (e) { showToast("CRITICAL SYNC FAILURE", "error"); } finally { ZLoader.hide(); }
+        }
+
+        function exportToPDFPro() {
+            const title = window.activeNote.title || 'Note';
+            const state = window.activeNote.content;
+            const printWin = window.open('', '_blank');
+            let pagesHtml = '';
+            state.pages.forEach((page, pi) => {
+                let blocksHtml = '';
+                (page.blocks || []).forEach(b => {
+                    let style = `position:absolute; left:${b.x}px; top:${b.y}px; width:${b.w}px; font-size:${b.styles?.fontSize || 16}px; font-family:${b.styles?.fontFamily || 'font-poppins'}; color:${b.styles?.color || '#1e293b'}; transform:rotate(${b.styles?.rotation || 0}deg); opacity:${b.styles?.opacity || 1}; white-space: pre-wrap;`;
+                    if (b.styles?.bgColor) style += `background-color:${b.styles.bgColor};`;
+                    if (b.styles?.borderRadius) style += `border-radius:${b.styles.borderRadius}px;`;
+                    if (b.styles?.padding) style += `padding:${typeof b.styles.padding === 'string' ? b.styles.padding : b.styles.padding + 'px'};`;
+                    if (b.styles?.borderLeft) style += `border-left:${b.styles.borderLeft};`;
+
+                    let content = '';
+                    if (b.type === 'image') content = `<img src="${b.content}" style="width:100%; height:auto; border-radius:inherit;">`;
+                    else if (b.type === 'divider') content = `<div style="width:100%; height:2px; background:#e2e8f0;"></div>`;
+                    else if (b.type === 'code') {
+                        content = `<div style="background:#0f172a; padding:8px 12px; font-size:10px; color:#94a3b8; font-weight:bold; border-bottom:1px solid #334155;">${b.title || 'snippet.txt'}</div><div style="padding:15px; color:#38bdf8; font-family:monospace; white-space:pre;">${b.content}</div>`;
+                    }
+                    else if (b.type === 'thought') {
+                        content = `<div style="display:flex; align-items:center; justify-content:center; text-align:center; height:100%;">${b.content}</div>`;
+                    }
+                    else content = b.content;
+                    blocksHtml += `<div style="${style}">${content}</div>`;
+                });
+                pagesHtml += `<div class="a4-page bg-${page.texture || 'plain'}">${blocksHtml}<div style="position:absolute; bottom:40px; left:40px; font-size:10px; color:#cbd5e1; font-weight:bold; text-transform:uppercase; letter-spacing:3px;">Sheet #0${pi + 1} // ${title}</div></div>`;
+            });
+            printWin.document.write(`<html><head><title>${title}</title><style>@page { size: A4; margin: 0; } body { margin: 0; padding: 0; background: #f1f5f9; } .a4-page { width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always; background:white; margin:0 auto; } .bg-lined { background-image: linear-gradient(#e2e8f0 1px, transparent 1px); background-size: 100% 28px; } .bg-grid { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 24px 24px; } .bg-dots { background-image: radial-gradient(#94a3b8 1.5px, transparent 0); background-size: 24px 24px; } @media print { body { background: white; -webkit-print-color-adjust: exact; } .a4-page { box-shadow: none; margin: 0; } }</style></head><body>${pagesHtml}<script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); }<\/script></body></html>`);
+            printWin.document.close();
+        }
+
+        async function deleteNote(id) {
+            openZenithConfirm("PURGE NEURAL NOTE?", async () => {
+                try {
+                    ZLoader.show("Purging Note...");
+                    const res = await fetch(`${API_BASE_URL}/api/admin/notes/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                    ZLoader.hide();
+                    if (res.ok) { showToast("NOTE PURGED", "success"); renderNoteStudio(); }
+                } catch (e) { ZLoader.hide(); showToast("DELETE FAILED", "error"); }
             });
         }
 
@@ -917,71 +2269,84 @@
             const res = await fetch(API_BASE_URL + '/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
             const txs = await res.json();
             document.getElementById('content-area').innerHTML = `
-                <div class="glass-card rounded-[4rem] overflow-hidden">
-                    <table class="w-full text-left font-bold">
-                        <thead class="bg-white/5 border-b border-white/5">
-                            <tr>
-                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operative</th>
-                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operation</th>
-                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Volume</th>
-                                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Timestamp</th>
-                                <th class="p-10 text-right pr-20 text-[10px] uppercase text-slate-500 tracking-widest">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${txs.length ? txs.map(t => `
-                                <tr class="border-b border-white/5 hover:bg-white/5 transition uppercase text-xs">
-                                    <td class="p-10">
-                                        <div class="font-black text-sm">${t.user?.username || 'Redacted'}</div>
-                                        <div class="text-[9px] text-slate-500">${t.user?.email || ''}</div>
-                                    </td>
-                                    <td class="p-10 text-blue-500">${t.type}</td>
-                                    <td class="p-10 font-black text-lg">₹${t.amount}</td>
-                                    <td class="p-10 text-slate-500 text-[10px]">${new Date(t.createdAt).toLocaleString()}</td>
-                                    <td class="p-10 text-right pr-20"><span class="text-green-500 text-[10px] font-black tracking-widest">SUCCESS</span></td>
-                                </tr>
-                            `).join('') : `<tr><td colspan="5" class="p-20 text-center text-slate-600 italic">No fiscal movements detected.</td></tr>`}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+<div class="glass-card rounded-[4rem] overflow-hidden">
+    <table class="w-full text-left font-bold">
+        <thead class="bg-white/5 border-b border-white/5">
+            <tr>
+                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operative</th>
+                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Operation</th>
+                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Volume</th>
+                <th class="p-10 text-[10px] uppercase text-slate-500 tracking-widest">Timestamp</th>
+                <th class="p-10 text-right pr-20 text-[10px] uppercase text-slate-500 tracking-widest">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${txs.length ? txs.map(t => `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition uppercase text-xs">
+                <td class="p-10">
+                    <div class="font-black text-sm">${t.user?.username || 'Redacted'}</div>
+                    <div class="text-[9px] text-slate-500">${t.user?.email || ''}</div>
+                </td>
+                <td class="p-10 text-blue-500">${t.type}</td>
+                <td class="p-10 font-black text-lg">₹${t.amount}</td>
+                <td class="p-10 text-slate-500 text-[10px]">${new Date(t.createdAt).toLocaleString()}</td>
+                <td class="p-10 text-right pr-20"><span
+                        class="text-green-500 text-[10px] font-black tracking-widest">SUCCESS</span></td>
+            </tr>
+            `).join('') : `<tr>
+                <td colspan="5" class="p-20 text-center text-slate-600 italic">No fiscal movements detected.</td>
+            </tr>`}
+        </tbody>
+    </table>
+</div>
+`;
         }
 
         // --- BRANDING ---
         function renderThemes() {
             document.getElementById('content-area').innerHTML = `
-                <div class="max-w-3xl space-y-12">
-                    <div class="glass-card p-12 rounded-[4rem]">
-                        <h3 class="text-3xl font-black mb-12 uppercase tracking-tighter">System Branding</h3>
-                        <div class="space-y-8">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">System Designation</label>
-                                <input id="s-name" value="${state.settings.systemName || ''}" class="input-zenith" type="text">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">OS Version Code</label>
-                                <input id="s-version" value="${state.settings.systemVersion || ''}" class="input-zenith" type="text">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Primary Theme Color</label>
-                                <input id="s-color" value="${state.settings.accent || '#2563eb'}" class="w-full h-16 bg-transparent border-none cursor-pointer" type="color">
-                            </div>
+<div class="max-w-3xl space-y-12">
+    <div class="glass-card p-12 rounded-[4rem]">
+        <h3 class="text-3xl font-black mb-12 uppercase tracking-tighter">System Branding</h3>
+        <div class="space-y-8">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">System
+                    Designation</label>
+                <input id="s-name" value="${state.settings.systemName || ''}" class="input-zenith" type="text">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">OS Version
+                    Code</label>
+                <input id="s-version" value="${state.settings.systemVersion || ''}" class="input-zenith" type="text">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Primary Theme
+                    Color</label>
+                <input id="s-color" value="${state.settings.accent || '#2563eb'}"
+                    class="w-full h-16 bg-transparent border-none cursor-pointer" type="color">
+            </div>
 
-                            <h3 class="text-xl font-black mt-12 mb-6 uppercase tracking-tighter">Payment Gateway (UPI)</h3>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">UPI ID (VPA)</label>
-                                <input id="s-upi" value="${state.settings.upiId || ''}" class="input-zenith" type="text" placeholder="username@bank">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">QR Code URL</label>
-                                <input id="s-qr" value="${state.settings.qrCodeUrl || ''}" class="input-zenith" type="text" placeholder="https://...">
-                            </div>
+            <h3 class="text-xl font-black mt-12 mb-6 uppercase tracking-tighter">Payment Gateway (UPI)</h3>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">UPI ID
+                    (VPA)</label>
+                <input id="s-upi" value="${state.settings.upiId || ''}" class="input-zenith" type="text"
+                    placeholder="username@bank">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">QR Code
+                    URL</label>
+                <input id="s-qr" value="${state.settings.qrCodeUrl || ''}" class="input-zenith" type="text"
+                    placeholder="https://...">
+            </div>
 
-                            <button onclick="saveBranding()" class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-red-600/30">Deploy Identity & Config</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            <button onclick="saveBranding()"
+                class="w-full py-6 bg-red-600 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-red-600/30">Deploy
+                Identity & Config</button>
+        </div>
+    </div>
+</div>
+`;
         }
 
         async function saveBranding() {
@@ -992,11 +2357,36 @@
             const qr = document.getElementById('s-qr').value;
 
             await Promise.all([
-                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemName', value: name }) }),
-                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'systemVersion', value: version }) }),
-                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'accent', value: accent }) }),
-                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'upiId', value: upi }) }),
-                fetch(API_BASE_URL + '/api/admin/settings', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'qrCodeUrl', value: qr }) })
+                fetch(`${API_BASE_URL}/api/admin/settings`, {
+                    method: 'POST', headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }, body: JSON.stringify({ key: 'systemName', value: name })
+                }),
+                fetch(`${API_BASE_URL}/api/admin/settings`, {
+                    method: 'POST', headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }, body: JSON.stringify({ key: 'systemVersion', value: version })
+                }),
+                fetch(`${API_BASE_URL}/api/admin/settings`, {
+                    method: 'POST', headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }, body: JSON.stringify({ key: 'accent', value: accent })
+                }),
+                fetch(`${API_BASE_URL}/api/admin/settings`, {
+                    method: 'POST', headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }, body: JSON.stringify({ key: 'upiId', value: upi })
+                }),
+                fetch(`${API_BASE_URL}/api/admin/settings`, {
+                    method: 'POST', headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }, body: JSON.stringify({ key: 'qrCodeUrl', value: qr })
+                })
             ]);
             showToast("IDENTITY & CONFIG DEPLOYED.", "success");
             init();
@@ -1004,7 +2394,9 @@
 
         // --- ADS MANAGER ---
         function renderAds() {
-            document.getElementById('action-bar').innerHTML = `<button onclick="openAdForm()" class="px-10 py-5 bg-purple-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-purple-600/30">Create Campaign</button>`;
+            document.getElementById('action-bar').innerHTML = `<button onclick="openAdForm()"
+    class="px-10 py-5 bg-purple-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-purple-600/30">Create
+    Campaign</button>`;
 
             // For now, we simulate Ad state or fetch from backend if we implement a dedicated model.
             // Since we don't have a dedicated Ad model yet, we will store them in a 'settings' key or imply them.
@@ -1013,35 +2405,39 @@
             // A better UX is to List All Courses and allow "Ad Injection"
 
             document.getElementById('content-area').innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                    ${state.courses.map(c => `
-                        <div class="glass-card p-10 rounded-[3rem] border-white/5 relative group">
-                            <div class="absolute top-6 right-6">
-                                ${c.adConfig?.enabled ? '<div class="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>' : '<div class="w-3 h-3 bg-slate-700 rounded-full"></div>'}
-                            </div>
-                            <h4 class="text-2xl font-black mb-2 uppercase tracking-tight line-clamp-1">${c.title}</h4>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-8">${c.units.length} Units Targeted</p>
-                            
-                            ${c.adConfig?.enabled ? `
-                                <div class="aspect-video bg-black rounded-2xl mb-6 overflow-hidden border border-white/10 relative">
-                                    <img src="${c.adConfig.imageUrl}" class="w-full h-full object-cover opacity-60">
-                                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                                        <div class="text-[9px] font-bold text-white truncate">${c.adConfig.linkUrl}</div>
-                                    </div>
-                                </div>
-                            ` : `
-                                <div class="aspect-video bg-white/5 rounded-2xl mb-6 flex items-center justify-center border border-dashed border-white/10">
-                                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">No Active Campaign</span>
-                                </div>
-                            `}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+    ${state.courses.map(c => `
+    <div class="glass-card p-10 rounded-[3rem] border-white/5 relative group">
+        <div class="absolute top-6 right-6">
+            ${c.adConfig?.enabled ? '<div class="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>' :
+                    '<div class="w-3 h-3 bg-slate-700 rounded-full"></div>'}
+        </div>
+        <h4 class="text-2xl font-black mb-2 uppercase tracking-tight line-clamp-1">${c.title}</h4>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-8">${c.units.length} Units Targeted
+        </p>
 
-                            <button onclick="configureAds('${c._id}')" class="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black uppercase text-[10px] tracking-widest transition">
-                                ${c.adConfig?.enabled ? 'Manage Campaign' : 'Deploy Ad System'}
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+        ${c.adConfig?.enabled ? `
+        <div class="aspect-video bg-black rounded-2xl mb-6 overflow-hidden border border-white/10 relative">
+            <img src="${c.adConfig.imageUrl}" class="w-full h-full object-cover opacity-60">
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                <div class="text-[9px] font-bold text-white truncate">${c.adConfig.linkUrl}</div>
+            </div>
+        </div>
+        ` : `
+        <div
+            class="aspect-video bg-white/5 rounded-2xl mb-6 flex items-center justify-center border border-dashed border-white/10">
+            <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">No Active Campaign</span>
+        </div>
+        `}
+
+        <button onclick="configureAds('${c._id}')"
+            class="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black uppercase text-[10px] tracking-widest transition">
+            ${c.adConfig?.enabled ? 'Manage Campaign' : 'Deploy Ad System'}
+        </button>
+    </div>
+    `).join('')}
+</div>
+`;
         }
 
 
@@ -1051,7 +2447,7 @@
             if (!pwd) return;
 
             try {
-                const res = await fetch(API_BASE_URL + '/api/admin/reset-system', {
+                const res = await fetch(`${API_BASE_URL}/api/admin/reset-system`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pwd })
@@ -1075,30 +2471,37 @@
             const ad = course.adConfig || { enabled: false, imageUrl: '', linkUrl: '' };
 
             document.getElementById('modal-content').innerHTML = `
-                 <h2 class="text-4xl font-black mb-2 tracking-tighter uppercase">Ad Injection Protocol</h2>
-                 <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-12">Target: ${course.title}</p>
-                 
-                 <form id="ad-form" class="space-y-10 max-w-xl">
-                    <div class="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
-                        <input type="checkbox" id="ad-active" ${ad.enabled ? 'checked' : ''} class="w-6 h-6 rounded-lg appearance-none bg-slate-800 checked:bg-green-600 transition cursor-pointer">
-                        <label for="ad-active" class="text-xs font-black uppercase text-slate-300 cursor-pointer">Activate Campaign</label>
-                    </div>
+<h2 class="text-4xl font-black mb-2 tracking-tighter uppercase">Ad Injection Protocol</h2>
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-12">Target: ${course.title}</p>
 
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Visual Asset (Image URL)</label>
-                        <input id="ad-img" value="${ad.imageUrl || ''}" type="text" class="input-zenith" placeholder="https://..." required>
-                    </div>
+<form id="ad-form" class="space-y-10 max-w-xl">
+    <div class="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
+        <input type="checkbox" id="ad-active" ${ad.enabled ? 'checked' : ''}
+            class="w-6 h-6 rounded-lg appearance-none bg-slate-800 checked:bg-green-600 transition cursor-pointer">
+        <label for="ad-active" class="text-xs font-black uppercase text-slate-300 cursor-pointer">Activate
+            Campaign</label>
+    </div>
 
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Redirect Vector (Link URL)</label>
-                        <input id="ad-link" value="${ad.linkUrl || ''}" type="text" class="input-zenith" placeholder="https://..." required>
-                    </div>
+    <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Visual Asset (Image
+            URL)</label>
+        <input id="ad-img" value="${ad.imageUrl || ''}" type="text" class="input-zenith" placeholder="https://..."
+            required>
+    </div>
 
-                    <button type="submit" class="w-full py-6 bg-purple-600 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-purple-600/30">
-                        Deploy Configuration
-                    </button>
-                 </form>
-            `;
+    <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Redirect Vector (Link
+            URL)</label>
+        <input id="ad-link" value="${ad.linkUrl || ''}" type="text" class="input-zenith" placeholder="https://..."
+            required>
+    </div>
+
+    <button type="submit"
+        class="w-full py-6 bg-purple-600 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-purple-600/30">
+        Deploy Configuration
+    </button>
+</form>
+`;
 
             document.getElementById('ad-form').onsubmit = async (e) => {
                 e.preventDefault();
@@ -1112,7 +2515,7 @@
                 // We'll reuse the generic PUT /courses/:id endpoint but we need to ensure backend accepts adConfig.
                 // Backend schema validation might strip it if not present. I'll need to check the Course model.
                 // For now let's try sending it.
-                await fetch(API_BASE_URL + `/api/admin/courses/${courseId}`, {
+                await fetch(`${API_BASE_URL}/api/admin/courses/${courseId}`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ adConfig: newConfig })
@@ -1140,27 +2543,28 @@
             const bg = type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
 
             toast.style.cssText = `
-                background: #050505;
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: 1rem;
-                border: 1px solid rgba(255,255,255,0.1);
-                border-left: 4px solid ${color};
-                font-family: 'Plus Jakarta Sans', sans-serif;
-                font-weight: 700;
-                font-size: 10px;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-                transform: translateX(100%);
-                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                min-width: 250px;
-            `;
+background: #050505;
+color: white;
+padding: 1rem 1.5rem;
+border-radius: 1rem;
+border: 1px solid rgba(255,255,255,0.1);
+border-left: 4px solid ${color};
+font-family: 'Plus Jakarta Sans', sans-serif;
+font-weight: 700;
+font-size: 10px;
+text-transform: uppercase;
+letter-spacing: 0.1em;
+box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+transform: translateX(100%);
+transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+display: flex;
+align-items: center;
+gap: 10px;
+min-width: 250px;
+`;
 
-            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}" style="color: ${color}; font-size: 14px;"></i> ${message}`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"
+    style="color: ${color}; font-size: 14px;"></i> ${message}`;
             container.appendChild(toast);
 
             // Animate In
@@ -1176,150 +2580,189 @@
         }
 
         async function renderSupport() {
-            document.getElementById('content-area').innerHTML = `
-                <div class="glass-card p-12 rounded-[4rem] text-center">
-                    <div class="text-6xl text-slate-700 mb-8"><i class="fas fa-headset"></i></div>
-                    <h3 class="text-3xl font-black uppercase mb-4">Support Terminal</h3>
-                    <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Customer assistance module is online.</p>
-                </div>
-            `;
+            try {
+                ZLoader.show("Accessing Support Tunnels...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/support`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error("Failed to load support tickets");
+                const tickets = await res.json();
+                ZLoader.hide();
+
+                document.getElementById('content-area').innerHTML = `
+<div class="glass-card rounded-[4rem] overflow-hidden">
+    <table class="w-full text-left">
+        <thead class="bg-white/5 border-b border-white/5">
+            <tr>
+                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Operative</th>
+                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Inquiry Data</th>
+                <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Priority / Type</th>
+                <th class="p-10 text-right pr-20 text-[10px] uppercase font-black text-slate-500 tracking-widest">
+                    Terminal</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+            ${tickets.length ? tickets.map(t => `
+            <tr class="hover:bg-white/5 transition group">
+                <td class="p-10">
+                    <div class="font-black text-sm tracking-tighter uppercase">${t.user?.username || 'REDACTED'}</div>
+                    <div class="text-[9px] text-slate-500 font-bold">${t.user?.email || 'N/A'}</div>
+                </td>
+                <td class="p-10 max-w-md">
+                    <div class="font-black text-xs uppercase mb-1">${t.subject}</div>
+                    <div class="text-[10px] text-slate-400 normal-case line-clamp-2">${t.message}</div>
+                </td>
+                <td class="p-10">
+                    <div class="flex flex-col gap-2">
+                        <span
+                            class="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block w-fit text-blue-500 border border-blue-500/20">${t.type}</span>
+                        <span
+                            class="text-[9px] font-bold ${t.status === 'pending' ? 'text-yellow-500' : t.status === 'resolved' ? 'text-green-500' : 'text-red-500'} uppercase">Status:
+                            ${t.status}</span>
+                    </div>
+                </td>
+                <td class="p-10 text-right pr-20 space-x-6">
+                    ${t.status === 'pending' ? `
+                    <button onclick="resolveTicket('${t._id}', 'resolved', ${t.type === 'topup' ? 'true' : 'false'})"
+                        class="text-[9px] font-black uppercase text-green-500 hover:tracking-widest transition-all">Authorize
+                        / Resolve</button>
+                    <button onclick="resolveTicket('${t._id}', 'rejected', false)"
+                        class="text-[9px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Reject</button>
+                    ` : `
+                    <span class="text-[9px] font-black uppercase text-slate-600">Archived</span>
+                    `}
+                </td>
+            </tr>
+            `).join('') : `<tr>
+                <td colspan="4" class="p-20 text-center text-slate-600 italic">No incoming requests detected.</td>
+            </tr>`}
+        </tbody>
+    </table>
+</div>
+`;
+            } catch (e) {
+                ZLoader.hide();
+                console.error("Support Fetch Error", e);
+                showToast("COULD NOT RETRIEVE TICKETS", "error");
+            }
+        }
+
+        async function resolveTicket(id, status, credit = false) {
+            let userBalanceAction = false;
+            if (credit) {
+                userBalanceAction = confirm("DO YOU WANT TO CREDIT THE OPERATIVE'S BALANCE?");
+            }
+
+            try {
+                ZLoader.show("Syncing Command...");
+                const res = await fetch(`${API_BASE_URL}/api/admin/support/${id}/resolve`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status, userBalanceAction })
+                });
+
+                if (res.ok) {
+                    showToast(`TICKET ${status.toUpperCase()}`, "success");
+                    renderSupport(); // Refresh list
+                } else {
+                    const err = await res.json();
+                    throw new Error(err.message || "Uplink Failed");
+                }
+            } catch (e) {
+                ZLoader.hide();
+                alert("COMMAND REJECTED: " + e.message);
+            }
         }
 
         async function renderPlacementManager() {
             document.getElementById('content-area').innerHTML = `
-                <div class="glass-card p-12 rounded-[4rem] text-center">
-                    <div class="text-6xl text-slate-700 mb-8"><i class="fas fa-briefcase"></i></div>
-                    <h3 class="text-3xl font-black uppercase mb-4">Placement Hub</h3>
-                    <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Career management systems active.</p>
-                </div>
-            `;
+<div class="glass-card p-12 rounded-[4rem] text-center">
+    <div class="text-6xl text-slate-700 mb-8"><i class="fas fa-briefcase"></i></div>
+    <h3 class="text-3xl font-black uppercase mb-4">Placement Hub</h3>
+    <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Career management systems active.</p>
+</div>
+`;
         }
 
         // --- SKILL FORGE ---
         async function renderSkillsManager() {
             document.getElementById('action-bar').innerHTML = `<button onclick="openSkillForm()" class="px-10 py-5 bg-red-600 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-red-600/30">+ Initialize Skill Node</button>`;
-            const container = document.getElementById('content-area');
-
-            container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            ${state.skills.map(skill => `
-                <div class="glass-card p-10 rounded-[3rem] border-white/5 hover:border-blue-500/20 group transition-all duration-500">
-                    <div class="flex justify-between items-start mb-8">
-                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl" style="background: ${skill.color}22; color: ${skill.color}">
-                           <i class="fas ${skill.icon || 'fa-code'}"></i>
-                        </div>
-                        <div class="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onclick="openSkillForm('${skill._id}')" class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Edit</button>
-                            <button onclick="deleteSkill('${skill._id}')" class="text-[10px] font-black text-red-500 uppercase tracking-widest">Purge</button>
-                        </div>
-                    </div>
-                    <h4 class="text-3xl font-black mb-3 tracking-tighter uppercase syne">${skill.name}</h4>
-                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">${skill.category} // LVL ${skill.level}</div>
-                    
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                            <span class="text-slate-500">Topics</span>
-                            <span class="text-blue-500">${skill.topics?.length || 0} Layers</span>
-                        </div>
-                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                            <span class="text-slate-500">Trajectory</span>
-                            <span class="text-green-500">${skill.prerequisites?.length || 0} Prereqs</span>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mt-8">
-                        <button onclick="openVisualRoadmapDesigner('${skill._id}')" class="flex-grow py-4 bg-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20">
-                            <i class="fas fa-project-diagram mr-2"></i> Design Roadmap
-                        </button>
-                        <button onclick="openSkillBranchManager('${skill._id}')" class="p-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
-                            <i class="fas fa-list"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('')}
+            document.getElementById('content-area').innerHTML = `
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+    ${state.skills.map(skill => `
+    <div class="glass-card p-10 rounded-[3rem] border-white/5 hover:border-blue-500/20 group transition-all duration-500">
+        <div class="flex justify-between items-start mb-8">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl" style="background: ${skill.color}22; color: ${skill.color}"><i class="fas ${skill.icon || 'fa-code'}"></i></div>
+            <div class="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                <button onclick="openSkillForm('${skill._id}')" class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Edit</button>
+                <button onclick="deleteSkill('${skill._id}')" class="text-[10px] font-black text-red-500 uppercase tracking-widest">Purge</button>
+            </div>
         </div>
-    `;
+        <h4 class="text-3xl font-black mb-3 tracking-tighter uppercase syne">${skill.name}</h4>
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">${skill.category} // LVL ${skill.level}</div>
+        <div class="flex gap-4 mt-8">
+            <button onclick="openVisualRoadmapDesigner('${skill._id}')" class="flex-grow py-4 bg-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20"><i class="fas fa-project-diagram mr-2"></i> Design Roadmap</button>
+        </div>
+    </div>`).join('')}
+</div>`;
         }
 
         function openSkillForm(id = null) {
             openModal();
-            const skill = id ? state.skills.find(s => s._id === id) : {
-                name: '', category: 'Other', description: '', icon: 'fa-code',
-                color: '#3b82f6', level: 1, prerequisites: []
-            };
-
+            const skill = id ? state.skills.find(s => s._id === id) : { name: '', category: 'Other' };
             document.getElementById('modal-content').innerHTML = `
-        <h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">${id ? 'Modify System Node' : 'Initialize Skill Blueprint'}</h2>
-        <form id="skill-form" class="space-y-12 max-w-2xl">
-            <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Skill Designation (Nomenclature)</label>
-                <input id="s-name-f" value="${skill.name}" type="text" class="input-zenith" placeholder="Enter name..." required>
-            </div>
-            <div>
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Category Allocation</label>
-                <select id="s-cat-f" class="input-zenith">
-                    ${['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Other'].map(c => `<option value="${c}" ${skill.category === c ? 'selected' : ''}>${c}</option>`).join('')}
-                </select>
-            </div>
-            <button type="submit" class="w-full py-6 bg-red-600 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.4em] shadow-3xl shadow-red-600/40">
-                ${id ? 'COMMIT CORE DATA' : 'DEPLOY & OPEN ROADMAP DESIGNER'}
-            </button>
-        </form>
-    `;
-
+<h2 class="text-5xl font-black mb-14 tracking-tighter uppercase">${id ? 'Modify System Node' : 'Initialize Skill Blueprint'}</h2>
+<form id="skill-form" class="space-y-12 max-w-2xl">
+    <div><label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Skill Designation</label><input id="s-name-f" value="${skill.name}" type="text" class="input-zenith" required></div>
+    <div><label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Category</label><select id="s-cat-f" class="input-zenith">${['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Other'].map(c => `<option value="${c}" ${skill.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    <button type="submit" class="w-full py-6 bg-red-600 rounded-[2.5rem] font-black uppercase text-sm tracking-[0.4em] shadow-3xl shadow-red-600/40">${id ? 'COMMIT CORE DATA' : 'DEPLOY SKILL'}</button>
+</form>`;
             document.getElementById('skill-form').onsubmit = async (e) => {
                 e.preventDefault();
-                const data = {
-                    name: document.getElementById('s-name-f').value,
-                    category: document.getElementById('s-cat-f').value
-                };
-
-                const method = id ? 'PATCH' : 'POST';
-                const url = id ? `/api/explore/admin/skills/${id}` : '/api/explore/admin/skills';
-
-                const res = await fetch(url, {
-                    method,
+                const data = { name: document.getElementById('s-name-f').value, category: document.getElementById('s-cat-f').value };
+                const res = await fetch(`${API_BASE_URL}${id ? `/api/explore/admin/skills/${id}` : '/api/explore/admin/skills'}`, {
+                    method: id ? 'PATCH' : 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-
-                if (res.ok) {
-                    showToast("SKILL DEPLOYED.", "success");
-                    const savedSkill = await res.json();
-                    await sync();
-                    if (!id) {
-                        openVisualRoadmapDesigner(savedSkill._id);
-                    } else {
-                        renderSkillsManager();
-                        closeModal();
-                    }
-                }
+                if (res.ok) { showToast("SKILL DEPLOYED.", "success"); await sync(); renderSkillsManager(); closeModal(); }
             };
         }
 
-        // --- HELPER WRAPPERS ---
         function openModal() { document.getElementById('hyper-modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
         function closeModal() { document.getElementById('hyper-modal').style.display = 'none'; document.body.style.overflow = 'auto'; }
         async function deleteCourse(id) {
             openZenithConfirm("PURGE ENTIRE PRODUCTION UNIT?", async () => {
-                await fetch(API_BASE_URL + `/api/admin/courses/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-                showToast("COURSE PURGED.", "success");
-                sync().then(renderCourses);
+                await fetch(`${API_BASE_URL}/api/admin/courses/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                showToast("COURSE PURGED.", "success"); await sync(); renderCourses();
             });
         }
         async function deleteSkill(id) {
             openZenithConfirm("PURGE SKILL FROM CONSTELLATION?", async () => {
-                await fetch(API_BASE_URL + `/api/explore/admin/skills/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-                showToast("SKILL DELETED.", "success");
-                await sync();
-                renderSkillsManager();
+                await fetch(`${API_BASE_URL}/api/explore/admin/skills/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                showToast("SKILL DELETED.", "success"); await sync(); renderSkillsManager();
             });
         }
         function logout() { localStorage.removeItem('token'); window.location.href = '/index.html'; }
+
+        function toggleModalMaximize(e) {
+            const ev = e || window.event;
+            const modal = document.getElementById('hyper-modal');
+            modal.classList.toggle('is-maximized');
+            const btn = ev.currentTarget.querySelector('i');
+            if (modal.classList.contains('is-maximized')) {
+                btn.classList.replace('fa-expand-alt', 'fa-compress-alt');
+            } else {
+                btn.classList.replace('fa-compress-alt', 'fa-expand-alt');
+            }
+        }
 
         init();
     </script>
     <script src="public/js/admin-topics.js?v=ultimate_fix_v10"></script>
 </body>
 
-</html> >
+</html>
