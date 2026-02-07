@@ -83,6 +83,14 @@ const userSchema = new mongoose.Schema({
         preferredLocations: [String],
         isJobReady: { type: Boolean, default: false }
     },
+    featureAccess: {
+        courses: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
+        profile: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
+        skills: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
+        video: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
+        chat: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String }
+    },
+    bonusClaimed: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 
