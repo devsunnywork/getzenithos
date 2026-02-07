@@ -93,6 +93,7 @@ app.use('/api/personal', require('./routes/personalRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/goals', require('./routes/goalRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/settings', require('./routes/settingRoutes'));
 app.use('/api/support', require('./routes/supportRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
