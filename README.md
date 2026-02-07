@@ -1,5 +1,10 @@
 # 🚀 Zenith OS - Integrated Life Operating System
 
+## 🌐 Production Status
+- **Neural Backend**: [Live on Render](https://getzenithos.onrender.com)
+- **Neural Frontend**: [Live on Netlify](https://getzenithos.netlify.app)
+- **Deployment Strategy**: Production-ready API uplink synchronized.
+
 > An immersive, high-performance platform designed to consolidate your academic, professional, and personal growth into a single, unified neural interface.
 
 [![Live Demo](https://img.shields.io/badge/demo-live-success?style=for-the-badge&logo=netlify)](https://getzenithos.netlify.app)
@@ -127,6 +132,8 @@ zenith-os/
 │   ├── models/            # Data Schemas (User, Skill, Course)
 │   ├── routes/            # API Command Triggers
 │   └── server.js          # Main System Entry Point
+├── tools/                  # Administrative Utilities
+│   └── seeding/           # Neural Record Generation & Seeding Engine
 └── README.md              # System Documentation Protocol
 ```
 
