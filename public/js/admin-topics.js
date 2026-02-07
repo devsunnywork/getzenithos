@@ -598,7 +598,7 @@ async function saveSkillChanges(skill) {
     });
 
     try {
-        const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/explore/admin/skills/${skill._id}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ topics: sanitizedTopics })
@@ -790,7 +790,7 @@ function openMetadataEditor() {
         const fd = new FormData(e.target);
         const updates = Object.fromEntries(fd.entries());
 
-        const res = await fetch(API_BASE_URL + `/api/explore/admin/skills/${skill._id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/explore/admin/skills/${skill._id}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)

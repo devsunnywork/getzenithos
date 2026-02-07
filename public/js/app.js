@@ -24,6 +24,13 @@ const state = {
 // ========================================
 
 async function init() {
+    // Initial Desktop Lock Check
+    checkDesktopLock();
+    window.addEventListener('resize', checkDesktopLock);
+
+    // If locked, don't proceed with neural link
+    if (window.innerWidth < 1000) return;
+
     ZLoader.show("Initializing Neural Link...");
     try {
         initToastSystem();
@@ -34,6 +41,11 @@ async function init() {
         applyTheme();
         loadPage('dashboard');
         lucide.createIcons();
+
+        // Check for Welcome Bonus
+        if (state.user && !state.user.bonusClaimed) {
+            renderBonusPopup();
+        }
     } catch (err) {
         console.error("Critical System Failure:", err);
         if (window.showToast) showToast("Neural Link Failure: System Offline", "error");
@@ -212,6 +224,133 @@ function showToast(message, type = 'info') {
         toast.classList.add('hiding');
         setTimeout(() => toast.remove(), 300);
     }, 4000);
+}
+
+// --- DESKTOP LOCK SYSTEM ---
+function checkDesktopLock() {
+    const existingLock = document.getElementById('zenith-desktop-lock');
+
+    if (window.innerWidth < 1000) {
+        if (!existingLock) {
+            renderDesktopLock();
+        } else {
+            // Update resolution display if already showing
+            const resDisplay = existingLock.querySelector('.resolution-val');
+            if (resDisplay) resDisplay.innerText = `${window.innerWidth}px`;
+        }
+        // Ensure app content is hidden
+        document.body.style.overflow = 'hidden';
+    } else {
+        if (existingLock) {
+            existingLock.remove();
+            document.body.style.overflow = '';
+            // If the app wasn't initialized because it started small, we need to reload to trigger init()
+            if (!state.user) window.location.reload();
+        }
+    }
+}
+
+function renderDesktopLock() {
+    const lock = document.createElement('div');
+    lock.id = 'zenith-desktop-lock';
+    lock.style.cssText = `
+        position: fixed; inset: 0; background: #000; z-index: 10000;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 40px; font-family: 'Syne', sans-serif;
+    `;
+    lock.innerHTML = `
+        <div class="w-24 h-24 bg-blue-600/10 rounded-3xl flex items-center justify-center border border-blue-500/20 mb-8 animate-bounce">
+            <i class="fas fa-desktop text-4xl text-blue-500"></i>
+        </div>
+        <h1 class="text-4xl font-black text-white uppercase tracking-tighter mb-4">Command Center Restricted</h1>
+        <p class="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-8 max-w-sm">
+            Zenith.OS requires ultra-wide neural bandwidth. Please switch to a Desktop display (min 1000px) to initialize connection.
+        </p>
+        <div class="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-blue-500 text-[10px] font-black uppercase tracking-widest">
+            Current Resolution: <span class="resolution-val">${window.innerWidth}px</span>
+        </div>
+    `;
+    document.body.appendChild(lock);
+}
+
+// --- WELCOME BONUS SYSTEM ---
+function renderBonusPopup() {
+    const overlay = document.createElement('div');
+    overlay.id = 'bonus-overlay';
+    overlay.className = 'fixed inset-0 z-[5000] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 animate-in fade-in duration-500';
+
+    overlay.innerHTML = `
+        <div class="glass-card max-w-xl w-full p-12 rounded-[4rem] border-blue-500/30 bg-gradient-to-br from-blue-600/10 to-transparent relative overflow-hidden text-center shadow-[0_0_100px_rgba(37,99,235,0.2)]">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+            
+            <div class="w-20 h-20 mx-auto bg-blue-600/20 rounded-3xl flex items-center justify-center text-blue-400 mb-8 border border-blue-500/30 animate-pulse">
+                <i class="fas fa-gift text-3xl"></i>
+            </div>
+            
+            <h2 class="text-4xl font-black syne text-white uppercase tracking-tighter mb-4">Welcome Operative</h2>
+            <p class="text-slate-400 font-medium text-sm leading-relaxed mb-10 uppercase tracking-wide">
+                Neural link established. Your specialized account has been pre-authorized for an immediate resource credit.
+            </p>
+            
+            <div class="bg-white/5 p-8 rounded-3xl border border-white/10 mb-10 flex items-center justify-center gap-6 group hover:bg-white/10 transition-all">
+                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Allocation:</div>
+                <div class="text-5xl font-black syne text-white tracking-tighter group-hover:scale-110 transition-transform">₹500</div>
+                <div class="text-[10px] font-black text-blue-500 uppercase tracking-widest border border-blue-500/30 px-3 py-1 rounded-lg">FREE</div>
+            </div>
+
+            <button id="claim-bonus-btn" onclick="claimWelcomeBonus()" 
+                class="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.4em] transition-all active:scale-95 shadow-2xl shadow-blue-600/30 group">
+                Synchronize Credit <i class="fas fa-arrow-right ml-4 group-hover:translate-x-2 transition-transform"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+window.claimWelcomeBonus = async function () {
+    const btn = document.getElementById('claim-bonus-btn');
+    if (btn.disabled) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i> SYNCING...';
+
+    try {
+        const res = await fetch(API_BASE_URL + '/api/auth/claim-bonus', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            if (window.showToast) showToast(data.message, 'success');
+
+            // Update UI Balance
+            const balanceEl = document.getElementById('balance-display');
+            if (balanceEl) {
+                balanceEl.innerText = `₹${data.newBalance.toLocaleString()}`;
+                // Update mobile balance too just in case
+                const mobileBalance = document.getElementById('mobile-balance-display');
+                if (mobileBalance) mobileBalance.innerText = `₹${data.newBalance.toLocaleString()}`;
+            }
+
+            // Remove Overlay
+            const overlay = document.getElementById('bonus-overlay');
+            overlay.classList.add('animate-out', 'fade-out', 'duration-500');
+            setTimeout(() => overlay.remove(), 500);
+
+            // Update state so it doesn't show again in current session
+            state.user.bonusClaimed = true;
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (err) {
+        if (window.showToast) showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'RETRY SYNCHRONIZATION';
+    }
 }
 
 // Override native alert for quick migration, or manually replace calls.
