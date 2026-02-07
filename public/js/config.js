@@ -10,7 +10,7 @@
 // 4. Deploy frontend to Netlify/Vercel
 //
 // LOCAL DEVELOPMENT:
-// Keep as 'http://localhost:5000'
+// Keep as ''
 //
 // PRODUCTION:
 // Change to your Render URL (without trailing slash)
