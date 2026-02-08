@@ -379,9 +379,21 @@ router.post('/settings', async (req, res) => {
 router.post('/reset-system', async (req, res) => {
     try {
         const { password } = req.body;
-        if (password !== 'theholyground') {
+
+        // Validate environment variable exists
+        if (!process.env.ADMIN_RESET_PASSWORD) {
+            console.error('❌ ADMIN_RESET_PASSWORD not set in environment variables');
+            return res.status(500).json({ message: 'System reset not configured properly.' });
+        }
+
+        if (!password || password !== process.env.ADMIN_RESET_PASSWORD) {
+            // Log failed attempt
+            console.warn(`⚠️ Failed system reset attempt from admin: ${req.user.username} at ${new Date().toISOString()}`);
             return res.status(403).json({ message: 'Incorrect clearance code.' });
         }
+
+        // Log successful reset attempt
+        console.warn(`🔴 SYSTEM RESET initiated by admin: ${req.user.username} at ${new Date().toISOString()}`);
 
         // Delete all data except admin users
         // 1. Delete Non-Admin Users
@@ -394,24 +406,14 @@ router.post('/reset-system', async (req, res) => {
             Lecture.deleteMany({}),
             Transaction.deleteMany({}),
             Support.deleteMany({}),
-            // If there are other models not imported here, they might persist.
-            // Based on models dir: Academic, Comment, Goal, Health, Personal, Skill
-            // I should import these above or dynamically delete?
-            // For safety and speed, let's just clear the main content ones we know.
-            // To be thorough, let's try to clear them all if possible, but we need imports.
-            // Let's stick to the main ones + Setting (maybe keep settings?)
-            // User asked "clear sara data... bs user chord kr admin".
-            // So we should wipe settings too? Or keep branding?
-            // Usually reset implies defaults. I will wipe settings too, and let them re-seed on restart.
+            Note.deleteMany({}),
             Setting.deleteMany({})
         ]);
 
-        // Also clear other collections if I can import them, but I need to `require` them at the top.
-        // I will add imports in a separate Edit if needed, but for now this covers the main items.
-
+        console.log('✅ SYSTEM RESET COMPLETE');
         res.json({ message: 'SYSTEM RESET COMPLETE. ALL DATA PURGED.' });
     } catch (err) {
-        console.error(err);
+        console.error('System Reset Error:', err);
         res.status(500).json({ message: err.message });
     }
 });
