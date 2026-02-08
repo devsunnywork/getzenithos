@@ -111,14 +111,23 @@ router.post('/:id/progress/mark-complete', auth, async (req, res) => {
     try {
         const { lectureId, completed } = req.body;
         const user = await User.findById(req.user._id);
-        const progress = user.courseProgress.find(p => p.courseId.toString() === req.params.id);
+        let progress = user.courseProgress.find(p => p.courseId.toString() === req.params.id);
 
         if (!progress) {
-            // 404 Fix: Auto-create progress if it doesn't exist yet
-            progress = { courseId: req.params.id, completedLectures: [], watchTime: 0 };
-            user.courseProgress.push(progress);
-            // Re-fetch reference
-            progress = user.courseProgress.find(p => p.courseId.toString() === req.params.id);
+            // Auto-create progress if it doesn't exist yet
+            user.courseProgress.push({
+                courseId: req.params.id,
+                completedLectures: [],
+                watchTime: 0,
+                xp: 0
+            });
+            // Save immediately to persist the new progress object
+            await user.save();
+            // Re-fetch the user to get the proper reference
+            const updatedUser = await User.findById(req.user._id);
+            progress = updatedUser.courseProgress.find(p => p.courseId.toString() === req.params.id);
+            // Update user reference for subsequent operations
+            Object.assign(user, updatedUser);
         }
 
 
@@ -140,8 +149,12 @@ router.post('/:id/progress/mark-complete', auth, async (req, res) => {
                 user.xp = Math.max(0, (user.xp || 0) - 100);
                 progress.xp = Math.max(0, (progress.xp || 0) - 100);
 
-                // Decrement lecture completion count
-                await Lecture.findByIdAndUpdate(lectureId, { $inc: { completions: -1 } });
+                // Decrement lecture completion count (with validation)
+                const lecture = await Lecture.findById(lectureId);
+                if (lecture && lecture.completions > 0) {
+                    lecture.completions -= 1;
+                    await lecture.save();
+                }
             }
         }
 
