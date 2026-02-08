@@ -647,8 +647,8 @@ router.get('/placement/readiness', auth, async (req, res) => {
             checks.push({ name: 'Portfolio/GitHub Added', completed: false });
         }
 
-        // Check 3: Career path selected (10 points)
-        if (user.selectedCareerPath) {
+        // Check 3: Active career paths selected (10 points)
+        if (user.activeCareers && user.activeCareers.length > 0) {
             score += 10;
             checks.push({ name: 'Career Path Selected', completed: true });
         } else {
