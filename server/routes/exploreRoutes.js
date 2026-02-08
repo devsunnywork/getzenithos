@@ -221,25 +221,26 @@ router.post('/skills/:skillId/unlock', auth, async (req, res) => {
         const skillId = req.params.skillId;
         const now = new Date();
 
-        // Check if reset period has passed
-        if (user.skillChangeHistory.resetDate && now > user.skillChangeHistory.resetDate) {
-            user.skillChangeHistory.count = 0;
-            user.skillChangeHistory.resetDate = null;
+        // Check if reset period has passed (using careerChangeMeta)
+        const lastReset = user.careerChangeMeta.lastResetDate ? new Date(user.careerChangeMeta.lastResetDate) : new Date(0);
+        const monthsDiff = (now.getFullYear() - lastReset.getFullYear()) * 12 + (now.getMonth() - lastReset.getMonth());
+
+        if (monthsDiff >= 1) {
+            user.careerChangeMeta.changesThisMonth = 0;
+            user.careerChangeMeta.lastResetDate = now;
         }
 
         // Policy Check: 3 changes per 30 days
-        if (user.skillChangeHistory.count >= 3) {
-            const daysLeft = Math.ceil((user.skillChangeHistory.resetDate - now) / (1000 * 60 * 60 * 24));
+        if (user.careerChangeMeta.changesThisMonth >= 3) {
+            const daysLeft = 30 - Math.floor((now - new Date(user.careerChangeMeta.lastResetDate)) / (1000 * 60 * 60 * 24));
             return res.status(403).json({
                 message: `Skill change limit reached (3/30 days). Try again in ${daysLeft} days.`
             });
         }
 
         // Initialize reset date if it's the first change in a cycle
-        if (user.skillChangeHistory.count === 0) {
-            const reset = new Date();
-            reset.setDate(reset.getDate() + 30);
-            user.skillChangeHistory.resetDate = reset;
+        if (user.careerChangeMeta.changesThisMonth === 0) {
+            user.careerChangeMeta.lastResetDate = now;
         }
 
         // Unlock Skill
@@ -258,8 +259,7 @@ router.post('/skills/:skillId/unlock', auth, async (req, res) => {
             });
         }
 
-        user.skillChangeHistory.count += 1;
-        user.skillChangeHistory.lastChangeDate = now;
+        user.careerChangeMeta.changesThisMonth += 1;
 
         await user.save();
         res.json({ message: 'Skill successfully unlocked!', skillProgress: user.skillProgress });
