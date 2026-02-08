@@ -8,6 +8,17 @@ const Setting = require('../models/Setting');
 const Transaction = require('../models/Transaction');
 const Support = require('../models/Support');
 const Note = require('../models/Note');
+const Academic = require('../models/Academic');
+const Comment = require('../models/Comment');
+const Goal = require('../models/Goal');
+const Health = require('../models/Health');
+const Personal = require('../models/Personal');
+const Skill = require('../models/Skill');
+const CareerPath = require('../models/CareerPath');
+const Achievement = require('../models/Achievement');
+const Job = require('../models/Job');
+const InterviewQuestion = require('../models/InterviewQuestion');
+const Chat = require('../models/Chat');
 const { auth, isAdmin } = require('../middleware/authMiddleware');
 
 // Protect all admin routes
@@ -399,7 +410,7 @@ router.post('/reset-system', async (req, res) => {
         // 1. Delete Non-Admin Users
         await User.deleteMany({ role: { $ne: 'admin' } });
 
-        // 2. Delete EVERYTHING else
+        // 2. Delete EVERYTHING else (all models)
         await Promise.all([
             Course.deleteMany({}),
             Unit.deleteMany({}),
@@ -407,7 +418,18 @@ router.post('/reset-system', async (req, res) => {
             Transaction.deleteMany({}),
             Support.deleteMany({}),
             Note.deleteMany({}),
-            Setting.deleteMany({})
+            Setting.deleteMany({}),
+            Academic.deleteMany({}),
+            Comment.deleteMany({}),
+            Goal.deleteMany({}),
+            Health.deleteMany({}),
+            Personal.deleteMany({}),
+            Skill.deleteMany({}),
+            CareerPath.deleteMany({}),
+            Achievement.deleteMany({}),
+            Job.deleteMany({}),
+            InterviewQuestion.deleteMany({}),
+            Chat.deleteMany({})
         ]);
 
         console.log('✅ SYSTEM RESET COMPLETE');
