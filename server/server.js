@@ -8,6 +8,21 @@ const connectDB = require('./config/db');
 // Load environment variables from root directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+// Validate critical environment variables
+if (!process.env.JWT_SECRET) {
+    console.error('❌ CRITICAL ERROR: JWT_SECRET is not defined in environment variables');
+    console.error('Please add JWT_SECRET to your .env file');
+    process.exit(1);
+}
+
+if (!process.env.MONGO_URI) {
+    console.error('❌ CRITICAL ERROR: MONGO_URI is not defined in environment variables');
+    console.error('Please add MONGO_URI to your .env file');
+    process.exit(1);
+}
+
+console.log('✅ Environment variables validated successfully');
+
 // Connect to Database
 const Setting = require('./models/Setting');
 
