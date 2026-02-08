@@ -169,13 +169,22 @@ router.post('/:id/progress/mark-complete', auth, async (req, res) => {
 router.post('/:id/telemetry/sync', auth, async (req, res) => {
     try {
         const { seconds } = req.body;
+
+        // Validate watch time input
+        const watchTime = parseInt(seconds);
+        if (isNaN(watchTime) || watchTime < 0 || watchTime > 3600) {
+            return res.status(400).json({
+                message: 'Invalid watch time. Must be between 0 and 3600 seconds.'
+            });
+        }
+
         const user = await User.findById(req.user._id);
         const progress = user.courseProgress.find(p => p.courseId.toString() === req.params.id);
 
         if (!progress) return res.status(404).json({ message: 'Progress track not found.' });
 
-        progress.watchTime += seconds;
-        user.totalWatchTime += seconds;
+        progress.watchTime += watchTime;
+        user.totalWatchTime += watchTime;
 
         // Simple Badge logic test
         if (user.totalWatchTime >= 3600 && !user.badges.find(b => b.name === 'Deep Diver')) {
