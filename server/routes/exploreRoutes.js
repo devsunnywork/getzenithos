@@ -354,8 +354,8 @@ router.post('/careermode/select', auth, async (req, res) => {
             const validCareers = user.activeCareers.filter(c => c !== null && c._id);
             const cleanIDs = validCareers.map(c => c._id.toString());
 
-            // 3. Update with clean IDs
-            user.activeCareers = cleanIDs;
+            // 3. Update with clean IDs and enforce max 2 limit
+            user.activeCareers = cleanIDs.slice(0, 2);
 
             // 4. Persist cleanup if dirt was found
             if (cleanIDs.length !== originalLength) {
