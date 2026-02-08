@@ -401,6 +401,9 @@ router.post('/careermode/select', auth, async (req, res) => {
             user.careerChangeMeta.history.push({ action: 'removed', careerId: skillId });
         }
 
+        // Increment change counter for both add and remove
+        user.careerChangeMeta.changesThisMonth += 1;
+
         await user.save();
 
         // Populate and return updated list
