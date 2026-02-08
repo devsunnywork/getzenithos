@@ -48,6 +48,18 @@ router.get('/profile', auth, async (req, res) => {
             .populate('enrolledCourses')
             .populate('courseProgress.courseId')
             .populate('activeCareers');
+
+        // Filter out null values from populated fields (deleted references)
+        if (user.enrolledCourses) {
+            user.enrolledCourses = user.enrolledCourses.filter(c => c !== null);
+        }
+        if (user.activeCareers) {
+            user.activeCareers = user.activeCareers.filter(c => c !== null);
+        }
+        if (user.courseProgress) {
+            user.courseProgress = user.courseProgress.filter(cp => cp.courseId !== null);
+        }
+
         res.json(user);
     } catch (err) {
         res.status(500).json({ message: err.message });

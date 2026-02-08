@@ -426,6 +426,13 @@ router.get('/careermode/my-progress', auth, async (req, res) => {
             return res.json({ message: 'No active protocols.', activeCareers: [] });
         }
 
+        // Filter out null values (deleted skill references)
+        user.activeCareers = user.activeCareers.filter(c => c !== null);
+
+        if (user.activeCareers.length === 0) {
+            return res.json({ message: 'No active protocols.', activeCareers: [] });
+        }
+
         // Return the full Skill objects for the active careers
         // The frontend will render the trees for these skills
         // We also need to map the user's progress to these trees (which is in user.skillProgress)
