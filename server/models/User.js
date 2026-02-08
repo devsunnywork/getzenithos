@@ -91,6 +91,7 @@ const userSchema = new mongoose.Schema({
         chat: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String }
     },
     bonusClaimed: { type: Boolean, default: false },
+    usedCheatCodes: [{ type: String }], // Track which cheat codes have been used
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -99,10 +99,25 @@ router.put('/profile', auth, upload.single('avatar'), async (req, res) => {
 router.post('/cheat-code', auth, async (req, res) => {
     try {
         const { code } = req.body;
+
+        // Input validation
+        if (!code || typeof code !== 'string') {
+            return res.status(400).json({ message: 'INVALID INPUT: Code required' });
+        }
+
         const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const upperCode = code.toUpperCase();
+
+        // Check if code was already used
+        if (user.usedCheatCodes && user.usedCheatCodes.includes(upperCode)) {
+            return res.status(400).json({
+                message: 'PROTOCOL ALREADY EXECUTED: This code has been used before',
+                currentXp: user.xp
+            });
+        }
+
         let reward = "";
         let xpGained = 0;
 
@@ -119,7 +134,10 @@ router.post('/cheat-code', auth, async (req, res) => {
             return res.status(400).json({ message: "INVALID PROTOCOL: ACCESS DENIED" });
         }
 
+        // Award XP and mark code as used
         user.xp = (user.xp || 0) + xpGained;
+        if (!user.usedCheatCodes) user.usedCheatCodes = [];
+        user.usedCheatCodes.push(upperCode);
         await user.save();
 
         res.json({ message: reward, newXp: user.xp });
