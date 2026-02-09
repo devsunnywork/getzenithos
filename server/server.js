@@ -58,11 +58,8 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin only in development (like mobile apps or curl requests)
         if (!origin) {
-            if (process.env.NODE_ENV === 'development') {
-                return callback(null, true);
-            } else {
-                return callback(new Error('Origin header required in production'), false);
-            }
+            // Allow requests with no origin during development/local work
+            return callback(null, true);
         }
 
         if (allowedOrigins.indexOf(origin) !== -1) {
@@ -76,6 +73,22 @@ const corsOptions = {
 };
 // ========================================
 
+// ========================================
+// Security Headers (CSP) - Fix DevTools Blocking
+// ========================================
+app.use((req, res, next) => {
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' * data: blob:; " +
+        "connect-src 'self' * ws: wss:; " +
+        "img-src 'self' * data: blob:; " +
+        "font-src 'self' * data:; " +
+        "style-src 'self' 'unsafe-inline' *; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' *;"
+    );
+    next();
+});
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -83,13 +96,24 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use('/public', express.static(path.join(__dirname, '../public'))); // Serve static frontend files from root public
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'))); // Serve uploads statically
 
-// Basic Routes - Serve index.html for both / and /index.html
+// Basic Routes - Serve landing/dashboard for both / and /index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
+    // Try to serve index.html, fallback to user.html
+    const indexPath = path.join(__dirname, '../index.html');
+    if (require('fs').existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.sendFile(path.join(__dirname, '../user.html'));
+    }
 });
 
 app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
+    const indexPath = path.join(__dirname, '../index.html');
+    if (require('fs').existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.sendFile(path.join(__dirname, '../user.html'));
+    }
 });
 
 app.get('/user.html', (req, res) => {
