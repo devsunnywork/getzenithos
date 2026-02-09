@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 
 // Load environment variables from root directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), quiet: true });
 
 // Validate critical environment variables
 if (!process.env.JWT_SECRET) {

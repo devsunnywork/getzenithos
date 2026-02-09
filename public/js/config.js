@@ -1,23 +1,22 @@
 // ========================================
 // ZENITH OS - API Configuration
 // ========================================
-// 
-// DEPLOYMENT INSTRUCTIONS:
-// 
-// 1. Deploy backend to Render
-// 2. Get your Render app URL (e.g., https://your-app-name.onrender.com)
-// 3. Replace the API_BASE_URL below with your Render URL
-// 4. Deploy frontend to Netlify/Vercel
-//
-// LOCAL DEVELOPMENT:
-// Keep as ''
-//
-// PRODUCTION:
-// Change to your Render URL (without trailing slash)
-// Example: 'https://getzenithos.onrender.com'
+// Auto-detects environment and switches between local and production
 // ========================================
 
-const API_BASE_URL = 'https://getzenithos.onrender.com';
+const API_BASE_URL = (() => {
+    const hostname = window.location.hostname;
+
+    // Production environment
+    if (hostname === 'getzenithos.netlify.app' || hostname.includes('netlify.app')) {
+        return 'https://getzenithos.onrender.com';
+    }
+
+    // Local development
+    return 'http://localhost:5000';
+})();
+
+console.log('🌐 API Environment:', API_BASE_URL);
 
 // Z-LOADER SYSTEM v1.0
 const ZLoader = {

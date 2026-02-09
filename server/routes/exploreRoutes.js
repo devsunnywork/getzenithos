@@ -48,7 +48,7 @@ router.post('/skills/:skillId/topics/:topicId/complete', auth, async (req, res) 
         );
         if (!topic) {
             console.error(`[Zenith Error] Topic ID mismatch. Skill: ${skill.name}, Target ID: ${req.params.topicId}`);
-            console.log("Available Topic IDs:", skill.topics.map(t => t._id.toString()));
+
             return res.status(404).json({ message: 'Topic not found (ID mismatch)' });
         }
 
@@ -70,11 +70,11 @@ router.post('/skills/:skillId/topics/:topicId/complete', auth, async (req, res) 
             return acId === skillId;
         });
 
-        console.log(`[Zenith System] Completion Request: Skill=${skill.name} (${skillId}), Active=${isActiveCareer}`);
+
 
         if (!skillProgress) {
             if (isActiveCareer) {
-                console.log(`[Zenith System] Auto-initializing progress for ${skill.name}`);
+
                 // Auto-initialize progress for active careers
                 user.skillProgress.push({
                     skill: req.params.skillId,
@@ -94,7 +94,7 @@ router.post('/skills/:skillId/topics/:topicId/complete', auth, async (req, res) 
         } else {
             // Force unlock if it's an active career - ensure we never block an active path
             if (isActiveCareer && !skillProgress.isUnlocked) {
-                console.log(`[Zenith System] Force unlocking existing progress for ${skill.name}`);
+
                 skillProgress.isUnlocked = true;
                 user.markModified('skillProgress');
             } else if (!skillProgress.isUnlocked) {
@@ -143,7 +143,7 @@ router.post('/skills/:skillId/topics/:topicId/complete', auth, async (req, res) 
                     const allChildrenDone = children.every(c => isTopicCompleted(c._id));
 
                     if (allChildrenDone && !isTopicCompleted(parentNode._id)) {
-                        console.log(`[Zenith Auto-Complete] Bubbling completion to parent: ${parentNode.title}`);
+
                         skillProgress.completedTopics.push(parentNode._id);
                         const pxp = parentNode.xp || 50;
                         skillProgress.xpEarned += pxp;
@@ -273,7 +273,7 @@ router.post('/skills/:skillId/unlock', auth, async (req, res) => {
 // Create a new skill (Admin)
 router.post('/admin/skills', auth, isAdmin, async (req, res) => {
     try {
-        console.log('Received Create Skill Request:', req.body.name);
+
         const { name, category } = req.body;
 
         if (!name || !category) {
@@ -282,7 +282,7 @@ router.post('/admin/skills', auth, isAdmin, async (req, res) => {
 
         const skill = new Skill(req.body);
         await skill.save();
-        console.log('Skill Saved Successfully:', skill._id);
+
         res.status(201).json(skill);
     } catch (err) {
         console.error('Skill Create Fail:', err);
@@ -293,7 +293,7 @@ router.post('/admin/skills', auth, isAdmin, async (req, res) => {
 // Update a skill (Admin)
 router.patch('/admin/skills/:id', auth, isAdmin, async (req, res) => {
     try {
-        console.log('Updating Skill:', req.params.id);
+
         const skill = await Skill.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!skill) return res.status(404).json({ message: 'Skill not found' });
         res.json(skill);

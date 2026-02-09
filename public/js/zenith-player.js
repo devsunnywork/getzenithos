@@ -4,6 +4,17 @@
  */
 
 window.ImmersiveEngine = {
+    escapeHTML: (str) => {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g,
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+    },
     open: (content) => {
         const sidebars = document.querySelectorAll('aside');
         const main = document.querySelector('main');
@@ -282,10 +293,7 @@ window.launchProPlayer = async function (lecId, unitId) {
     const isDone = progress.completedLectures.includes(lecture._id);
 
     // Debug logging
-    console.log('Launch Player Debug:');
-    console.log('Course ID:', course._id);
-    console.log('User Progress:', state.user.courseProgress);
-    console.log('Found Progress:', progress);
+
 
     const content = `
     <div class="h-screen bg-gradient-to-br from-[#0a0a0f] via-[#0f0a15] to-[#0a0a0f] text-white flex flex-col">
@@ -637,10 +645,10 @@ window.renderComments = async function () {
                             <img src="${avatarUrl}" class="w-12 h-12 rounded-full border-2 border-white/10">
                             <div class="flex-grow">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span class="font-bold text-sm text-white">${c.user?.username || 'Anonymous User'}</span>
+                                    <span class="font-bold text-sm text-white">${c.user?.username ? ImmersiveEngine.escapeHTML(c.user.username) : 'Anonymous User'}</span>
                                     <span class="text-xs text-slate-600">${new Date(c.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <p class="text-sm text-slate-300 leading-relaxed">${c.text}</p>
+                                <p class="text-sm text-slate-300 leading-relaxed">${ImmersiveEngine.escapeHTML(c.text)}</p>
                             </div>
                         </div>
                     `;
@@ -691,8 +699,8 @@ async function pollChat() {
             stream.innerHTML = chats.slice(-25).reverse().map(c => `
                 <div class="text-sm">
                     <span class="text-slate-600 text-xs">[${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
-                    <span class="text-blue-500 font-bold ml-2">${c.user?.username || 'System'}:</span>
-                    <span class="text-slate-300 ml-2">${c.text}</span>
+                    <span class="text-blue-500 font-bold ml-2">${c.user?.username ? ImmersiveEngine.escapeHTML(c.user.username) : 'System'}:</span>
+                    <span class="text-slate-300 ml-2">${ImmersiveEngine.escapeHTML(c.text)}</span>
                 </div>
             `).join('');
         } catch (e) { }
@@ -728,7 +736,6 @@ window.toggleLectureComplete = async function (lecId, courseId) {
 
     if (!progress) {
         console.error('Progress not found for courseId:', courseId);
-        console.log('Available progress:', state.user.courseProgress);
         notify('Progress not found. Please refresh the page.');
         return;
     }
@@ -772,14 +779,14 @@ window.toggleLectureComplete = async function (lecId, courseId) {
             if (userRes.ok) {
                 const updatedUser = await userRes.json();
                 state.user = updatedUser;
-                console.log('User data refreshed from database');
+
             }
         } catch (e) {
             console.error('Failed to refresh user data:', e);
         }
 
         notify(isDone ? 'Lecture unmarked' : '✅ Completed! +100 XP');
-        console.log('Progress updated:', result);
+
     } catch (e) {
         notify('Failed to update progress');
         console.error('Mark complete error:', e);
