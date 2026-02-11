@@ -1,4 +1,4 @@
-// Zenith OS Landing Logic
+// Zenith OS Landing Logic - v1.09.0
 
 // API Base URL is loaded from public/js/config.js
 // ========================================
