@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const skillSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Optional for global skills, required for user-created ones
+    name: { type: String, required: true },
     category: { type: String, enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'Mobile', 'AI/ML', 'Design', 'Game Dev', 'Cloud Computing', 'Other'], default: 'Other' },
     description: { type: String },
     icon: { type: String, default: 'fa-code' }, // Font Awesome icon class
