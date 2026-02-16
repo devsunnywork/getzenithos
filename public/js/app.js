@@ -329,12 +329,16 @@ window.claimWelcomeBonus = async function () {
 
             // Update UI Balance
             const balanceEl = document.getElementById('balance-display');
+            const topBalanceEl = document.getElementById('top-balance-display');
             if (balanceEl) {
                 balanceEl.innerText = `₹${data.newBalance.toLocaleString()}`;
-                // Update mobile balance too just in case
-                const mobileBalance = document.getElementById('mobile-balance-display');
-                if (mobileBalance) mobileBalance.innerText = `₹${data.newBalance.toLocaleString()}`;
             }
+            if (topBalanceEl) {
+                topBalanceEl.innerText = `₹${data.newBalance.toLocaleString()}`;
+            }
+            // Update mobile balance too just in case
+            const mobileBalance = document.getElementById('mobile-balance-display');
+            if (mobileBalance) mobileBalance.innerText = `₹${data.newBalance.toLocaleString()}`;
 
             // Remove Overlay
             const overlay = document.getElementById('bonus-overlay');
@@ -415,31 +419,59 @@ async function fetchUser() {
         }
 
         const userNameEl = document.getElementById('user-name');
+        const topUserNameEl = document.getElementById('top-user-name');
         if (userNameEl && state.user.username) {
             userNameEl.innerText = state.user.username.toUpperCase();
+        }
+        if (topUserNameEl && state.user.username) {
+            topUserNameEl.innerText = state.user.username.toUpperCase();
         }
 
         const initials = state.user.username.substring(0, 2).toUpperCase();
         const initialEl = document.getElementById('user-initials');
+        const topAvatarEl = document.getElementById('top-user-avatar');
+
         if (state.user.profile?.avatar) {
             let avatarUrl = state.user.profile.avatar;
             if (avatarUrl.startsWith('/uploads')) {
                 avatarUrl = API_BASE_URL + avatarUrl;
             }
-            initialEl.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover rounded-xl">`;
-            initialEl.classList.remove('bg-blue-600/10', 'border', 'border-blue-500/20', 'text-blue-500'); // Remove default style to show image cleanly
-            initialEl.classList.add('p-0', 'overflow-hidden');
+            const imgHtml = `<img src="${avatarUrl}" class="w-full h-full object-cover rounded-xl">`;
+            const topImgHtml = `<img src="${avatarUrl}" class="w-full h-full object-cover">`;
+
+            if (initialEl) {
+                initialEl.innerHTML = imgHtml;
+                initialEl.classList.remove('bg-blue-600/10', 'border', 'border-blue-500/20', 'text-blue-500');
+                initialEl.classList.add('p-0', 'overflow-hidden');
+            }
+            if (topAvatarEl) {
+                topAvatarEl.innerHTML = topImgHtml;
+                topAvatarEl.classList.remove('bg-slate-950');
+            }
         } else {
-            initialEl.innerText = initials;
+            if (initialEl) initialEl.innerText = initials;
+            if (topAvatarEl) topAvatarEl.innerHTML = `<span class="font-black text-blue-500 text-sm">${initials}</span>`;
         }
 
-        document.getElementById('balance-display').innerText = `₹${(state.user.balance || 0).toLocaleString()}`;
+        const formattedBalance = `₹${(state.user.balance || 0).toLocaleString()}`;
+        if (document.getElementById('balance-display')) {
+            document.getElementById('balance-display').innerText = formattedBalance;
+        }
+        if (document.getElementById('top-balance-display')) {
+            document.getElementById('top-balance-display').innerText = formattedBalance;
+        }
+
         // Update mobile balance display
         const mobileBalance = document.getElementById('mobile-balance-display');
         if (mobileBalance) {
-            mobileBalance.innerText = `₹${(state.user.balance || 0).toLocaleString()}`;
+            mobileBalance.innerText = formattedBalance;
         }
         state.enrolledCourses = state.user.enrolledCourses || [];
+        // Robust extraction of flat IDs for comparisons
+        state.enrolledIds = state.enrolledCourses.map(c => {
+            const cid = c.courseId || c;
+            return String(cid._id || cid);
+        });
 
         if (state.user.role === 'admin') {
             const logoutSection = document.querySelector('.p-10.border-t');
@@ -453,7 +485,9 @@ async function fetchUser() {
             }
         }
     } catch (err) {
-        logout();
+        console.error("fetchUser Error:", err);
+        if (window.showToast) showToast("Neural Link Failure: Session Invalid", "error");
+        setTimeout(() => logout(), 2000);
     }
 }
 
@@ -464,17 +498,17 @@ function logout() {
 }
 
 const PAGE_META = {
-    dashboard: ["Intelligence Center", "Core metrics and neural telemetry."],
-    academic: ["Academic Core", "Institutional modules and university sync."],
-    missions: ["Mission Control", "Tactical task matrix and XP log."],
-    professional: ["Career Constellation", "Visual trajectory of your operative status."],
-    health: ["Vital Stats", "Biometric monitoring and metabolic tracking."],
-    store: ["Resource Store", "Procure high-performance modules."],
-    profile: ["Identity Hub", "Personal profile and wallet management."],
-    helpdesk: ["Neural Help Desk", "Support tickets, Top-ups, and logs."],
-    leaderboard: ["Global Rankings", "Elite operative classification index."],
-    roadmap: ["Neural Roadmap", "Strategic skill acquisition pathways."],
-    explore: ["Explore Tree", "Visual skill map and career trajectory."]
+    dashboard: ["Dashboard", "Overview of your activity"],
+    academic: ["Courses", "Manage your learning modules"],
+    missions: ["Tasks", "Daily goals and assignments"],
+    professional: ["Careers", "Track your professional growth"],
+    health: ["Health", "Monitor your vital statistics"],
+    store: ["Store", "Browse and buy new modules"],
+    profile: ["Profile", "Manage your account settings"],
+    helpdesk: ["Support", "Get help and transaction info"],
+    leaderboard: ["Rankings", "See how you compare to others"],
+    roadmap: ["Roadmap", "Your skill development path"],
+    explore: ["Explore", "Visual skill and career map"]
 };
 
 async function loadPage(page, subTab = null) {
@@ -495,7 +529,8 @@ async function loadPage(page, subTab = null) {
 
     const title = document.getElementById('page-title');
     const desc = document.getElementById('page-desc-sub');
-    title.innerText = PAGE_META[page][0];
+    if (title) title.innerText = PAGE_META[page][0];
+    if (desc) desc.innerText = PAGE_META[page][1];
 
     // Smooth transition
     const content = document.getElementById('app-content');
@@ -928,7 +963,10 @@ async function renderEnrolledCatalog(container, type) {
     container.innerHTML = `<div id="course-list" class="grid grid-cols-1 md:grid-cols-2 gap-10"></div>`;
     const list = document.getElementById('course-list');
     try {
-        const enrolledIds = state.user.enrolledCourses?.map(c => String(c.courseId._id || c.courseId)) || [];
+        const enrolledIds = (state.user.enrolledCourses || []).map(c => {
+            const cid = c.courseId || c;
+            return String(cid._id || cid);
+        });
         const filtered = state.courses.filter(c => enrolledIds.includes(String(c._id)) && (c.category === type || !type));
 
         if (filtered.length === 0) {
@@ -938,7 +976,7 @@ async function renderEnrolledCatalog(container, type) {
         list.innerHTML = filtered.map(c => `
             <div class="glass-card p-12 rounded-[4rem] hover:border-blue-500/20 transition-all duration-500 group cursor-pointer" onclick="openPlayer('${c._id}')">
                 <div class="flex justify-between items-start mb-8">
-                    <span class="px-5 py-2 bg-blue-600/10 text-blue-500 rounded-2xl text-[10px] font-black uppercase tracking-widest">${c.category} UNIT</span>
+                    <span class="px-5 py-2 bg-blue-600/10 text-blue-500 rounded-2xl text-[10px] font-black uppercase tracking-widest">${c.category || 'MODULE'} UNIT</span>
                     <i class="fas fa-chevron-right text-slate-800 group-hover:translate-x-2 group-hover:text-blue-500 transition-all"></i>
                 </div>
                 <h4 class="text-3xl font-black mb-6 syne tracking-tighter leading-none">${c.title.toUpperCase()}</h4>
@@ -957,7 +995,10 @@ async function renderStoreCatalog(container) {
         const res = await fetch(API_BASE_URL + '/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
         const courses = await res.json();
         list.innerHTML = courses.map(c => {
-            const isEnrolled = state.enrolledCourses.includes(c._id);
+            const courseId = String(c._id);
+            const isEnrolled = (state.enrolledIds || []).includes(courseId);
+            const displayPrice = c.isFree ? 0 : (c.price || 0);
+
             return `
                 <div class="glass-card rounded-[4rem] overflow-hidden group border border-white/5 hover:border-blue-500/30 transition-all duration-700 hover:-translate-y-2">
                     <div class="h-56 bg-gradient-to-br from-slate-900 to-black relative overflow-hidden">
@@ -968,8 +1009,8 @@ async function renderStoreCatalog(container) {
                         </div>
                     </div>
                     <div class="p-10 flex justify-between items-center">
-                        ${isEnrolled ? `<span class="text-green-500 font-black uppercase text-[10px] tracking-widest"><i class="fas fa-check-circle mr-2"></i> SYNCED</span>` : `<span class="text-3xl font-black syne tracking-tighter">₹${(c.price || 800).toLocaleString()}</span>`}
-                        <button onclick="${isEnrolled ? `openPlayer('${c._id}')` : `promptEnroll('${c._id}', '${c.title}', ${c.price || 800})`}" class="px-8 py-4 ${isEnrolled ? 'bg-slate-900 text-slate-400' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30'} rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-110 transition-all">
+                        ${isEnrolled ? `<span class="text-green-500 font-black uppercase text-[10px] tracking-widest"><i class="fas fa-check-circle mr-2"></i> SYNCED</span>` : `<span class="text-3xl font-black syne tracking-tighter">₹${displayPrice.toLocaleString()}</span>`}
+                        <button onclick="${isEnrolled ? `openPlayer('${c._id}')` : `promptEnroll('${c._id}', '${c.title}', ${displayPrice})`}" class="px-8 py-4 ${isEnrolled ? 'bg-slate-900 text-slate-400' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30'} rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-110 transition-all">
                             ${isEnrolled ? 'Launch' : 'Acquire'}
                         </button>
                     </div>
@@ -980,15 +1021,31 @@ async function renderStoreCatalog(container) {
 }
 
 async function promptEnroll(id, title, price) {
+    console.log(`[Neural Link] Initiating procurement for: ${title} (${id})`);
     showZenithConfirm(
         "Authorize Transaction",
         `Acquire ${title.toUpperCase()} for ₹${price}? This will sync the module to your neural stack.`,
         async () => {
             try {
-                const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) { await fetchUser(); loadPage(state.activePage); }
-                else { const d = await res.json(); alert(d.message.toUpperCase()); }
-            } catch (e) { alert('SYNC FAILURE.'); }
+                ZLoader.show("Syncing Module...");
+                const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    await fetchUser();
+                    loadPage(state.activePage);
+                } else {
+                    const d = await res.json();
+                    console.error('[SYNC_ERROR]:', d);
+                    alert(d.message.toUpperCase());
+                }
+            } catch (e) {
+                console.error('[SYNC_FAILURE]:', e);
+                alert('SYNC FAILURE. CONNECTION LOST.');
+            } finally {
+                ZLoader.hide();
+            }
         }
     );
 }

@@ -52,15 +52,65 @@
             border-right: 1px solid rgba(255, 255, 255, 0.05);
             z-index: 50;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding-top: 80px;
+            /* Offset for top navbar */
         }
 
         main {
             min-height: 100vh;
             position: relative;
             background: #00050d;
-            margin-left: 21rem;
-            /* 336px to match w-84 + gap */
+            margin-left: var(--sidebar-width);
+            padding-top: 80px;
+            /* Offset for top navbar */
             transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Top Navbar */
+        #desktop-top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(0, 5, 13, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        .nav-logo-section {
+            width: var(--sidebar-width);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 2rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-content-section {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        #page-title {
+            font-size: 0.9rem;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 20px rgba(0, 112, 255, 0.3);
+        }
+
+        #page-desc-sub {
+            font-size: 7.5px;
+            letter-spacing: 0.15em;
+            font-weight: 600;
         }
 
         /* ===== MOBILE RESPONSIVE SYSTEM ===== */
@@ -230,6 +280,10 @@
             main {
                 margin-left: 0 !important;
                 padding-top: 70px !important;
+            }
+
+            #desktop-top-nav {
+                display: none !important;
             }
 
             /* Hide balance from header on mobile */
@@ -580,8 +634,8 @@
 
         /* Fluid Typography */
         #page-title {
-            font-size: clamp(2rem, 5vw, 4rem) !important;
-            line-height: 1;
+            font-size: clamp(1.5rem, 3vw, 2.5rem) !important;
+            line-height: 1.2;
         }
 
         /* GLOBAL SCROLLBAR OVERRIDE */
@@ -790,19 +844,7 @@
             <!-- Sidebar -->
             <aside id="sidebar-main"
                 class="w-84 bg-[#00050d]/84 border-r border-slate-900 flex flex-col fixed inset-y-0 z-50 custom-scrollbar overflow-y-auto">
-                <div class="p-8 text-xl font-bold flex flex-col gap-1 mb-2">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xs shadow-xl shadow-blue-600/30">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
-                        <span class="syne tracking-tighter uppercase text-xl" id="logo-branding-text">Zenith<span
-                                class="text-blue-500">.OS</span></span>
-                    </div>
-                    <div class="pl-14 text-[9px] font-black text-slate-500 uppercase tracking-widest"
-                        id="sidebar-version">Initializing...
-                    </div>
-                </div>
+                <!-- Logo moved to top nav -->
 
                 <nav class="flex-grow py-8">
                     <div class="px-12 mb-6 text-[10px] text-slate-600 font-bold tracking-[0.3em] uppercase">Core Intel
@@ -861,25 +903,58 @@
                     class="fixed bottom-6 right-8 text-[9px] font-black text-slate-700 tracking-[0.4em] uppercase z-40 pointer-events-none">
                     Zenith.OS // LINK ESTABLISHED
                 </div>
-                <header class="p-14 pb-0 flex justify-between items-end mb-10">
-                    <div>
-                        <h2 id="page-title" class="text-6xl font-black tracking-tighter mb-2 syne">Intelligence Center
-                        </h2>
-                        <p id="page-desc-sub" class="text-slate-500 font-medium">System status: Nominal | <span
-                                id="ver-branding">v1.07</span>
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-6">
-                        <div
-                            class="bg-slate-900/50 px-6 py-3 rounded-2xl border border-slate-800 font-bold text-blue-500 flex items-center gap-4">
-                            <i class="fas fa-wallet"></i>
-                            <span id="balance-display">₹0.00</span>
-                            <button onclick="loadPage('helpdesk', 'topup')"
-                                class="ml-2 w-6 h-6 bg-blue-600 rounded-lg text-white flex items-center justify-center text-[10px] hover:scale-110 transition"><i
-                                    class="fas fa-plus"></i></button>
+
+                <!-- Desktop Top Nav -->
+                <nav id="desktop-top-nav" class="hidden lg:flex">
+                    <div class="nav-logo-section">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xs shadow-xl shadow-blue-600/30">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <span class="syne tracking-tighter uppercase text-xl text-white">Zenith<span
+                                    class="text-blue-500">.OS</span></span>
                         </div>
                     </div>
-                </header>
+                    <div class="nav-content-section">
+                        <div class="flex items-center gap-4">
+                            <h2 id="page-title" class="font-black tracking-tighter syne uppercase italic text-white">
+                                Dashboard</h2>
+                            <div class="w-px h-4 bg-white/10 mx-1"></div>
+                            <p id="page-desc-sub" class="text-slate-500 font-bold uppercase tracking-[0.1em]">Overview
+                                of your activity</p>
+                        </div>
+
+                        <div class="flex items-center gap-8">
+                            <!-- Balance -->
+                            <div
+                                class="flex items-center gap-4 bg-slate-900/40 px-5 py-2.5 rounded-2xl border border-white/5">
+                                <i class="fas fa-wallet text-blue-500 text-sm"></i>
+                                <span id="top-balance-display" class="font-black text-blue-500 text-base">₹0.00</span>
+                                <button onclick="loadPage('helpdesk', 'topup')"
+                                    class="w-6 h-6 bg-blue-600/20 hover:bg-blue-600 rounded-lg text-blue-500 hover:text-white flex items-center justify-center transition">
+                                    <i class="fas fa-plus text-[10px]"></i>
+                                </button>
+                            </div>
+                            <!-- Profile -->
+                            <div class="flex items-center gap-4 cursor-pointer hover:opacity-80 transition"
+                                onclick="loadPage('profile')">
+                                <div class="text-right">
+                                    <div class="text-xs font-black text-white uppercase tracking-wider"
+                                        id="top-user-name">Loading...</div>
+                                    <div class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">
+                                        Operative Status</div>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px]">
+                                    <div class="w-full h-full rounded-2xl bg-slate-950 flex items-center justify-center overflow-hidden border border-white/10"
+                                        id="top-user-avatar">
+                                        <i class="fas fa-user-shield text-blue-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
 
                 <div id="app-content" class="flex-grow overflow-y-auto px-14 pb-14 transition-all duration-500">
                     <!-- Dynamic Content -->

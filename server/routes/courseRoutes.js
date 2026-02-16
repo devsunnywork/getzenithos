@@ -45,7 +45,10 @@ router.post('/:id/enroll', auth, async (req, res) => {
         const course = await Course.findById(req.params.id);
 
         if (!course) return res.status(404).json({ message: 'Module not found.' });
-        if (user.enrolledCourses.includes(req.params.id)) {
+
+        // Robust check for existing enrollment
+        const isEnrolled = user.enrolledCourses.some(id => id.toString() === req.params.id);
+        if (isEnrolled) {
             return res.status(400).json({ message: 'Neural link already active.' });
         }
 
@@ -80,8 +83,17 @@ router.post('/:id/enroll', auth, async (req, res) => {
         await user.save();
         res.json({ message: 'Link established. Module acquired.', balance: user.balance });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('[ENROLLMENT_ERROR]:', err);
+        res.status(400).json({ message: err.message || 'Synchronization failure. Internal protocol error.' });
     }
+});
+
+// GET enrollment endpoint (for debugging/redirection)
+router.get('/:id/enroll', auth, (req, res) => {
+    res.status(405).json({
+        message: 'Direct protocol access denied. Procurement requires an authorized POST transaction.',
+        hint: 'Please use the dashboard interface or authorized API client.'
+    });
 });
 
 // Private: Get Course Content (Units & Lectures)
