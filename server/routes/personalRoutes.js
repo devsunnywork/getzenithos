@@ -9,7 +9,7 @@ router.use(auth);
 // Get all entries
 router.get('/', async (req, res) => {
     try {
-        const entries = await Personal.find().sort({ date: -1 });
+        const entries = await Personal.find({ user: req.user._id }).sort({ date: -1 });
         res.json(entries);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
 // Create an entry
 router.post('/', async (req, res) => {
-    const entry = new Personal(req.body);
+    const entry = new Personal({ ...req.body, user: req.user._id });
     try {
         const newEntry = await entry.save();
         res.status(201).json(newEntry);
