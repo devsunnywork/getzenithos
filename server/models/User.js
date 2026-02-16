@@ -6,58 +6,23 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    profile: {
-        bio: { type: String, default: '' },
-        avatar: { type: String, default: '' },
-        personalInfo: {
-            fullName: { type: String, default: '' },
-            phone: { type: String, default: '' },
-            city: { type: String, default: '' },
-            country: { type: String, default: '' },
-            jobTitle: { type: String, default: '' },
-            company: { type: String, default: '' },
-            website: { type: String, default: '' },
-            github: { type: String, default: '' },
-            linkedin: { type: String, default: '' },
-            twitter: { type: String, default: '' },
-            skills: { type: String, default: '' }, // Comma separated
-            education: { type: String, default: '' },
-            languages: { type: String, default: '' }
-        }
-    },
-    enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
-    balance: { type: Number, default: 0 },
+    balance: { type: Number, default: 1000 },
     xp: { type: Number, default: 0 },
-    status: { type: String, enum: ['active', 'blocked'], default: 'active' },
-    blockedReason: { type: String, default: '' },
-    blockedUntil: { type: Date, default: null },
-    lastSeen: { type: Date, default: Date.now },
+    enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+    activeCareers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
     courseProgress: [{
         courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
         completedLectures: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Lecture' }],
-        watchTime: { type: Number, default: 0 }, // In seconds
+        watchTime: { type: Number, default: 0 },
         xp: { type: Number, default: 0 }
     }],
-    totalWatchTime: { type: Number, default: 0 },
-    badges: [{
-        name: { type: String },
-        icon: { type: String },
-        unlockedAt: { type: Date, default: Date.now }
-    }],
-    // Explore Tree Features
     skillProgress: [{
         skill: { type: mongoose.Schema.Types.ObjectId, ref: 'Skill' },
-        proficiencyLevel: { type: Number, default: 1, min: 1, max: 5 }, // 1=Beginner, 5=Expert
-        xpEarned: { type: Number, default: 0 },
-        completedTopics: [{ type: mongoose.Schema.Types.ObjectId }], // IDs of topics from Skill.topics
-        lastPracticed: { type: Date, default: Date.now },
         isUnlocked: { type: Boolean, default: false },
-        isMastered: { type: Boolean, default: false }
-    }],
-    activeCareers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }], // Max 2
-    achievements: [{
-        achievement: { type: mongoose.Schema.Types.ObjectId, ref: 'Achievement' },
-        unlockedAt: { type: Date, default: Date.now }
+        proficiencyLevel: { type: Number, default: 1 },
+        completedTopics: [{ type: String }],
+        xpEarned: { type: Number, default: 0 },
+        lastPracticed: { type: Date }
     }],
     learningStreak: {
         current: { type: Number, default: 0 },
@@ -65,48 +30,59 @@ const userSchema = new mongoose.Schema({
         lastActiveDate: { type: Date }
     },
     careerChangeMeta: {
-        changesThisMonth: { type: Number, default: 0 },
         lastResetDate: { type: Date, default: Date.now },
+        changesThisMonth: { type: Number, default: 0 },
         history: [{
-            action: String, // 'added', 'removed'
-            careerId: { type: mongoose.Schema.Types.ObjectId },
+            action: String,
+            careerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Skill' },
             date: { type: Date, default: Date.now }
         }]
     },
+    achievements: [{
+        achievement: { type: mongoose.Schema.Types.ObjectId, ref: 'Achievement' },
+        unlockedAt: { type: Date, default: Date.now }
+    }],
+    goals: [{
+        title: { type: String },
+        status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
+        deadline: { type: Date }
+    }],
+    profile: {
+        avatar: String,
+        bio: String,
+        skills: [String],
+        personalInfo: {
+            fullName: String,
+            phone: String,
+            address: String
+        }
+    },
     placementData: {
-        resumeUrl: { type: String },
-        portfolioUrl: { type: String },
-        githubUrl: { type: String },
-        linkedinUrl: { type: String },
-        targetRole: { type: String },
-        expectedSalary: { type: String },
+        resumeUrl: String,
+        portfolioUrl: String,
+        githubUrl: String,
+        linkedinUrl: String,
+        targetRole: String,
+        expectedSalary: String,
         preferredLocations: [String],
         isJobReady: { type: Boolean, default: false }
     },
     featureAccess: {
         courses: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
         profile: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
-        skills: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
         video: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String },
         chat: { status: { type: String, enum: ['active', 'blocked'], default: 'active' }, reason: String }
     },
     bonusClaimed: { type: Boolean, default: false },
-    usedCheatCodes: [{ type: String }], // Track which cheat codes have been used
+    usedCheatCodes: [{ type: String }],
     createdAt: { type: Date, default: Date.now }
 });
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    try {
-        this.password = await bcrypt.hash(this.password, 10);
-        next();
-    } catch (err) {
-        next(err);
-    }
+userSchema.pre('save', async function () {
+    if (!this.isModified('password')) return;
+    this.password = await bcrypt.hash(this.password, 10);
 });
 
-// Method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Course = require('../models/Course');
+const Skill = require('../models/Skill');
+const Achievement = require('../models/Achievement');
 
 // Register
 router.post('/register', async (req, res) => {
