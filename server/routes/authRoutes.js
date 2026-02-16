@@ -11,9 +11,18 @@ router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
 
-        // Check if user exists
-        let user = await User.findOne({ email });
-        if (user) return res.status(400).json({ message: 'User already exists' });
+        // Check if user exists (Email or Username)
+        // Check if user exists (Email or Username) - Sanitize input to prevent NoSQL injection
+        const existingUser = await User.findOne({
+            $or: [
+                { email: { $eq: email } },
+                { username: { $eq: username } }
+            ]
+        });
+        if (existingUser) {
+            const field = existingUser.email === email ? 'Email' : 'Username';
+            return res.status(400).json({ message: `${field} already exists` });
+        }
 
         user = new User({ username, email, password });
         await user.save();
@@ -29,7 +38,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: { $eq: email } });
         if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
         const isMatch = await user.comparePassword(password);
@@ -75,10 +84,18 @@ const upload = require('../middleware/uploadMiddleware');
 router.put('/profile', auth, upload.single('avatar'), async (req, res) => {
     try {
         // Multer should populate req.body, but if it's undefined (e.g. no text fields and middleware quirk), default to {}
-        const { bio, personalInfo, password } = req.body || {};
+        const { bio, personalInfo, password, currentPassword } = req.body || {};
         const user = await User.findById(req.user._id);
 
+        // If trying to change password, require current password
         if (password && password.trim() !== '') {
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Current password is required to set a new password.' });
+            }
+            const isMatch = await user.comparePassword(currentPassword);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password verification failed.' });
+            }
             user.password = password; // Mongoose pre-save hook will hash this
         }
 
@@ -177,16 +194,19 @@ router.get('/leaderboard', async (req, res) => {
 // Claim Welcome Bonus
 router.post('/claim-bonus', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        // Atomic update: only update if bonusClaimed is false
+        const user = await User.findOneAndUpdate(
+            { _id: req.user._id, bonusClaimed: false },
+            {
+                $inc: { balance: 500 },
+                $set: { bonusClaimed: true }
+            },
+            { new: true }
+        );
 
-        if (user.bonusClaimed) {
-            return res.status(400).json({ message: 'PROTOCOL ERROR: Bonus already synchronization completed.' });
+        if (!user) {
+            return res.status(400).json({ message: 'PROTOCOL ERROR: Bonus already synchronization completed or User not found.' });
         }
-
-        user.balance = (user.balance || 0) + 500;
-        user.bonusClaimed = true;
-        await user.save();
 
         res.json({
             message: 'ZENITH PROTOCOL: 500 Rupee credit synchronized successfully.',
