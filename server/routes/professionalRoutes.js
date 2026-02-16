@@ -9,7 +9,7 @@ router.use(auth);
 // Get all skills
 router.get('/', async (req, res) => {
     try {
-        const skills = await Skill.find();
+        const skills = await Skill.find({ user: req.user._id });
         res.json(skills);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
 // Create a skill
 router.post('/', async (req, res) => {
-    const skill = new Skill(req.body);
+    const skill = new Skill({ ...req.body, user: req.user._id });
     try {
         const newSkill = await skill.save();
         res.status(201).json(newSkill);

@@ -9,7 +9,7 @@ router.use(auth);
 // Get all tasks
 router.get('/', async (req, res) => {
     try {
-        const tasks = await Academic.find();
+        const tasks = await Academic.find({ user: req.user._id });
         res.json(tasks);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
 // Create a task
 router.post('/', async (req, res) => {
-    const task = new Academic(req.body);
+    const task = new Academic({ ...req.body, user: req.user._id });
     try {
         const newTask = await task.save();
         res.status(201).json(newTask);
