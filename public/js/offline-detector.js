@@ -100,5 +100,5 @@
         }
     };
 
-    console.log('✅ Offline Detection System Initialized');
+    // console.log('✅ Offline Detection System Initialized');
 })();

@@ -16,7 +16,7 @@ const API_BASE_URL = (() => {
     return 'http://localhost:5000';
 })();
 
-console.log('🌐 API Environment:', API_BASE_URL);
+// console.log('🌐 API Environment:', API_BASE_URL);
 
 // Z-LOADER SYSTEM v1.0
 const ZLoader = {
