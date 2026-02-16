@@ -28,7 +28,8 @@ console.log('✅ Environment variables validated successfully');
 const Setting = require('./models/Setting');
 
 // Connect to Database
-connectDB().then(async () => {
+connectDB().then(async (isConnected) => {
+    if (!isConnected) return;
     // Seed Default Settings
     try {
         const upi = await Setting.findOne({ key: 'upiId' });
@@ -37,11 +38,53 @@ connectDB().then(async () => {
         const qr = await Setting.findOne({ key: 'qrCodeUrl' });
         if (!qr) await Setting.create({ key: 'qrCodeUrl', value: 'https://i.ibb.co/9H86gqzY/zenith-qr-only.png' });
 
+        // Branding Seeds
+        const name = await Setting.findOne({ key: 'systemName' });
+        if (!name) await Setting.create({ key: 'systemName', value: 'Zenith' });
+
+        const ver = await Setting.findOne({ key: 'systemVersion' });
+        if (!ver) await Setting.create({ key: 'systemVersion', value: 'v1.09.0' });
+
+        const accent = await Setting.findOne({ key: 'accent' });
+        if (!accent) await Setting.create({ key: 'accent', value: '#3b82f6' });
+
         console.log("System Settings Synchronized.");
     } catch (err) { console.error("Settings Sync Failed:", err.message); }
 });
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
+
+// ========================================
+// Security Middleware
+// ========================================
+app.use(helmet());
+
+// Apply rate limiting to all requests
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', limiter);
+
+// Stricter limiter for Auth
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // Limit each IP to 10 login/register attempts per hour
+    message: 'Too many authentication attempts, please try again in an hour'
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// System Reset Limiter
+app.use('/api/admin/reset-system', rateLimit({
+    windowMs: 24 * 60 * 60 * 1000, // 24 hours
+    max: 3, // Only 3 attempts per day
+    message: 'Critical system reset attempts exceeded'
+}));
 
 // ========================================
 // CORS Configuration - Allow Frontend URLs
