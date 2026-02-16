@@ -34,6 +34,7 @@ async function init() {
     ZLoader.show("Initializing Neural Link...");
     try {
         initToastSystem();
+        initInactivityTracker();
         await fetchUser();
         await fetchCourses();
         await fetchTasks();
@@ -497,6 +498,28 @@ function logout() {
     window.location.replace('/index.html');
 }
 
+// --- INACTIVITY TRACKING SYSTEM (30 MIN) ---
+function initInactivityTracker() {
+    let timeout;
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Minutes
+
+    function resetTimer() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            console.warn("System Idle: Inactivity limit reached. Synchronizing logout.");
+            logout();
+        }, INACTIVITY_LIMIT);
+    }
+
+    // Monitor common user interactions
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(name => {
+        document.addEventListener(name, resetTimer, true);
+    });
+
+    resetTimer(); // Start the initial timer
+}
+
 const PAGE_META = {
     dashboard: ["Dashboard", "Overview of your activity"],
     academic: ["Courses", "Manage your learning modules"],
@@ -504,8 +527,7 @@ const PAGE_META = {
     professional: ["Careers", "Track your professional growth"],
     health: ["Health", "Monitor your vital statistics"],
     store: ["Store", "Browse and buy new modules"],
-    profile: ["Profile", "Manage your account settings"],
-    helpdesk: ["Support", "Get help and transaction info"],
+    profile: ["Profile", "Account Hub & Neural Support"],
     leaderboard: ["Rankings", "See how you compare to others"],
     roadmap: ["Roadmap", "Your skill development path"],
     explore: ["Explore", "Visual skill and career map"]
@@ -736,33 +758,9 @@ function renderOverview(container) {
     `).join('') : `<p class="text-center py-10 text-slate-700 font-black uppercase text-[9px] tracking-[0.2em]">No active operations. Initiate a mission via control.</p>`;
 
     container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <!-- Efficiency Index -->
-            <div class="glass-card p-10 rounded-[3.5rem] relative overflow-hidden group hover:border-blue-500/30 transition-all border-white/5">
-                <div class="flex justify-between items-start mb-8">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Efficiency Index</h4>
-                    <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                        <i class="fas fa-bolt text-blue-500"></i>
-                    </div>
-                </div>
-                <div class="flex items-center gap-8">
-                    <div class="relative w-28 h-28">
-                        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle class="text-slate-900 stroke-current text-opacity-30" stroke-width="8" fill="transparent" r="40" cx="50" cy="50"/>
-                            <circle class="text-blue-600 stroke-current transition-all duration-1000" stroke-width="8" stroke-linecap="round" fill="transparent" r="40" cx="50" cy="50" 
-                                style="stroke-dasharray: 251.2; stroke-dashoffset: ${251.2 - (251.2 * efficiency / 100)}"/>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center text-2xl font-black syne">${efficiency}%</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-1">Neural Flow</div>
-                        <div class="text-lg font-black uppercase tracking-tighter text-blue-400">${efficiency > 70 ? 'Optimal' : efficiency > 30 ? 'Stable' : 'Degraded'}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- XP Accumulator (V2 Leveling System) -->
+        <!-- Top Metrics: XP & Progress -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <!-- XP Accumulator -->
             <div class="glass-card p-10 rounded-[3.5rem] group border-white/5 relative overflow-hidden">
                 <div class="absolute inset-0 bg-yellow-500/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                 <div class="flex justify-between items-start mb-6 relative z-10">
@@ -784,7 +782,7 @@ function renderOverview(container) {
                 </div>
             </div>
 
-            <!-- Accurate Lecture Pipeline -->
+            <!-- Lecture Pipeline -->
             <div class="glass-card p-10 rounded-[3.5rem] group border-white/5 relative overflow-hidden">
                 <div class="flex justify-between items-start mb-8">
                     <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lecture Pipeline</h4>
@@ -798,107 +796,59 @@ function renderOverview(container) {
             </div>
         </div>
 
-        <!-- Watch Time & Metrics Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-            <div class="glass-card p-12 rounded-[4rem] border-white/5 bg-gradient-to-br from-blue-600/5 to-transparent flex items-center justify-between group">
-                <div>
-                    <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-4">Neuro-Sync Duration</h4>
-                    <div class="flex items-baseline gap-3">
-                        <span class="text-5xl font-black syne text-white">${Math.floor((state.user.totalWatchTime || 0) / 3600)}</span>
-                        <span class="text-xs font-black text-slate-600 uppercase tracking-widest">Hours</span>
-                        <span class="text-5xl font-black syne text-white">${Math.floor(((state.user.totalWatchTime || 0) % 3600) / 60)}</span>
-                        <span class="text-xs font-black text-slate-600 uppercase tracking-widest">Mins</span>
-                    </div>
-                </div>
-                <div class="p-8 bg-blue-600/10 rounded-full border border-blue-500/20 group-hover:scale-110 transition-transform">
-                    <i class="fas fa-stopwatch text-3xl text-blue-500 pulse"></i>
-                </div>
-            </div>
+        <!-- Middle Hub: Wallet & Recent Activity -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
+             <!-- Strategic Wallet Hub -->
+             <div class="glass-card p-10 rounded-[3.5rem] border-white/5 bg-gradient-to-br from-blue-600/5 to-transparent flex flex-col justify-between group overflow-hidden relative">
+                 <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all">
+                     <i class="fas fa-wallet text-7xl -rotate-12"></i>
+                 </div>
+                 <div>
+                    <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-4">Neural Wallet</h4>
+                    <div class="text-5xl font-black syne tracking-tighter text-white mb-2">₹${(state.user.balance || 0).toLocaleString()}</div>
+                    <p class="text-[9px] font-black text-slate-600 uppercase tracking-widest">Available Procurement Funds</p>
+                 </div>
+                 <button onclick="state.supportTab='topup'; loadPage('profile', 'support')" class="mt-6 w-full py-4 bg-white text-black rounded-2xl font-black uppercase text-[9px] tracking-[0.2em] shadow-2xl hover:bg-blue-600 hover:text-white transition-all active:scale-95">
+                     <i class="fas fa-plus mr-3"></i> Top-up
+                 </button>
+             </div>
 
-            <div class="glass-card p-12 rounded-[4rem] border-white/5 flex items-center justify-between">
-                <div>
-                    <h4 class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-4">Neural Stability</h4>
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-tight">Active link established via <span class="text-emerald-500">Node-Alpha</span></div>
-                </div>
-                <div class="flex items-center gap-1">
-                    <div class="w-1 h-8 bg-emerald-500/20 rounded-full overflow-hidden relative">
-                        <div class="absolute bottom-0 w-full bg-emerald-500 animate-pulse" style="height: 60%"></div>
-                    </div>
-                    <div class="w-1 h-12 bg-emerald-500/20 rounded-full overflow-hidden relative">
-                        <div class="absolute bottom-0 w-full bg-emerald-500 animate-pulse" style="height: 80%; animation-delay: 0.2s"></div>
-                    </div>
-                    <div class="w-1 h-10 bg-emerald-500/20 rounded-full overflow-hidden relative">
-                        <div class="absolute bottom-0 w-full bg-emerald-500 animate-pulse" style="height: 40%; animation-delay: 0.4s"></div>
-                    </div>
-                </div>
-            </div>
+             <!-- Recent Activity Card (Dynamic Hub) -->
+             <div id="recent-course-hub" class="lg:col-span-2">
+                 <!-- Populated by renderRecentDashboard() -->
+                 <div class="glass-card p-10 rounded-[3.5rem] border-white/5 animate-pulse flex items-center justify-center h-full">
+                     <p class="text-[10px] font-black text-slate-700 uppercase tracking-widest italic">Awaiting Module Data...</p>
+                 </div>
+             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            <!-- LIVE MISSIONS -->
-            <div class="glass-card p-12 rounded-[4rem] border-white/5 relative overflow-hidden h-[450px]">
-                <h4 class="text-2xl font-black mb-10 flex items-center justify-between gap-6 syne text-white">
-                    <div class="flex items-center gap-6"><i class="fas fa-satellite-dish text-blue-500"></i> LIVE MISSIONS</div>
-                    <span class="text-[10px] text-slate-600 uppercase tracking-widest font-black">Tracking: ${activeMissions.length}</span>
-                </h4>
-                <div class="space-y-4">
-                    ${missionFeedHtml}
+        <!-- Bottom Intelligence Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass-card p-10 rounded-[3.5rem] border-white/5 flex flex-col justify-between group">
+                <h4 class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-6">Neural Day Streak</h4>
+                <div class="flex items-baseline gap-4 mb-4">
+                    <span class="text-6xl font-black syne text-white">${state.user.learningStreak?.current || 0}</span>
+                    <i class="fas fa-fire text-3xl text-orange-500 animate-pulse"></i>
                 </div>
-                <button onclick="loadPage('missions')" class="mt-8 w-full py-4 border border-white/5 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-blue-500 hover:border-blue-500/30 transition-all">Launch Control Center</button>
-            </div>
-            
-            <!-- CAREER TRAJECTORY -->
-            <div class="glass-card p-12 rounded-[4rem] border-white/5 relative overflow-hidden h-[450px]">
-                <h4 class="text-2xl font-black mb-10 flex items-center gap-6 syne text-white">
-                    <i class="fas fa-map-marker-alt text-purple-400"></i> CAREER PATH
-                </h4>
-                <div class="space-y-6">
-                    <div class="p-6 bg-purple-500/10 rounded-3xl border border-purple-500/20">
-                        <div class="text-[10px] font-black text-purple-400 uppercase tracking-[0.2em] mb-2">Active Protocol</div>
-                        <div class="text-xl font-black text-white uppercase tracking-tighter">Fullstack Operative</div>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-end">
-                            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Trajectory Accuracy</span>
-                            <span class="text-xs font-black text-white">${efficiency}%</span>
-                        </div>
-                        <div class="h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                            <div class="h-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" style="width: ${efficiency}%"></div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mt-4">
-                        <button onclick="loadPage('explore')" class="flex-1 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 transition-all border border-white/5">Expand Neural Map</button>
-                        <button onclick="window.open('/explore-tree.html', '_blank')" class="flex-1 py-4 bg-blue-600/10 hover:bg-blue-600/20 rounded-2xl text-[9px] font-black uppercase tracking-widest text-blue-400 transition-all border border-blue-500/20">
-                            <i class="fas fa-external-link-alt mr-2"></i> Quick Launch
-                        </button>
-                    </div>
-                </div>
+                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Sustained Daily Synchronization</div>
             </div>
 
-            <!-- SKILL MASTERY -->
-            <div class="glass-card p-12 rounded-[4rem] border-white/5 relative overflow-hidden h-[450px]">
-                <h4 class="text-2xl font-black mb-10 flex items-center gap-6 syne text-white">
-                    <i class="fas fa-microchip text-emerald-400"></i> MASTERY
-                </h4>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="p-5 bg-white/5 rounded-2xl border border-white/5 text-center">
-                        <div class="text-2xl font-black text-white mb-1">${totalCourses}</div>
-                        <div class="text-[8px] font-black text-slate-600 uppercase tracking-widest">Sub-Modules</div>
-                    </div>
-                    <div class="p-5 bg-white/5 rounded-2xl border border-white/5 text-center">
-                        <div class="text-2xl font-black text-emerald-400 mb-1">${completedLecs}</div>
-                        <div class="text-[8px] font-black text-slate-600 uppercase tracking-widest">Decryptions</div>
-                    </div>
+            <div class="glass-card p-10 rounded-[3.5rem] border-white/5 flex flex-col justify-between group">
+                <h4 class="text-[10px] font-black text-purple-500 uppercase tracking-[0.3em] mb-6">Active Presence</h4>
+                <div class="flex items-baseline gap-3 mb-2">
+                    <span class="text-5xl font-black syne text-white">${Math.floor((state.user.totalWatchTime || 0) / 3600)}h</span>
+                    <span class="text-4xl font-black syne text-slate-700">${Math.floor(((state.user.totalWatchTime || 0) % 3600) / 60)}m</span>
                 </div>
-                <div class="mt-8 p-6 bg-emerald-500/5 rounded-3xl border border-emerald-500/10">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Mastery Status: STABLE</div>
-                    </div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-loose">All neural links are active. Synchronization at optimal parameters for operative deployment.</p>
+                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Sync Duration</div>
+            </div>
+
+            <div class="glass-card p-10 rounded-[3.5rem] border-white/5 flex flex-col justify-between group bg-gradient-to-tr from-yellow-500/[0.02] to-transparent">
+                <div class="flex justify-between items-start">
+                    <h4 class="text-[10px] font-black text-yellow-500 uppercase tracking-[0.3em] mb-6">Global standing</h4>
+                    <i class="fas fa-globe text-yellow-500/20 text-2xl"></i>
                 </div>
+                <div class="text-5xl font-black syne tracking-tighter text-white mb-2">#5</div>
+                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Neural Grid Ranking</div>
             </div>
         </div>
     `;
@@ -908,27 +858,51 @@ function renderOverview(container) {
 async function renderRecentDashboard() {
     const hub = document.getElementById('recent-course-hub');
     if (!state.enrolledCourses.length) {
-        hub.innerHTML = `<div class="p-20 text-center"><p class="text-slate-700 font-black uppercase tracking-widest mb-6">No active modules.</p><button onclick="loadPage('store')" class="px-12 py-4 bg-blue-600 rounded-3xl font-black uppercase text-[10px] tracking-widest">Store catalog</button></div>`;
+        hub.innerHTML = `
+            <div class="h-full glass-card p-12 rounded-[4rem] border-white/5 border-dashed bg-blue-600/[0.02] flex flex-col items-center justify-center text-center group hover:bg-blue-600/[0.04] transition-all duration-700">
+                <div class="w-20 h-20 bg-blue-600/10 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <i class="fas fa-plus text-3xl text-blue-500"></i>
+                </div>
+                <h5 class="text-3xl font-black syne tracking-tighter text-white mb-4 uppercase">Strategic Initialization</h5>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-10 max-w-sm">No tactical linkstreams detected. Access the Resource Store to authorize new learning modules.</p>
+                <button onclick="loadPage('store')" class="px-12 py-5 bg-blue-600 rounded-3xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl shadow-blue-600/40 active:scale-95 transition-all">
+                    Explore Store Catalog
+                </button>
+            </div>`;
         return;
     }
 
     try {
         const res = await fetch(API_BASE_URL + '/api/courses', { headers: { 'Authorization': `Bearer ${token}` } });
         const courses = await res.json();
-        const recent = courses.filter(c => state.enrolledCourses.includes(c._id)).pop();
+        const recent = courses.filter(c => state.enrolledIds.includes(String(c._id))).pop();
 
         if (recent) {
             hub.innerHTML = `
-                <div class="p-12 bg-white/5 rounded-[3.5rem] border border-white/5 group hover:bg-white/10 transition-all cursor-pointer" onclick="openPlayer('${recent._id}')">
-                    <div class="flex justify-between items-start mb-10">
-                        <span class="px-4 py-2 bg-blue-600 rounded-xl text-[9px] font-black uppercase tracking-widest">Link Active</span>
-                        <i class="fas fa-external-link-alt text-slate-700 group-hover:text-blue-500 transition"></i>
+                <div class="h-full glass-card p-12 rounded-[4rem] border-white/5 group hover:bg-white/10 hover:border-blue-500/30 transition-all duration-700 cursor-pointer flex flex-col justify-between relative overflow-hidden" onclick="openPlayer('${recent._id}')">
+                    <div class="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-all">
+                        <i class="fas fa-graduation-cap text-9xl"></i>
                     </div>
-                    <h5 class="text-4xl font-black syne tracking-tighter mb-4">${recent.title.toUpperCase()}</h5>
-                    <div class="flex items-center gap-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <span>${recent.category}</span>
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-800"></span>
-                        <span>v1.0.2</span>
+                    <div class="flex justify-between items-start mb-6 relative z-10">
+                        <div class="flex items-center gap-4">
+                            <span class="px-4 py-2 bg-blue-600 rounded-xl text-[9px] font-black uppercase tracking-widest">Module Synchronization</span>
+                            <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest blink">Live Link</span>
+                        </div>
+                        <i class="fas fa-play-circle text-2xl text-slate-700 group-hover:text-blue-500 transition-colors"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h5 class="text-5xl font-black syne tracking-tighter text-white mb-6 leading-none group-hover:text-blue-400 transition-colors">${recent.title.toUpperCase()}</h5>
+                        <div class="flex items-center gap-6">
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Category</span>
+                                <span class="text-[10px] font-black text-white uppercase tracking-widest">${recent.category}</span>
+                            </div>
+                            <div class="w-px h-8 bg-white/10"></div>
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Decryption Progress</span>
+                                <span class="text-[10px] font-black text-white uppercase tracking-widest">SYNC IN PROGRESS</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1098,17 +1072,19 @@ function renderProfileTab() {
                 Neural Wallet
             </button>
             <button onclick="setProfileTab('protocols')" class="px-6 py-2 rounded-full text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.profileTab === 'protocols' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:text-white'}">
-                Manage Protocols
+                Protocols
+            </button>
+            <button onclick="setProfileTab('support')" class="px-6 py-2 rounded-full text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.profileTab === 'support' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:text-white'}">
+                Support
             </button>
         </div>
 
-        <!-- Identity Content -->
+        <!-- Tab Content -->
         ${state.profileTab === 'identity' ? `
         <div class="glass-card p-8 rounded-[2rem] border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-50"></div>
             
             <div class="flex flex-col md:flex-row gap-8 items-start">
-                <!-- Left Column: Avatar & Bio -->
                 <div class="w-full md:w-1/3 flex flex-col items-center text-center">
                     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarFile(this)">
                     <div class="relative group cursor-pointer inline-block" onclick="document.getElementById('avatar-input').click()">
@@ -1126,7 +1102,6 @@ function renderProfileTab() {
                     <h2 class="text-xl font-black mt-4 syne text-white">${state.user.profile?.personalInfo?.fullName || state.user.username}</h2>
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 mb-4">${state.user.profile?.personalInfo?.jobTitle || 'Operative Level 1'}</p>
 
-                     <!-- Social Connectors -->
                     <div class="flex justify-center gap-3 mb-6">
                         ${state.user.profile?.personalInfo?.github ? `<button onclick="window.open('https://github.com/${state.user.profile.personalInfo.github}', '_blank')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-[#333] hover:text-white transition flex items-center justify-center text-slate-400 text-xs"><i class="fab fa-github"></i></button>` : ''}
                         ${state.user.profile?.personalInfo?.linkedin ? `<button onclick="window.open('https://linkedin.com/in/${state.user.profile.personalInfo.linkedin}', '_blank')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-[#0077b5] hover:text-white transition flex items-center justify-center text-slate-400 text-xs"><i class="fab fa-linkedin-in"></i></button>` : ''}
@@ -1139,7 +1114,6 @@ function renderProfileTab() {
                     </div>
                 </div>
 
-                <!-- Right Column: Form Data -->
                 <div class="w-full md:w-2/3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -1160,17 +1134,33 @@ function renderProfileTab() {
                                 <div><label class="lbl-zenith">Skills (CSV)</label><input id="p-skills" type="text" class="input-zenith py-2 text-xs" value="${state.user.profile?.personalInfo?.skills || ''}"></div>
                              </div>
                         </div>
-                    <div class="col-span-1 md:col-span-2 mt-6">
-                         <h5 class="text-[9px] font-black text-red-500 uppercase tracking-[0.3em] mb-4 border-b border-white/5 pb-2">Security & Encryption</h5>
-                         <div><label class="lbl-zenith">Update Link Key (Password)</label><input id="p-password" type="password" class="input-zenith py-2 text-xs" placeholder="Enter new password to update..."></div>
                     </div>
-                </div>
-
-                <div class="mt-8 flex justify-end">
-                         <button onclick="updateProfile()" class="px-8 py-3 bg-blue-600 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-blue-600/40 hover:scale-[1.02] transition-all">Save Changes</button>
-                    </div>
+                    <form onsubmit="event.preventDefault(); updateProfile();">
+                        <div class="mt-6 space-y-4">
+                             <h5 class="text-[9px] font-black text-red-500 uppercase tracking-[0.3em] mb-4 border-b border-white/5 pb-2">Security & Encryption</h5>
+                             <div>
+                                <label class="lbl-zenith">Current Password</label>
+                                <input id="p-current-password" type="password" class="input-zenith py-2 text-xs" placeholder="Required only if changing password...">
+                             </div>
+                             <div>
+                                <label class="lbl-zenith">New Link Key (Password)</label>
+                                <input id="p-password" type="password" class="input-zenith py-2 text-xs" placeholder="Enter new password to update...">
+                             </div>
+                        </div>
+                        <div class="mt-8 flex justify-end">
+                             <button type="submit" class="px-8 py-3 bg-blue-600 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-blue-600/40 hover:scale-[1.02] transition-all">Save Changes</button>
+                        </div>
+                    </form>
                 </div>
             </div>
+        </div>
+        ` : state.profileTab === 'wallet' ? `
+        <div class="glass-card p-12 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500 text-center">
+             <div class="inline-block p-6 rounded-full bg-blue-600/10 text-blue-500 mb-8 border border-blue-500/20"><i class="fas fa-wallet text-4xl"></i></div>
+             <h3 class="text-3xl font-black syne text-white mb-2">Neural Wallet</h3>
+             <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-10">Available Strategic Balance</p>
+             <div class="text-8xl font-black syne tracking-tighter text-white glow-text mb-12">₹${(state.user.balance || 0).toLocaleString()}</div>
+             <button onclick="setProfileTab('support')" class="px-12 py-5 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl">Add Funds</button>
         </div>
         ` : state.profileTab === 'protocols' ? `
         <div class="glass-card p-12 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -1180,32 +1170,27 @@ function renderProfileTab() {
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Manage your skill trajectories</p>
                 </div>
              </div>
-
              <div class="space-y-6">
-                ${state.user.activeCareers && state.user.activeCareers.length > 0 ?
-                state.user.activeCareers.map(career => {
-                    const careerId = career._id || career;
-                    const careerName = career.name || career.title || 'Unknown Protocol';
-                    return `
+                ${(state.user.activeCareers || []).length > 0 ?
+                state.user.activeCareers.map(career => `
                         <div class="p-8 bg-white/5 border border-white/5 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-blue-500/30 transition-all">
                             <div class="flex items-center gap-6">
                                 <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-600 transition-all">
                                     <i class="fas fa-project-diagram text-2xl text-blue-500 group-hover:text-white"></i>
                                 </div>
                                 <div>
-                                    <h4 class="text-xl font-black text-white uppercase tracking-tight mb-1">${careerName}</h4>
+                                    <h4 class="text-xl font-black text-white uppercase tracking-tight mb-1">${career.name || career.title}</h4>
                                     <div class="flex items-center gap-3">
                                         <span class="px-2 py-1 bg-blue-500/10 text-blue-500 rounded text-[8px] font-black uppercase tracking-widest">Active Link</span>
-                                        <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">ID: ${careerId.toString().substring(0, 8)}...</span>
+                                        <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">ID: ${(career._id || career).toString().substring(0, 8)}...</span>
                                     </div>
                                 </div>
                             </div>
-                            <button onclick="terminateProtocol('${careerId}')" class="px-8 py-4 bg-red-600/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95">
+                            <button onclick="terminateProtocol('${career._id || career}')" class="px-8 py-4 bg-red-600/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95">
                                 <i class="fas fa-trash-alt mr-2"></i> Terminate Protocol
                             </button>
                         </div>
-                        `;
-                }).join('')
+                `).join('')
                 : `
                 <div class="text-center py-20 border-2 border-dashed border-white/5 rounded-[3rem]">
                     <i class="fas fa-ghost text-5xl text-slate-800 mb-6"></i>
@@ -1214,29 +1199,29 @@ function renderProfileTab() {
                 </div>
                 `}
              </div>
-
-             <div class="mt-12 p-8 bg-blue-600/5 rounded-3xl border border-blue-500/10">
-                <h5 class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-3">
-                    <i class="fas fa-info-circle"></i> Protocol Security Notice
-                </h5>
-                <p class="text-[11px] text-slate-400 font-medium leading-relaxed">
-                    Terminating a protocol will remove it from your active neural map. Progress (XP and completed nodes) is preserved but the link must be re-established to continue data synchronization. 
-                    <span class="text-blue-500/80">Maximum of 3 protocol changes allowed per lunar cycle.</span>
-                </p>
+        </div>
+        ` : state.profileTab === 'support' ? `
+        <div class="glass-card p-10 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500">
+             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+                <div class="lg:col-span-1 border-r border-white/5 pr-8 space-y-3">
+                    <button onclick="setSupportTabInProfile('topup')" class="w-full py-4 px-6 rounded-xl text-left text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.supportTab === 'topup' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'bg-white/5 text-slate-500 hover:text-white'}">
+                        <i class="fas fa-coins mr-3"></i> Top-up
+                    </button>
+                    <button onclick="setSupportTabInProfile('complaint')" class="w-full py-4 px-6 rounded-xl text-left text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.supportTab === 'complaint' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'bg-white/5 text-slate-500 hover:text-white'}">
+                        <i class="fas fa-ticket-alt mr-3"></i> Ticket
+                    </button>
+                    <button onclick="setSupportTabInProfile('history')" class="w-full py-4 px-6 rounded-xl text-left text-[9px] font-black tracking-[0.2em] uppercase transition-all ${state.supportTab === 'history' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'bg-white/5 text-slate-500 hover:text-white'}">
+                        <i class="fas fa-history mr-3"></i> History
+                    </button>
+                </div>
+                <div class="lg:col-span-3 min-h-[400px]">
+                    ${renderSupportTab()}
+                </div>
              </div>
         </div>
-        ` : `
-        <div class="glass-card p-12 rounded-[3rem] border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-500 text-center">
-             <div class="inline-block p-6 rounded-full bg-blue-600/10 text-blue-500 mb-8 border border-blue-500/20"><i class="fas fa-wallet text-4xl"></i></div>
-             <h3 class="text-3xl font-black syne text-white mb-2">Neural Wallet</h3>
-             <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-10">Available Strategic Balance</p>
-             <div class="text-8xl font-black syne tracking-tighter text-white glow-text mb-12">₹${(state.user.balance || 0).toLocaleString()}</div>
-             <button onclick="loadPage('helpdesk', 'topup')" class="px-12 py-5 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl">Add Funds</button>
-        </div>
-        `}
+        ` : ''}
     </div>`;
 }
-
 async function updateProfile() {
     const data = {
         bio: document.getElementById('p-bio').value,
@@ -1250,13 +1235,14 @@ async function updateProfile() {
             website: document.getElementById('p-website').value,
             skills: document.getElementById('p-skills').value
         },
+        currentPassword: document.getElementById('p-current-password').value ? document.getElementById('p-current-password').value : undefined,
         password: document.getElementById('p-password').value ? document.getElementById('p-password').value : undefined
     };
 
     try {
         const res = await fetch(API_BASE_URL + '/api/auth/profile', {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${token} `, 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         if (res.ok) {
@@ -1298,7 +1284,7 @@ async function updateAvatar(file) {
     try {
         const res = await fetch(API_BASE_URL + '/api/auth/profile', {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` }, // Content-Type is auto-set with FormData
+            headers: { 'Authorization': `Bearer ${token} ` }, // Content-Type is auto-set with FormData
             body: formData
         });
         if (res.ok) {
@@ -1355,7 +1341,7 @@ async function terminateProtocol(skillId) {
                 const res = await fetch(API_BASE_URL + '/api/explore/careermode/select', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Authorization': `Bearer ${token} `,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ skillId, action: 'remove' })
@@ -1389,8 +1375,8 @@ async function renderLeaderboard(container) {
         const leaders = await res.json();
 
         container.innerHTML = `
-            <div class="max-w-4xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                ${leaders.map((l, index) => {
+        <div class="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            ${leaders.map((l, index) => {
             const isTop3 = index < 3;
             const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-orange-400' : 'text-slate-600';
             const borderClass = isTop3 ? 'border-blue-500/30 bg-blue-600/5' : 'border-white/5 bg-white/[0.02]';
@@ -1413,7 +1399,8 @@ async function renderLeaderboard(container) {
                         </div>
                     </div>
                     `;
-        }).join('')}
+        }).join('')
+            }
             </div>
         `;
     } catch (e) {
@@ -1435,8 +1422,8 @@ function renderSkillConstellation(container) {
     const currentXP = state.user.xp || 0;
 
     container.innerHTML = `
-        <div class="relative min-h-[800px] overflow-hidden rounded-[4rem] bg-[#020308] border border-white/5">
-            <!-- Background Grid -->
+        < div class="relative min-h-[800px] overflow-hidden rounded-[4rem] bg-[#020308] border border-white/5" >
+            < !--Background Grid-- >
             <div class="absolute inset-0 opacity-20" style="background-image: linear-gradient(#3b82f6 1px, transparent 1px), linear-gradient(90deg, #3b82f6 1px, transparent 1px); background-size: 50px 50px; background-position: center;"></div>
             
             <div class="relative z-10 p-12 h-full flex flex-col items-center justify-center">
@@ -1477,7 +1464,7 @@ function renderSkillConstellation(container) {
                  </div>
             </div>
         </div>
-    `;
+        `;
 }
 
 // --- HELP DESK RENDERER ---
@@ -1500,10 +1487,11 @@ function renderHelpDesk(container) {
             </div>
             <div class="lg:col-span-3"><div class="glass-card p-16 rounded-[4rem] min-h-[600px] border-white/5">${renderSupportTab()}</div></div>
         </div>
-    `;
+        `;
 }
 
-function setSupportTab(tab) { state.supportTab = tab; renderHelpDesk(document.getElementById('app-content')); }
+function setSupportTab(tab) { state.supportTab = tab; if (state.activePage === 'helpdesk') renderHelpDesk(document.getElementById('app-content')); }
+function setSupportTabInProfile(tab) { state.supportTab = tab; renderProfile(document.getElementById('app-content')); }
 
 function renderSupportTab() {
     if (state.supportTab === 'topup') {
@@ -1584,7 +1572,7 @@ async function fetchMyRequests() {
     if (!container) return;
 
     container.innerHTML = `
-        < h4 class="text-4xl font-black mb-10 syne tracking-tighter uppercase" > Transmission Logs</h4 >
+        <h4 class="text-4xl font-black mb-10 syne tracking-tighter uppercase">Transmission Logs</h4>
             <div class="space-y-6">
                 ${data.map(r => `
                 <div class="p-8 bg-white/5 border border-white/5 rounded-[2.5rem] flex justify-between items-center group">
@@ -1644,8 +1632,8 @@ async function launchProPlayer(lecId, unitId) {
 
     // Switch to Full Video Player View (Separate Logic)
     const content = `
-        <div class="h-screen flex flex-col bg-[#050505] overflow-hidden">
-            <!-- Player Nav -->
+        < div class="h-screen flex flex-col bg-[#050505] overflow-hidden" >
+            < !--Player Nav-- >
             <div class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/50 backdrop-blur-md z-40">
                 <div class="flex items-center gap-6">
                     <button onclick="renderCourseCurriculum()" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition"><i class="fas fa-chevron-left text-slate-400"></i></button>
@@ -1661,44 +1649,44 @@ async function launchProPlayer(lecId, unitId) {
                 </div>
             </div>
 
-            <!-- Main Stage -->
-            <div class="flex-grow flex overflow-hidden">
-                <!-- Video Stage -->
-                <div class="flex-grow bg-black relative flex flex-col">
-                    <div class="flex-grow relative">
-                         ${renderMediaAsset(lecture)}
+            <!--Main Stage-- >
+        <div class="flex-grow flex overflow-hidden">
+            <!-- Video Stage -->
+            <div class="flex-grow bg-black relative flex flex-col">
+                <div class="flex-grow relative">
+                    ${renderMediaAsset(lecture)}
+                </div>
+                <div class="h-24 border-t border-white/5 p-6 flex items-center justify-between bg-[#080808]">
+                    <div>
+                        <h2 class="text-xl font-black text-white uppercase tracking-tight mb-1">${lecture.title}</h2>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Phase: ${unit.title}</p>
                     </div>
-                    <div class="h-24 border-t border-white/5 p-6 flex items-center justify-between bg-[#080808]">
-                        <div>
-                            <h2 class="text-xl font-black text-white uppercase tracking-tight mb-1">${lecture.title}</h2>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Phase: ${unit.title}</p>
-                        </div>
-                        <div class="flex gap-4">
-                           <!-- Additional controls if needed -->
-                        </div>
+                    <div class="flex gap-4">
+                        <!-- Additional controls if needed -->
                     </div>
                 </div>
+            </div>
 
-                <!-- Live Interface Sidebar (Discussion) -->
-                <div class="w-96 border-l border-white/5 bg-[#020202] flex flex-col">
-                    <div class="p-6 border-b border-white/5">
-                        <div class="text-[9px] font-black text-blue-500 uppercase tracking-[0.3em] mb-4">Live Nexus</div>
-                    </div>
-                    
-                    <div id="comment-feed" class="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-6">
-                        <!-- Dynamic Comments -->
-                    </div>
+            <!-- Live Interface Sidebar (Discussion) -->
+            <div class="w-96 border-l border-white/5 bg-[#020202] flex flex-col">
+                <div class="p-6 border-b border-white/5">
+                    <div class="text-[9px] font-black text-blue-500 uppercase tracking-[0.3em] mb-4">Live Nexus</div>
+                </div>
 
-                    <div class="p-6 border-t border-white/5 bg-[#050505]">
-                         <div class="relative">
-                            <input id="comment-input" type="text" placeholder="Data uplink..." class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-white">
+                <div id="comment-feed" class="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    <!-- Dynamic Comments -->
+                </div>
+
+                <div class="p-6 border-t border-white/5 bg-[#050505]">
+                    <div class="relative">
+                        <input id="comment-input" type="text" placeholder="Data uplink..." class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-white">
                             <button onclick="postComment('${lecture._id}')" class="absolute right-2 top-2 p-2 text-blue-500 hover:text-white transition"><i class="fas fa-paper-plane"></i></button>
-                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    `;
+        </div >
+        `;
 
     ImmersiveEngine.open(content);
     renderComments(lecture._id);
