@@ -78,14 +78,16 @@ router.patch('/users/:id/moderation', async (req, res) => {
         if (blockedUntil !== undefined) user.blockedUntil = blockedUntil ? new Date(blockedUntil) : null;
 
         await user.save();
-        res.json(user);
+        // Return user without password
+        const updatedUser = await User.findById(user._id).select('-password');
+        res.json(updatedUser);
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
 router.patch('/users/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
-        const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true }).select('-password');
         if (!user) return res.status(404).json({ message: 'Operative not found.' });
         res.json(user);
     } catch (err) { res.status(400).json({ message: err.message }); }
@@ -93,7 +95,7 @@ router.patch('/users/:id/status', async (req, res) => {
 
 router.patch('/users/:id/role', async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, { new: true });
+        const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, { new: true }).select('-password');
         res.json(user);
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
@@ -111,7 +113,7 @@ router.patch('/users/:id/balance', async (req, res) => {
     try {
         const { amount, type, reason } = req.body; // type: 'add' or 'subtract'
         const change = type === 'add' ? Number(amount) : -Number(amount);
-        const user = await User.findByIdAndUpdate(req.params.id, { $inc: { balance: change } }, { new: true });
+        const user = await User.findByIdAndUpdate(req.params.id, { $inc: { balance: change } }, { new: true }).select('-password');
 
         // Log transaction
         const tx = new Transaction({
@@ -131,7 +133,7 @@ router.patch('/users/:id/feature-access', async (req, res) => {
         const { feature, status, reason } = req.body;
         const update = {};
         update[`featureAccess.${feature}`] = { status, reason };
-        const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true });
+        const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
         res.json(user);
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
@@ -150,7 +152,8 @@ router.post('/users/:id/courses/:courseId', async (req, res) => {
             user.courseProgress.push({ courseId: req.params.courseId });
         }
         await user.save();
-        res.json({ message: 'Module Authorized.', user });
+        const updatedUser = await User.findById(user._id).select('-password');
+        res.json({ message: 'Module Authorized.', user: updatedUser });
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -168,7 +171,8 @@ router.post('/users/:id/grant', async (req, res) => {
             user.courseProgress.push({ courseId });
         }
         await user.save();
-        res.json({ message: 'Module Authorized.', user });
+        const updatedUser = await User.findById(user._id).select('-password');
+        res.json({ message: 'Module Authorized.', user: updatedUser });
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -181,7 +185,8 @@ router.post('/users/:id/revoke', async (req, res) => {
         user.enrolledCourses = user.enrolledCourses.filter(c => c.toString() !== courseId);
         user.courseProgress = user.courseProgress.filter(p => p.courseId.toString() !== courseId);
         await user.save();
-        res.json({ message: 'Module Access Revoked.', user });
+        const updatedUser = await User.findById(user._id).select('-password');
+        res.json({ message: 'Module Access Revoked.', user: updatedUser });
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -193,7 +198,8 @@ router.delete('/users/:id/courses/:courseId', async (req, res) => {
         user.enrolledCourses = user.enrolledCourses.filter(c => c.toString() !== req.params.courseId);
         user.courseProgress = user.courseProgress.filter(p => p.courseId.toString() !== req.params.courseId);
         await user.save();
-        res.json({ message: 'Module Access Revoked.', user });
+        const updatedUser = await User.findById(user._id).select('-password');
+        res.json({ message: 'Module Access Revoked.', user: updatedUser });
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -302,7 +308,7 @@ router.get('/notes', async (req, res) => {
 
 router.post('/notes', async (req, res) => {
     try {
-        const note = new Note(req.body);
+        const note = new Note({ ...req.body, user: req.user._id });
         await note.save();
         res.status(201).json(note);
     } catch (err) {
