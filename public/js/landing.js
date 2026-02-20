@@ -100,6 +100,13 @@ async function handleAuth(event, mode) {
             localStorage.setItem('token', data.token);
             if (data.username) localStorage.setItem('username', data.username);
 
+            // Handle Deep Link Redirects (e.g. from Group Invites)
+            const inviteRedirect = localStorage.getItem('inviteRedirect');
+            if (inviteRedirect && data.role !== 'admin') {
+                window.location.replace(inviteRedirect);
+                return;
+            }
+
             // Redirect based on role
             // Backend returns { token, username, role }
             if (data.role === 'admin') {

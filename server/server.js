@@ -65,16 +65,16 @@ app.use(helmet());
 // Apply rate limiting to all requests
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again after 15 minutes'
+    max: 500, // Increased limit for dev
+    message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 app.use('/api/', limiter);
 
 // Stricter limiter for Auth
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // Limit each IP to 10 login/register attempts per hour
-    message: 'Too many authentication attempts, please try again in an hour'
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // Increased to 50 for testing
+    message: { message: 'Too many authentication attempts, please try again later' }
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -82,8 +82,8 @@ app.use('/api/auth/register', authLimiter);
 // System Reset Limiter
 app.use('/api/admin/reset-system', rateLimit({
     windowMs: 24 * 60 * 60 * 1000, // 24 hours
-    max: 3, // Only 3 attempts per day
-    message: 'Critical system reset attempts exceeded'
+    max: 10,
+    message: { message: 'Critical system reset attempts exceeded' }
 }));
 
 // ========================================
@@ -172,6 +172,14 @@ app.get('/explore-tree.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../explore-tree.html'));
 });
 
+app.get('/groups.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../groups.html'));
+});
+
+app.get('/invite.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../invite.html'));
+});
+
 // Define Routes
 app.use(require('./middleware/activityMiddleware')); // Track global activity
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -187,6 +195,7 @@ app.use('/api/settings', require('./routes/settingRoutes'));
 app.use('/api/support', require('./routes/supportRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/explore', require('./routes/exploreRoutes'));
+app.use('/api/groups', require('./routes/groupRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

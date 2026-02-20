@@ -530,7 +530,8 @@ const PAGE_META = {
     profile: ["Profile", "Account Hub & Neural Support"],
     leaderboard: ["Rankings", "See how you compare to others"],
     roadmap: ["Roadmap", "Your skill development path"],
-    explore: ["Explore", "Visual skill and career map"]
+    explore: ["Explore", "Visual skill and career map"],
+    techclubs: ["Tech Clubs", "Global Constellation Network"]
 };
 
 async function loadPage(page, subTab = null) {
@@ -577,6 +578,7 @@ function renderView(page, container) {
         case 'leaderboard': renderLeaderboard(container); break;
         case 'explore': renderExploreTreeLayout(container); break;
         case 'roadmap': renderRoadmap(container); break;
+        case 'techclubs': renderTechClubs(container); break;
     }
 }
 
@@ -2070,6 +2072,434 @@ async function deleteTask(id) {
             } catch (e) { showToast("UPLINK FAILURE", "error"); }
         }
     );
+}
+
+// ========================================
+// TECH CLUBS / GROUPS SYSTEM
+// ========================================
+let tcGroups = [];
+let tcActiveGroup = null;
+let tcActiveChannel = null;
+let tcChatInterval = null;
+
+async function renderTechClubs(container) {
+    container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center"><i class="fas fa-satellite-dish fa-spin text-4xl text-blue-500 mb-4"></i><div class="text-[10px] font-black uppercase text-slate-500 tracking-widest">Scanning Frequencies...</div></div>`;
+    await loadGroups(container);
+}
+
+async function loadGroups(container = document.getElementById('app-content')) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups`, { headers: { 'Authorization': `Bearer ${token}` } });
+        tcGroups = await res.json();
+        renderDiscovery(container);
+    } catch (e) { console.error(e); }
+}
+
+function renderDiscovery(container) {
+    if (tcChatInterval) clearInterval(tcChatInterval);
+
+    let html = `
+        <div class="flex h-[80vh] w-full bg-[#020202] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl animate-in fade-in">
+            <div class="w-80 sidebar flex flex-col h-full bg-[#050505] border-r border-white/5 z-[40]">
+                <div class="p-8 border-b border-white/5">
+                    <h1 class="text-2xl font-black tracking-tighter uppercase syne text-white">Tech Clubs</h1>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Global Constellation</p>
+                </div>
+                
+                <div class="flex-grow overflow-y-auto custom-scrollbar p-4 space-y-2">
+                    <div class="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-4 px-4 pt-4">Your Uplinks</div>
+    `;
+
+    const myGroups = tcGroups.filter(g => g.isMember);
+    if (myGroups.length === 0) {
+        html += `<div class="px-4 py-8 text-center text-slate-600 text-xs font-bold uppercase tracking-widest">No active uplinks.</div>`;
+    } else {
+        myGroups.forEach(g => {
+            html += `
+                <div onclick="openGroup('${g._id}')" class="p-4 rounded-2xl hover:bg-white/5 cursor-pointer transition flex items-center gap-4 group block w-full text-left">
+                    <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center font-black text-lg group-hover:scale-110 transition shadow-inner border border-blue-500/20">${g.name.charAt(0)}</div>
+                    <div class="overflow-hidden">
+                        <div class="font-bold text-white text-sm truncate">${g.name}</div>
+                        <div class="text-[10px] text-slate-500 uppercase tracking-widest truncate">${g.memberCount} Operatives</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    html += `
+                </div>
+                <div class="p-6 border-t border-white/5">
+                    <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')" class="w-full py-4 bg-white/5 hover:bg-blue-600 hover:text-white text-slate-400 rounded-xl text-xs font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-600/20"><i class="fas fa-plus"></i> New Uplink</button>
+                </div>
+            </div>
+
+            <div class="flex-grow p-12 overflow-y-auto custom-scrollbar bg-[#0a0a0a]">
+                <h2 class="text-4xl font-black mb-8 syne text-white">Discover Network</h2>
+                <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+    `;
+
+    const publicGroups = tcGroups.filter(g => !g.isMember && g.visibility === 'public');
+
+    if (publicGroups.length === 0) {
+        html += `<div class="col-span-full py-20 text-center text-slate-600 font-bold uppercase tracking-widest">No signals detected in the public sector.</div>`;
+    } else {
+        publicGroups.forEach(g => {
+            html += `
+                <div class="glass-panel p-6 rounded-3xl group hover:border-blue-500/30 transition flex flex-col justify-between bg-white/5 border border-white/10">
+                    <div>
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center font-black mb-4">${g.name.charAt(0)}</div>
+                        <h3 class="text-xl font-bold text-white mb-2 leading-tight">${g.name}</h3>
+                        <p class="text-xs text-slate-400 mb-4 line-clamp-2">${g.description || 'No description provided.'}</p>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-white/5 pt-4 mt-4">
+                        <span class="text-xs text-slate-500 font-bold"><i class="fas fa-user-astronaut mr-1"></i> ${g.memberCount}</span>
+                        <button onclick="joinGroup('${g._id}')" class="px-4 py-2 bg-blue-600/20 text-blue-500 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition shadow-lg">Connect</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    html += `</div></div></div>`;
+    container.innerHTML = html;
+}
+
+async function createGroup() {
+    const name = document.getElementById('new-group-name').value;
+    const desc = document.getElementById('new-group-desc').value;
+    const vis = document.getElementById('new-group-vis').value;
+
+    if (!name) return showToast("Designation required", "error");
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name, description: desc, visibility: vis })
+        });
+        if (!res.ok) throw new Error("Creation failed");
+        const newGroup = await res.json();
+        document.getElementById('create-group-modal').classList.add('hidden');
+
+        document.getElementById('new-group-name').value = '';
+        document.getElementById('new-group-desc').value = '';
+
+        await loadGroups();
+        openGroup(newGroup._id);
+    } catch (e) { showToast(e.message, "error"); }
+}
+
+async function joinGroup(id) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${id}/join`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        await loadGroups();
+        if (data.group) openGroup(data.group._id);
+        else showToast(data.message, "success");
+    } catch (e) { showToast(e.message, "error"); }
+}
+
+async function openGroup(id) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) throw new Error("Failed to load details");
+        tcActiveGroup = await res.json();
+
+        if (tcActiveGroup.channels && tcActiveGroup.channels.length > 0) {
+            tcActiveChannel = tcActiveGroup.channels[0]._id;
+        }
+
+        renderGroupInterface();
+        if (tcActiveChannel) loadMessages();
+
+    } catch (e) { console.error(e); }
+}
+
+function renderGroupInterface() {
+    let channelsHtml = '';
+    const groupContainer = document.getElementById('app-content');
+
+    if (tcActiveGroup.channels) {
+        tcActiveGroup.channels.forEach(ch => {
+            channelsHtml += `
+                <div onclick="switchChannel('${ch._id}', this)" class="channel-item px-6 py-3 border-l-2 border-transparent hover:border-slate-700 flex items-center gap-3 ${tcActiveChannel === ch._id ? 'active' : 'text-slate-400'}">
+                    <i class="fas fa-hashtag text-[10px] opacity-50"></i>
+                    <span class="font-bold text-sm truncate">${ch.name}</span>
+                </div>
+            `;
+        });
+    }
+
+    const isPrivileged = tcActiveGroup.currentUserRole === 'admin' || tcActiveGroup.currentUserRole === 'moderator';
+
+    groupContainer.innerHTML = `
+        <div class="flex h-[80vh] w-full bg-[#020202] rounded-[2rem] border border-white/5 shadow-2xl animate-in fade-in">
+            <!-- Group Sidebar -->
+            <div class="w-64 sidebar flex flex-col h-full bg-[#050505] border-r border-white/5 z-[40]">
+                <div class="p-6 border-b border-white/5 cursor-pointer hover:bg-white/5 transition" onclick="renderDiscovery(document.getElementById('app-content'))">
+                    <div class="flex items-center gap-3 text-slate-400 hover:text-white transition">
+                        <i class="fas fa-chevron-left text-xs"></i>
+                        <span class="text-xs font-bold uppercase tracking-widest">Back to Hub</span>
+                    </div>
+                </div>
+                <div class="p-6 border-b border-white/5 text-center">
+                    <div class="w-16 h-16 mx-auto bg-blue-600/20 text-blue-500 rounded-2xl flex items-center justify-center text-2xl font-black mb-3 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">${tcActiveGroup.name.charAt(0)}</div>
+                    <h2 class="font-bold text-white truncate px-2">${tcActiveGroup.name}</h2>
+                    <span class="text-[10px] text-slate-500 uppercase mt-1 tracking-widest px-2 py-1 rounded bg-white/5"><i class="fas ${tcActiveGroup.visibility === 'private' ? 'fa-lock text-red-400' : 'fa-globe text-blue-400'}"></i> ${tcActiveGroup.visibility}</span>
+                </div>
+                
+                <div class="flex-grow overflow-y-auto custom-scrollbar py-4">
+                    <div class="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-6 mb-2">Comms Channels</div>
+                    ${channelsHtml}
+                    
+                    ${isPrivileged ? `
+                    <div class="px-6 mt-4">
+                        <button class="text-xs text-blue-500 hover:text-white transition w-full text-left py-2 font-bold"><i class="fas fa-plus mr-2"></i> Add Channel</button>
+                    </div>` : ''}
+
+                    <hr class="border-white/5 my-6 mx-6">
+
+                    <div class="px-6 mb-2">
+                        <div class="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Modules</div>
+                        <div class="opacity-50 pointer-events-none cursor-not-allowed">
+                            <div class="px-4 py-3 rounded-lg flex items-center gap-3 text-slate-400 bg-white/5 mb-1"><i class="fas fa-boxes text-purple-400"></i><span class="text-xs font-bold">The Vault</span></div>
+                            <div class="px-4 py-3 rounded-lg flex items-center gap-3 text-slate-400 bg-white/5 mb-1"><i class="fas fa-trophy text-yellow-400"></i><span class="text-xs font-bold">Challenges</span></div>
+                        </div>
+                        <div class="text-[8px] text-center text-slate-600 mt-2 uppercase">Under Construction</div>
+                    </div>
+
+                </div>
+                
+                ${isPrivileged && tcActiveGroup.visibility === 'private' ? `
+                <div class="p-4 border-t border-white/5">
+                    <button onclick="copyInvite()" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg overflow-hidden text-xs font-mono text-slate-400 flex items-center justify-between px-3 border border-white/10 transition">
+                        <span class="truncate pr-2">Link: ${tcActiveGroup.inviteCode || 'Hidden'}</span>
+                        <i class="fas fa-copy text-white"></i>
+                    </button>
+                </div>` : ''}
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area flex-grow relative z-[30] flex flex-col bg-[#020202]">
+                <!-- Header -->
+                <div class="h-16 border-b border-white/5 flex items-center px-8 bg-[#020202] drop-shadow-md z-10 shrink-0">
+                    <h3 class="font-bold text-lg text-white flex items-center"><i class="fas fa-hashtag text-slate-500 mr-2 text-sm"></i> <span id="current-channel-name">${tcActiveGroup.channels.find(c => c._id === tcActiveChannel)?.name || 'General'}</span></h3>
+                </div>
+                
+                <!-- Message List -->
+                <div id="messages-container" class="messages-container fade-in flex-grow overflow-y-auto w-full custom-scrollbar">
+                    <div class="h-full flex items-center justify-center">
+                        <i class="fas fa-spinner fa-spin text-slate-600 text-3xl"></i>
+                    </div>
+                </div>
+                
+                <!-- Input Area -->
+                <div class="p-6 bg-[#050505] border-t border-white/5 shrink-0 z-10 w-full relative">
+                    <div class="flex gap-4 items-center">
+                        <!-- Attachment Dropdown Menu -->
+                        <div class="relative group">
+                            <button class="w-12 h-12 shrink-0 bg-[#111] hover:bg-blue-600/20 text-slate-400 hover:text-blue-500 rounded-xl border border-white/10 transition flex items-center justify-center tooltip-trigger" title="Attach">
+                                <i class="fas fa-paperclip text-lg"></i>
+                            </button>
+                            <!-- Dropdown List -->
+                            <div class="absolute bottom-full left-0 mb-3 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50 overflow-hidden flex flex-col">
+                                <button onclick="document.getElementById('snippet-modal').classList.remove('hidden')" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-blue-600 hover:text-white text-left transition w-full">
+                                    <i class="fas fa-code text-blue-500 w-4 group-hover:text-white transition"></i> Code Snippet
+                                </button>
+                                <button onclick="showToast('Media uploads initializing in next patch', 'info')" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-purple-600 hover:text-white text-left transition w-full">
+                                    <i class="fas fa-image text-purple-500 w-4 group-hover:text-white transition"></i> Media
+                                </button>
+                                <button onclick="showToast('File uploads launching via The Vault soon.', 'info')" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-orange-600 hover:text-white text-left transition w-full border-t border-white/5">
+                                    <i class="fas fa-file-alt text-orange-500 w-4 group-hover:text-white transition"></i> Document
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <input type="text" id="chat-input" placeholder="Transmit message to channel..." onkeypress="handleChatKey(event)" class="w-full bg-[#111] border border-white/10 rounded-xl px-5 h-12 text-white focus:border-blue-500 focus:outline-none transition font-sans shadow-inner">
+                        
+                        <button onclick="sendMessage()" class="w-12 h-12 shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-lg shadow-blue-600/20 flex items-center justify-center">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function switchChannel(id, element) {
+    tcActiveChannel = id;
+    const chan = tcActiveGroup.channels.find(c => c._id === id);
+    if (chan) document.getElementById('current-channel-name').innerText = chan.name;
+
+    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active', 'text-slate-400'));
+    document.querySelectorAll('.channel-item').forEach(el => el.classList.add('text-slate-400'));
+    element.classList.remove('text-slate-400');
+    element.classList.add('active');
+
+    loadMessages();
+}
+
+async function loadMessages() {
+    if (!tcActiveChannel || !tcActiveGroup) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${tcActiveGroup._id}/channels/${tcActiveChannel}/messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error();
+        const messages = await res.json();
+        renderMessages(messages);
+
+        if (tcChatInterval) clearInterval(tcChatInterval);
+        tcChatInterval = setInterval(pollMessages, 3000);
+
+    } catch (e) { console.error('Error loading msgs'); }
+}
+
+async function pollMessages() {
+    if (!tcActiveChannel) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${tcActiveGroup._id}/channels/${tcActiveChannel}/messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const messages = await res.json();
+            renderMessages(messages, true);
+        }
+    } catch (e) { }
+}
+
+function renderMessages(messages, isPoll = false) {
+    const container = document.getElementById('messages-container');
+    if (!container) return;
+
+    const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center pt-20">
+                <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-600 text-2xl mb-4"><i class="fas fa-ghost"></i></div>
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Void space. Be the first to transmit.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div class="w-full px-4 pt-4">';
+    let prevSender = null;
+
+    messages.forEach(m => {
+        const isMe = m.sender._id === state.user._id;
+        const showHeader = prevSender !== m.sender._id;
+
+        html += `
+            <div class="flex gap-4 mb-${showHeader ? '6' : '1'} message-box ${isMe ? 'message-mine flex-row-reverse' : 'message-other'}">
+                ${!isMe && showHeader ? `
+                    <div class="w-8 h-8 rounded-full shadow-md bg-blue-600/20 border border-blue-500/20 shrink-0 mt-1 flex items-center justify-center text-blue-500 font-black text-xs uppercase">${m.sender.username.substring(0, 2)}</div>
+                ` : `<div class="w-8 shrink-0"></div>`}
+                
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%]">
+                    ${showHeader ? `
+                        <div class="flex items-baseline gap-2 mb-1 px-1">
+                            <span class="font-bold text-xs ${isMe ? 'text-blue-400' : 'text-slate-300'}">${m.sender.username}</span>
+                            <span class="text-[9px] text-slate-600">${new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${m.type === 'snippet' ? renderSnippetHtml(m) : `
+                        <div class="msg-bubble px-4 py-2 text-[15px] leading-relaxed relative shadow-md rounded-2xl ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}">
+                            ${m.content}
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+        prevSender = m.sender._id;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Add Prism highlight safely
+    if (window.Prism) {
+        window.Prism.highlightAllUnder(container);
+    }
+
+    if (!isPoll || isScrolledToBottom) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function renderSnippetHtml(m) {
+    const lang = m.snippetMeta?.language || 'javascript';
+    const filename = m.snippetMeta?.filename || 'snippet';
+
+    return `
+        <div class="snippet-container w-[500px] max-w-full text-left">
+            <div class="snippet-header">
+                <span><i class="fas fa-file-code mr-2 opacity-50"></i>${filename}</span>
+                <span class="uppercase tracking-widest opacity-50">${lang}</span>
+            </div>
+            <pre><code class="language-${lang}">${escapeHtml(m.content)}</code></pre>
+        </div>
+    `;
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function handleChatKey(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+async function sendMessage(content = null, type = 'text', snippetMeta = null) {
+    const finalContent = content || document.getElementById('chat-input').value;
+    if (!finalContent.trim()) return;
+
+    if (!content) document.getElementById('chat-input').value = '';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups/${tcActiveGroup._id}/channels/${tcActiveChannel}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ content: finalContent, type, snippetMeta })
+        });
+        if (res.ok) {
+            await loadMessages();
+        }
+    } catch (e) { showToast('Failed to send message', 'error'); }
+}
+
+function closeSnippetModal() {
+    document.getElementById('snippet-modal').classList.add('hidden');
+    document.getElementById('snippet-code').value = '';
+}
+
+function sumbitSnippet() {
+    const code = document.getElementById('snippet-code').value;
+    const lang = document.getElementById('snippet-lang').value;
+    const filename = document.getElementById('snippet-filename').value;
+    if (!code.trim()) return;
+
+    sendMessage(code, 'snippet', { language: lang, filename: filename || `snippet.${lang.substring(0, 2)}` });
+    closeSnippetModal();
+}
+
+function copyInvite() {
+    if (!tcActiveGroup.inviteCode) return;
+    const link = `${window.location.origin}/invite.html?code=${tcActiveGroup.inviteCode}`;
+    navigator.clipboard.writeText(link);
+    showToast("Invite link copied to clipboard", "success");
 }
 
 

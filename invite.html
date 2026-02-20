@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Invitation - Zenith OS</title>
+    <script src="public/js/config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/css/design-system.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #020202;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(20, 20, 25, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Loading State -->
+    <div id="loading" class="text-center transition-opacity duration-500">
+        <div class="w-20 h-20 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-6">
+        </div>
+        <div class="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Decrypting Invite
+            Link...</div>
+    </div>
+
+    <!-- Main Invite Card -->
+    <div id="invite-card"
+        class="glass-panel p-10 rounded-[3rem] max-w-lg w-full text-center relative overflow-hidden hidden transform scale-95 opacity-0 transition-all duration-700">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent">
+        </div>
+
+        <div
+            class="w-24 h-24 mx-auto bg-blue-600/10 text-blue-500 rounded-3xl flex items-center justify-center text-4xl font-black mb-6 border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+            <i class="fas fa-satellite-dish"></i>
+        </div>
+
+        <h1 class="text-3xl font-black syne uppercase tracking-tight mb-2">Incoming Uplink</h1>
+        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-8">You have been invited to join a Tech
+            Club</p>
+
+        <div
+            class="bg-black/50 border border-white/5 rounded-2xl p-6 mb-8 text-left group hover:border-blue-500/30 transition">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center font-black text-xl"
+                    id="group-initial">?</div>
+                <div>
+                    <div class="font-black text-lg" id="group-name">Loading...</div>
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest"><i class="fas fa-users mr-1"></i>
+                        <span id="group-members">0</span> Operatives</div>
+                </div>
+            </div>
+            <p class="text-sm text-slate-400 line-clamp-2" id="group-desc"></p>
+        </div>
+
+        <div id="action-area" class="space-y-4">
+            <!-- Buttons injected here based on auth state -->
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-card" class="hidden text-center max-w-md w-full p-8">
+        <div
+            class="w-24 h-24 mx-auto bg-red-600/10 text-red-500 rounded-3xl flex items-center justify-center text-4xl font-black mb-6">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h1 class="text-2xl font-black syne uppercase tracking-tight mb-4">Uplink Failed</h1>
+        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-8" id="error-message">Invalid or expired
+            transmission code.</p>
+        <button onclick="window.location.href='/'"
+            class="px-8 py-4 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition w-full">Return
+            to Base</button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = urlParams.get('code');
+        const token = localStorage.getItem('token');
+
+        async function init() {
+            if (!inviteCode) {
+                showError("No invite code detected in communication stream.");
+                return;
+            }
+
+            try {
+                // Fetch group preview info
+                const res = await fetch(`${API_BASE_URL}/api/groups/invite/${inviteCode}`);
+                if (!res.ok) throw new Error("Invalid or Expired Invite Link.");
+
+                const group = await res.json();
+                renderInvite(group);
+
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        function renderInvite(group) {
+            document.getElementById('loading').classList.add('hidden');
+            const card = document.getElementById('invite-card');
+
+            document.getElementById('group-initial').innerText = group.name.charAt(0);
+            document.getElementById('group-name').innerText = group.name;
+            document.getElementById('group-members').innerText = group.memberCount;
+            document.getElementById('group-desc').innerText = group.description || 'No description provided for this node.';
+
+            const actionArea = document.getElementById('action-area');
+
+            if (token) {
+                // User is logged in, show Accept button
+                actionArea.innerHTML = `
+                    <button onclick="acceptInvite()" class="w-full py-5 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white text-xs font-black uppercase tracking-[0.3em] transition shadow-xl shadow-blue-600/20 group">
+                        Accept Transmission <i class="fas fa-check-circle ml-2 group-hover:scale-110 transition-transform"></i>
+                    </button>
+                    <button onclick="window.location.href='/user.html'" class="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 text-xs font-black uppercase tracking-[0.3em] transition">
+                        Decline
+                    </button>
+                `;
+            } else {
+                // User is not logged in, redirect to login and save intent
+                actionArea.innerHTML = `
+                    <button onclick="redirectToLogin()" class="w-full py-5 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white text-xs font-black uppercase tracking-[0.3em] transition shadow-xl shadow-blue-600/20 group">
+                        Authenticate to Join <i class="fas fa-fingerprint ml-2 group-hover:scale-110 transition-transform"></i>
+                    </button>
+                    <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-4">You must be logged into Zenith.OS to accept this invitation.</p>
+                `;
+            }
+
+            // Show card
+            card.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+            }, 50);
+        }
+
+        async function acceptInvite() {
+            try {
+                const btn = document.querySelector('#action-area button');
+                const prevText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Establishing Connection...';
+
+                const res = await fetch(`${API_BASE_URL}/api/groups/invite/${inviteCode}/accept`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+
+                // Clear any stored redirect
+                localStorage.removeItem('inviteRedirect');
+
+                // Send to groups page and specifically to this group
+                // In a real app we'd pass the ID in the URL, but for now just go to groups hub
+                window.location.replace('/groups.html');
+
+            } catch (e) {
+                alert(e.message);
+                window.location.replace('/user.html');
+            }
+        }
+
+        function redirectToLogin() {
+            // Save intention to join this group after login
+            localStorage.setItem('inviteRedirect', window.location.href);
+            window.location.href = '/index.html'; // Go to landing/login page
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error-message').innerText = msg;
+            document.getElementById('error-card').classList.remove('hidden');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
