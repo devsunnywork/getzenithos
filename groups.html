@@ -149,6 +149,23 @@
 
 <body class="antialiased flex h-screen">
 
+    <!-- Zenith Loader -->
+    <div id="zenith-loader"
+        class="fixed inset-0 z-[9999] bg-[#020202] flex flex-col items-center justify-center transition-all duration-700 pointer-events-none opacity-0">
+        <div class="relative">
+            <div class="absolute inset-0 bg-blue-600/20 rounded-full blur-3xl animate-pulse scale-150"></div>
+            <div class="w-24 h-24 border-2 border-blue-500/10 rounded-full flex items-center justify-center">
+                <div class="w-16 h-16 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center font-black text-xs syne text-blue-500">Z</div>
+        </div>
+        <div class="mt-8 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/50 mb-2">Neural Link Active
+            </div>
+            <div class="loader-msg text-xs text-white font-black uppercase tracking-[0.2em] animate-pulse">Syncing
+                Intelligence...</div>
+        </div>
+    </div>
     <!-- Global Nav (Minimal) -->
     <nav class="w-20 bg-[#050505] border-r border-white/5 flex flex-col items-center py-6 gap-8 z-50">
         <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-black">Z</div>
@@ -249,6 +266,34 @@
     </div>
 
     <script>
+        // --- UI Utilities ---
+        const ZLoader = {
+            show: (msg = "Initializing...") => {
+                const loader = document.getElementById('zenith-loader');
+                const msgEl = loader.querySelector('.loader-msg');
+                if (msgEl) msgEl.innerText = msg;
+                if (loader) loader.classList.remove('opacity-0', 'pointer-events-none');
+            },
+            hide: () => {
+                const loader = document.getElementById('zenith-loader');
+                if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
+            }
+        };
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-white shadow-2xl z-[10000] border border-white/10 flex items-center gap-3 fade-in ${type === 'error' ? 'bg-red-900/90 shadow-red-500/20' : type === 'success' ? 'bg-green-900/90 shadow-green-500/20' : 'bg-blue-900/90 shadow-blue-500/20'
+                }`;
+            toast.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-triangle text-red-400' : type === 'success' ? 'fa-check-circle text-green-400' : 'fa-info-circle text-blue-400'}"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // Store user and current group state
         let currentUser = null;
         let groups = [];
@@ -375,6 +420,7 @@
         }
 
         async function joinGroup(id) {
+            ZLoader.show("Establishing secure connection...");
             try {
                 const res = await fetch(`${API_BASE_URL}/api/groups/${id}/join`, {
                     method: 'POST',
@@ -384,15 +430,28 @@
                 if (!res.ok) throw new Error(data.message);
 
                 await loadGroups();
-                if (data.group) openGroup(data.group._id);
-                else alert(data.message); // Request sent (private group)
-            } catch (e) { alert(e.message); }
+                if (data.group) {
+                    showToast("Uplink Established", "success");
+                    openGroup(data.group._id);
+                } else {
+                    // It's a private group, request sent
+                    showToast(data.message || "Join request transmitted.", "success");
+                }
+            } catch (e) {
+                showToast(e.message, "error");
+            } finally {
+                ZLoader.hide();
+            }
         }
 
         async function openGroup(id) {
+            ZLoader.show("Syncing group telemetry...");
             try {
                 const res = await fetch(`${API_BASE_URL}/api/groups/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) throw new Error("Failed to load details");
+                if (!res.ok) {
+                    if (res.status === 403) throw new Error("Access Denied: You are not an active operative in this unit.");
+                    throw new Error("Failed to load details");
+                }
                 activeGroup = await res.json();
 
                 if (activeGroup.channels && activeGroup.channels.length > 0) {
@@ -402,7 +461,11 @@
                 renderGroupInterface();
                 if (activeChannel) loadMessages();
 
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                showToast(e.message, "error");
+            } finally {
+                ZLoader.hide();
+            }
         }
 
         function renderGroupInterface() {
@@ -482,12 +545,29 @@
                     </div>
                     
                     <!-- Input Area -->
-                    <div class="p-6 bg-[#050505] border-t border-white/5 shrink-0 z-10">
-                        <div class="flex gap-4">
-                            <button onclick="document.getElementById('snippet-modal').classList.remove('hidden')" class="w-12 h-12 shrink-0 bg-[#111] hover:bg-blue-600/20 text-slate-400 hover:text-blue-500 rounded-xl border border-white/10 hover:border-blue-500/50 transition flex items-center justify-center tooltip-trigger" title="Share Snippet">
-                                <i class="fas fa-code"></i>
-                            </button>
-                            <input type="text" id="chat-input" placeholder="Transmit message to channel..." onkeypress="handleChatKey(event)" class="w-full bg-[#111] border border-white/10 rounded-xl px-5 text-white focus:border-blue-500 focus:outline-none transition font-sans shadow-inner">
+                    <div class="p-6 bg-[#050505] border-t border-white/5 shrink-0 z-10 w-full relative">
+                        <div class="flex gap-4 items-center">
+                            <!-- Attachment Dropdown Menu -->
+                            <div class="relative" id="attachment-dropdown-container">
+                                <button onclick="toggleAttachmentMenu(event)" class="w-12 h-12 shrink-0 bg-[#111] hover:bg-blue-600/20 text-slate-400 hover:text-blue-500 rounded-xl border border-white/10 transition flex items-center justify-center tooltip-trigger" title="Attach">
+                                    <i class="fas fa-paperclip text-lg"></i>
+                                </button>
+                                <!-- Dropdown List -->
+                                <div id="attachment-menu" class="hidden absolute bottom-full left-0 mb-3 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl transition-all duration-200 z-50 overflow-hidden flex flex-col">
+                                    <button onclick="document.getElementById('snippet-modal').classList.remove('hidden'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-blue-600 hover:text-white text-left transition w-full group">
+                                        <i class="fas fa-code text-blue-500 w-4 group-hover:text-white transition"></i> Code Snippet
+                                    </button>
+                                    <button onclick="alert('Media uploads initializing in next patch'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-purple-600 hover:text-white text-left transition w-full group">
+                                        <i class="fas fa-image text-purple-500 w-4 group-hover:text-white transition"></i> Media
+                                    </button>
+                                    <button onclick="alert('File uploads launching via The Vault soon.'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-orange-600 hover:text-white text-left transition w-full border-t border-white/5 group">
+                                        <i class="fas fa-file-alt text-orange-500 w-4 group-hover:text-white transition"></i> Document
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <input type="text" id="chat-input" placeholder="Transmit message to channel..." onkeypress="handleChatKey(event)" class="w-full bg-[#111] border border-white/10 rounded-xl px-5 h-12 text-white focus:border-blue-500 focus:outline-none transition font-sans shadow-inner">
+                            
                             <button onclick="sendMessage()" class="w-12 h-12 shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-lg shadow-blue-600/20 flex items-center justify-center">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
@@ -496,6 +576,31 @@
                 </div>
             `;
         }
+
+        function toggleAttachmentMenu(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('attachment-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+            }
+        }
+
+        // Close dropdown when clicking anywhere else
+        document.addEventListener('click', function (event) {
+            const menu = document.getElementById('attachment-menu');
+            const container = document.getElementById('attachment-dropdown-container');
+            if (menu && !menu.classList.contains('hidden')) {
+                // If click is outside the container
+                if (container && !container.contains(event.target)) {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('flex');
+                }
+            }
+        });
 
         function switchChannel(id) {
             activeChannel = id;
