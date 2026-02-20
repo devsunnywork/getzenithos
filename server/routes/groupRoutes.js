@@ -27,12 +27,22 @@ const requireRole = (roles) => {
             const group = await Group.findById(req.params.id || req.params.groupId);
             if (!group) return res.status(404).json({ message: 'Group not found' });
 
-            const member = group.members.find(m => m.user.toString() === req.user._id.toString());
-            if (!member || !roles.includes(member.role)) {
+            // Make sure the group object's isMember and getRole work
+            const isMember = group.isMember(req.user._id);
+            const userRole = group.getRole(req.user._id);
+
+            console.log('--- requireRole DEBUG ---');
+            console.log('User ID:', req.user._id);
+            console.log('Is Member?', isMember);
+            console.log('User Role:', userRole);
+            console.log('Required Roles:', roles);
+
+            if (!isMember || !roles.includes(userRole)) {
+                console.log('requireRole REJECTED! Returning 403');
                 return res.status(403).json({ message: 'Insufficient group permissions' });
             }
             req.group = group; // Pass group to next middleware
-            req.memberRole = member.role;
+            req.memberRole = userRole;
             next();
         } catch (e) {
             res.status(500).json({ message: e.message });
@@ -81,6 +91,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
         if (!group) return res.status(404).json({ message: 'Group not found' });
 
         const isMember = group.isMember(req.user._id);
+
+        console.log('--- DEBUG 403 ---');
+        console.log('req.user._id:', req.user._id);
+        console.log('group members extracted:', group.members.map(m => m.user?._id || m.user));
+        console.log('isMember:', isMember);
+        console.log('group.visibility:', group.visibility);
 
         if (group.visibility === 'private' && !isMember && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'This is a private group. You must join to view contents.' });
@@ -150,6 +166,34 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
             return res.json({ message: 'Join request sent to Admins' });
         }
     } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// POST Accept/Decline Join Request (Admins/Mods only)
+router.post('/:id/requests/:userId', [authMiddleware, requireRole(['admin', 'moderator'])], async (req, res) => {
+    try {
+        const { action } = req.body; // 'accept' or 'decline'
+        const group = req.group;
+        const targetUserId = req.params.userId;
+
+        // Check if request exists
+        if (!group.joinRequests.some(id => id.toString() === targetUserId.toString())) {
+            return res.status(404).json({ message: 'Join request not found' });
+        }
+
+        // Remove from requests queue
+        group.joinRequests = group.joinRequests.filter(id => id.toString() !== targetUserId.toString());
+
+        if (action === 'accept') {
+            if (!group.isMember(targetUserId)) {
+                group.members.push({ user: targetUserId, role: 'member' });
+            }
+        }
+
+        await group.save();
+        res.json({ message: `Request ${action}ed successfully` });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
 });
 
 // GET Fetch preview data from an Invite Code (public endpoint)

@@ -61,12 +61,40 @@ const groupSchema = new mongoose.Schema({
 
 // Helper to check if a user is a member
 groupSchema.methods.isMember = function (userId) {
-    return this.members.some(m => m.user.toString() === userId.toString());
+    const targetIdString = userId && userId.toString ? userId.toString() : String(userId);
+    return this.members.some(m => {
+        if (!m.user) return false;
+
+        let memberIdString = '';
+        if (m.user && m.user._id) {
+            memberIdString = m.user._id.toString();
+        } else if (typeof m.user === 'object' && m.user.toString) {
+            memberIdString = m.user.toString();
+        } else {
+            memberIdString = String(m.user);
+        }
+
+        return memberIdString === targetIdString;
+    });
 };
 
 // Helper to check role
 groupSchema.methods.getRole = function (userId) {
-    const member = this.members.find(m => m.user.toString() === userId.toString());
+    const targetIdString = userId && userId.toString ? userId.toString() : String(userId);
+    const member = this.members.find(m => {
+        if (!m.user) return false;
+
+        let memberIdString = '';
+        if (m.user && m.user._id) {
+            memberIdString = m.user._id.toString();
+        } else if (typeof m.user === 'object' && m.user.toString) {
+            memberIdString = m.user.toString();
+        } else {
+            memberIdString = String(m.user);
+        }
+
+        return memberIdString === targetIdString;
+    });
     return member ? member.role : null;
 };
 

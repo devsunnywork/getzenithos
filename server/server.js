@@ -198,7 +198,17 @@ app.use('/api/explore', require('./routes/exploreRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
 
 const PORT = process.env.PORT || 5000;
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"]
+    }
+});
 
-app.listen(PORT, () => {
+// Initialize Socket Handlers
+require('./socketHandlers')(io);
+
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

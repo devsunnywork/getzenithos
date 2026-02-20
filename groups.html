@@ -230,6 +230,34 @@
         </div>
     </div>
 
+    <!-- Invite Modal -->
+    <div id="invite-modal"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center fade-in">
+        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm border-white/10 shadow-2xl relative text-center">
+            <button onclick="document.getElementById('invite-modal').classList.add('hidden')"
+                class="absolute top-6 right-6 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            <div
+                class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                <i class="fas fa-user-plus text-2xl text-blue-500"></i>
+            </div>
+            <h2 class="text-xl font-black mb-2 uppercase tracking-tight">Recruit Operatives</h2>
+            <p class="text-[10px] text-slate-400 uppercase tracking-widest mb-8">Transmit this secure clearance code to
+                invite allies to your uplink.</p>
+
+            <div class="relative mb-6">
+                <input type="text" id="invite-code-display" readonly
+                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-4 text-center text-blue-400 font-mono text-xl tracking-[0.5em] focus:outline-none shadow-inner"
+                    value="------">
+                <div class="absolute inset-0 ring-1 ring-blue-500/30 rounded-xl pointer-events-none"></div>
+            </div>
+
+            <button onclick="copyInvite()"
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest py-4 rounded-xl transition shadow-lg shadow-blue-600/20 group">
+                <i class="fas fa-copy mr-2 group-hover:scale-110 transition"></i> Copy Link To Clipboard
+            </button>
+        </div>
+    </div>
+
     <!-- Code Snippet Modal -->
     <div id="snippet-modal"
         class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center fade-in">
@@ -267,19 +295,6 @@
 
     <script>
         // --- UI Utilities ---
-        const ZLoader = {
-            show: (msg = "Initializing...") => {
-                const loader = document.getElementById('zenith-loader');
-                const msgEl = loader.querySelector('.loader-msg');
-                if (msgEl) msgEl.innerText = msg;
-                if (loader) loader.classList.remove('opacity-0', 'pointer-events-none');
-            },
-            hide: () => {
-                const loader = document.getElementById('zenith-loader');
-                if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
-            }
-        };
-
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-white shadow-2xl z-[10000] border border-white/10 flex items-center gap-3 fade-in ${type === 'error' ? 'bg-red-900/90 shadow-red-500/20' : type === 'success' ? 'bg-green-900/90 shadow-green-500/20' : 'bg-blue-900/90 shadow-blue-500/20'
@@ -468,6 +483,26 @@
             }
         }
 
+        async function handleJoinRequest(userId, action) {
+            ZLoader.show("Processing Request...");
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}/requests/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ action })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+
+                showToast(data.message.toUpperCase(), "success");
+                openGroup(activeGroup._id); // Reload the group interface to refresh list
+            } catch (e) {
+                showToast(e.message, "error");
+            } finally {
+                ZLoader.hide();
+            }
+        }
+
         function renderGroupInterface() {
             let channelsHtml = '';
 
@@ -520,12 +555,29 @@
                         </div>
 
                     </div>
+
+                    ${isPrivileged && activeGroup.joinRequests && activeGroup.joinRequests.length > 0 ? `
+                    <div class="px-6 mb-4">
+                        <div class="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-2 bg-yellow-500/10 inline-block px-2 py-1 rounded">Pending Requests (${activeGroup.joinRequests.length})</div>
+                        ${activeGroup.joinRequests.map(r => `
+                            <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg mb-1 border border-white/5 shadow-sm">
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <div class="w-6 h-6 rounded-md bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] font-black shrink-0 border border-blue-500/20">${r.username.charAt(0).toUpperCase()}</div>
+                                    <span class="text-xs font-bold text-white truncate">${r.username}</span>
+                                </div>
+                                <div class="flex gap-1 shrink-0 ml-2">
+                                    <button onclick="handleJoinRequest('${r._id}', 'accept')" class="w-6 h-6 rounded bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white transition flex items-center justify-center" title="Accept"><i class="fas fa-check text-[10px]"></i></button>
+                                    <button onclick="handleJoinRequest('${r._id}', 'decline')" class="w-6 h-6 rounded bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition flex items-center justify-center" title="Decline"><i class="fas fa-times text-[10px]"></i></button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
                     
-                    ${isPrivileged && activeGroup.visibility === 'private' ? `
-                    <div class="p-4 border-t border-white/5">
-                        <button onclick="copyInvite()" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded overflow-hidden text-xs font-mono text-slate-400 flex items-center justify-between px-3 border border-white/10">
-                            <span class="truncate pr-2">Link: ${activeGroup.inviteCode || 'Hidden'}</span>
-                            <i class="fas fa-copy text-white"></i>
+                    ${isPrivileged ? `
+                    <div class="p-6 border-t border-white/5">
+                        <button onclick="openInviteModal()" class="w-full bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 hover:border-indigo-500 font-black uppercase text-xs tracking-widest py-3 rounded-xl transition shadow-lg flex justify-center items-center gap-2 group">
+                            <i class="fas fa-satellite-dish group-hover:animate-pulse"></i> Generate Invite
                         </button>
                     </div>` : ''}
                 </div>
@@ -763,11 +815,28 @@
             closeSnippetModal();
         }
 
-        function copyInvite() {
-            if (!activeGroup.inviteCode) return;
+        function openInviteModal() {
+            if (!activeGroup || !activeGroup.inviteCode) return;
             const link = `${window.location.origin}/invite.html?code=${activeGroup.inviteCode}`;
-            navigator.clipboard.writeText(link);
-            alert("Invite link copied to clipboard: \n" + link);
+            document.getElementById('invite-code-display').value = link;
+            document.getElementById('invite-modal').classList.remove('hidden');
+            document.getElementById('invite-modal').classList.add('flex');
+        }
+
+        function copyInvite() {
+            const linkInput = document.getElementById('invite-code-display');
+            if (!linkInput || !linkInput.value || linkInput.value === '------') return;
+
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                showToast("Invite link copied to clipboard", "success");
+                setTimeout(() => {
+                    document.getElementById('invite-modal').classList.add('hidden');
+                    document.getElementById('invite-modal').classList.remove('flex');
+                }, 1000);
+            }).catch(err => {
+                console.error("Clipboard err", err);
+                showToast("Failed to copy link", "error");
+            });
         }
 
         window.onload = init;
