@@ -16,6 +16,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/public/apple-touch-icon.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="public/css/design-system.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -129,8 +130,22 @@
             border-radius: 10px;
         }
 
-        .fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
+        .msg-bubble {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .message-box:hover .msg-bubble {
+            transform: scale(1.01);
+        }
+
+        .message-other .msg-bubble {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+
+        .message-mine .msg-bubble {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
         }
 
         @keyframes fadeIn {
@@ -143,6 +158,55 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .msg-context-menu {
+            position: absolute;
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            width: 160px;
+        }
+
+        .msg-context-menu button {
+            padding: 10px 15px;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: left;
+            color: #ccc;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .msg-context-menu button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        .msg-context-menu button.delete-btn {
+            color: #ef4444;
+        }
+
+        .msg-context-menu button.delete-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .message-box:hover .msg-more-btn {
+            opacity: 1;
+        }
+
+        .msg-more-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: #64748b;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -230,31 +294,102 @@
         </div>
     </div>
 
-    <!-- Invite Modal -->
-    <div id="invite-modal"
+    <!-- Group Settings Modal -->
+    <div id="group-settings-modal"
         class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center fade-in">
-        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm border-white/10 shadow-2xl relative text-center">
-            <button onclick="document.getElementById('invite-modal').classList.add('hidden')"
+        <div class="glass-panel p-8 rounded-3xl w-full max-w-md border-white/10 shadow-2xl relative">
+            <button onclick="document.getElementById('group-settings-modal').classList.add('hidden')"
                 class="absolute top-6 right-6 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-black mb-6 uppercase tracking-tight">Group Configuration</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Icon
+                        URL</label>
+                    <input type="text" id="edit-group-icon" placeholder="https://path-to-icon.png"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition">
+                </div>
+                <div>
+                    <label
+                        class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Designation</label>
+                    <input type="text" id="edit-group-name"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Mission
+                        Statement</label>
+                    <textarea id="edit-group-desc"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition h-24 resize-none"></textarea>
+                </div>
+                <div class="pt-4 border-t border-white/5">
+                    <h4 class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4">Danger Zone</h4>
+                    <button onclick="deleteGroup()"
+                        class="w-full border border-red-500/20 hover:border-red-500 bg-red-500/5 hover:bg-red-500/20 text-red-500 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition">Dismantle
+                        Hub</button>
+                </div>
+            </div>
+
+            <button onclick="updateGroup()"
+                class="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest py-4 rounded-xl transition">Apply
+                Changes</button>
+        </div>
+    </div>
+
+    <!-- Member Roster Modal -->
+    <div id="member-roster-modal"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center fade-in">
+        <div
+            class="glass-panel p-0 rounded-3xl w-full max-w-lg border-white/10 shadow-2xl relative overflow-hidden flex flex-col h-[70vh]">
+            <div class="px-8 py-6 border-b border-white/5 bg-[#0a0a0a]">
+                <h2 class="text-xl font-black uppercase tracking-tight">Verified Operatives</h2>
+                <button onclick="document.getElementById('member-roster-modal').classList.add('hidden')"
+                    class="absolute top-6 right-8 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="member-list-container" class="flex-grow overflow-y-auto p-4 custom-scrollbar bg-[#050505]">
+                <!-- Load Members Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Context Menu -->
+    <div id="msg-context-menu" class="msg-context-menu">
+        <button onclick="handleMsgDelete('me')" class="hover:bg-white/5 transition"><i
+                class="fas fa-trash-alt text-[10px]"></i> Delete for me</button>
+        <button id="del-everyone-btn" onclick="handleMsgDelete('everyone')" class="delete-btn"><i
+                class="fas fa-radiation text-[10px]"></i> Delete for everyone</button>
+    </div>
+
+    <!-- Custom Purge Confirmation Modal -->
+    <div id="purge-confirm-modal"
+        class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm hidden items-center justify-center fade-in">
+        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm border-red-500/20 shadow-2xl relative text-center">
             <div
-                class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
-                <i class="fas fa-user-plus text-2xl text-blue-500"></i>
+                class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                <i class="fas fa-radiation text-2xl text-red-500 animate-pulse"></i>
             </div>
-            <h2 class="text-xl font-black mb-2 uppercase tracking-tight">Recruit Operatives</h2>
-            <p class="text-[10px] text-slate-400 uppercase tracking-widest mb-8">Transmit this secure clearance code to
-                invite allies to your uplink.</p>
+            <h2 class="text-xl font-black text-white uppercase tracking-tight mb-2">Confirm Purge</h2>
+            <p class="text-slate-400 text-sm mb-8 font-medium">This action will permanently dismantle this message
+                across the neural network. This cannot be undone.</p>
 
-            <div class="relative mb-6">
-                <input type="text" id="invite-code-display" readonly
-                    class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-4 text-center text-blue-400 font-mono text-xl tracking-[0.5em] focus:outline-none shadow-inner"
-                    value="------">
-                <div class="absolute inset-0 ring-1 ring-blue-500/30 rounded-xl pointer-events-none"></div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('purge-confirm-modal').classList.add('hidden')"
+                    class="flex-grow py-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-black uppercase text-[10px] tracking-widest transition">Abort</button>
+                <button id="purge-confirm-btn"
+                    class="flex-grow py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition shadow-lg shadow-red-600/20">Confirm</button>
             </div>
+        </div>
+    </div>
+    </div>
+    </div>
+    </div>
 
-            <button onclick="copyInvite()"
-                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest py-4 rounded-xl transition shadow-lg shadow-blue-600/20 group">
-                <i class="fas fa-copy mr-2 group-hover:scale-110 transition"></i> Copy Link To Clipboard
-            </button>
+    <!-- Operative Dossier (Profile) Modal -->
+    <div id="user-profile-modal"
+        class="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md hidden items-center justify-center fade-in">
+        <div class="glass-panel p-1 rounded-3xl w-full max-w-sm border-white/10 shadow-2xl relative overflow-hidden">
+            <div id="profile-card-content">
+                <!-- Data populated via JS -->
+            </div>
         </div>
     </div>
 
@@ -314,10 +449,49 @@
         let groups = [];
         let activeGroup = null;
         let activeChannel = null;
-        let chatInterval = null;
+        let socket = null;
 
         async function init() {
             try {
+                // Initialize Socket
+                socket = io({
+                    auth: { token: token }
+                });
+
+                socket.on('connect', () => {
+                    console.log('Connected to Neural Socket Protocol');
+                });
+
+                socket.on('new_message', (msg) => {
+                    // Only render if it's for the current channel
+                    if (activeChannel === msg.channel) {
+                        appendMessageToDom(msg);
+                    }
+                });
+
+                socket.on('message_deleted', (data) => {
+                    if (activeChannel === data.channelId) {
+                        const box = document.querySelector(`[data-msg-id="${data.messageId}"]`);
+                        if (box) {
+                            box.innerHTML = `
+                                <div class="msg-bubble px-4 py-2 text-[13px] italic font-medium bg-white/5 border border-white/5 text-slate-500 rounded-2xl w-full text-center">
+                                    <i class="fas fa-ban mr-2 text-[10px]"></i> This message was deleted
+                                </div>
+                            `;
+                            box.classList.add('opacity-50');
+                            box.classList.remove('flex-row-reverse'); // Force neutral layout
+                        }
+                    }
+                });
+
+                socket.on('typing', ({ username }) => {
+                    showTypingIndicator(username);
+                });
+
+                socket.on('error', (err) => {
+                    showToast(err.message, "error");
+                });
+
                 // Get user info
                 const userRes = await fetch(`${API_BASE_URL}/api/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
                 currentUser = await userRes.json();
@@ -339,9 +513,6 @@
         }
 
         function renderDiscovery() {
-            // Stop chat polling if returning to discovery
-            if (chatInterval) clearInterval(chatInterval);
-
             let html = `
                 <div class="w-80 sidebar flex flex-col h-full z-[40]">
                     <div class="p-8 border-b border-white/5">
@@ -373,7 +544,7 @@
             html += `
                     </div>
                     <div class="p-6 border-t border-white/5">
-                        <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')" class="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition flex items-center justify-center gap-2"><i class="fas fa-plus text-blue-500"></i> New Uplink</button>
+                        <button onclick="const m=document.getElementById('create-group-modal'); m.classList.remove('hidden'); m.classList.add('flex');" class="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition flex items-center justify-center gap-2"><i class="fas fa-plus text-blue-500"></i> New Uplink</button>
                     </div>
                 </div>
 
@@ -528,10 +699,21 @@
                             <span class="text-xs font-bold uppercase tracking-widest">Back to Hub</span>
                         </div>
                     </div>
-                    <div class="p-6 border-b border-white/5 text-center">
-                        <div class="w-16 h-16 mx-auto bg-blue-600/20 text-blue-500 rounded-2xl flex items-center justify-center text-2xl font-black mb-3 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">${activeGroup.name.charAt(0)}</div>
+                    <div class="p-6 border-b border-white/5 text-center relative group/settings">
+                        ${isPrivileged ? `
+                        <button onclick="openGroupSettings()" class="absolute top-4 right-4 text-slate-500 hover:text-blue-500 transition tooltip-trigger" title="Hub Settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        ` : ''}
+                        
+                        <div class="w-16 h-16 mx-auto bg-blue-600/20 text-blue-500 rounded-2xl flex items-center justify-center text-2xl font-black mb-3 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                            <img src="${activeGroup.icon || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + activeGroup.name}" class="w-full h-full rounded-2xl object-cover ${!activeGroup.icon ? 'p-3' : ''}" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${activeGroup.name}'; this.className='w-full h-full rounded-2xl object-cover p-3'">
+                        </div>
                         <h2 class="font-bold text-white truncate px-2">${activeGroup.name}</h2>
-                        <span class="text-[10px] text-slate-500 uppercase mt-1 tracking-widest px-2 py-1 rounded bg-white/5"><i class="fas ${activeGroup.visibility === 'private' ? 'fa-lock text-red-400' : 'fa-globe text-blue-400'}"></i> ${activeGroup.visibility}</span>
+                        <div class="flex items-center justify-center gap-2 mt-1">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-widest px-2 py-1 rounded bg-white/5"><i class="fas ${activeGroup.visibility === 'private' ? 'fa-lock text-red-400' : 'fa-globe text-blue-400'}"></i> ${activeGroup.visibility}</span>
+                            <button onclick="openMemberRoster()" class="text-[10px] text-slate-500 hover:text-blue-400 uppercase tracking-widest px-2 py-1 rounded bg-white/5 transition"><i class="fas fa-users mr-1"></i> ${activeGroup.members.length}</button>
+                        </div>
                     </div>
                     
                     <div class="flex-grow overflow-y-auto custom-scrollbar py-4">
@@ -563,7 +745,7 @@
                             <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg mb-1 border border-white/5 shadow-sm">
                                 <div class="flex items-center gap-2 overflow-hidden">
                                     <div class="w-6 h-6 rounded-md bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] font-black shrink-0 border border-blue-500/20">${r.username.charAt(0).toUpperCase()}</div>
-                                    <span class="text-xs font-bold text-white truncate">${r.username}</span>
+                                    <span class="text-xs font-bold text-white truncate cursor-pointer hover:text-blue-400 transition" onclick="openProfileCard('${r._id}')">${r.username}</span>
                                 </div>
                                 <div class="flex gap-1 shrink-0 ml-2">
                                     <button onclick="handleJoinRequest('${r._id}', 'accept')" class="w-6 h-6 rounded bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white transition flex items-center justify-center" title="Accept"><i class="fas fa-check text-[10px]"></i></button>
@@ -609,15 +791,16 @@
                                     <button onclick="document.getElementById('snippet-modal').classList.remove('hidden'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-blue-600 hover:text-white text-left transition w-full group">
                                         <i class="fas fa-code text-blue-500 w-4 group-hover:text-white transition"></i> Code Snippet
                                     </button>
-                                    <button onclick="alert('Media uploads initializing in next patch'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-purple-600 hover:text-white text-left transition w-full group">
+                                    <button onclick="triggerFileUpload('media'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-purple-600 hover:text-white text-left transition w-full group">
                                         <i class="fas fa-image text-purple-500 w-4 group-hover:text-white transition"></i> Media
                                     </button>
-                                    <button onclick="alert('File uploads launching via The Vault soon.'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-orange-600 hover:text-white text-left transition w-full border-t border-white/5 group">
+                                    <button onclick="triggerFileUpload('doc'); toggleAttachmentMenu(event);" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-300 hover:bg-orange-600 hover:text-white text-left transition w-full border-t border-white/5 group">
                                         <i class="fas fa-file-alt text-orange-500 w-4 group-hover:text-white transition"></i> Document
                                     </button>
                                 </div>
                             </div>
                             
+                            <input type="file" id="chat-file-input" class="hidden" onchange="handleFileUpload(event)">
                             <input type="text" id="chat-input" placeholder="Transmit message to channel..." onkeypress="handleChatKey(event)" class="w-full bg-[#111] border border-white/10 rounded-xl px-5 h-12 text-white focus:border-blue-500 focus:outline-none transition font-sans shadow-inner">
                             
                             <button onclick="sendMessage()" class="w-12 h-12 shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-lg shadow-blue-600/20 flex items-center justify-center">
@@ -663,6 +846,11 @@
             document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
             event.currentTarget.classList.add('active');
 
+            // Join Socket Room
+            if (socket) {
+                socket.emit('join_channel', { groupId: activeGroup._id, channelId: activeChannel });
+            }
+
             loadMessages();
         }
 
@@ -677,24 +865,380 @@
                 const messages = await res.json();
                 renderMessages(messages);
 
-                // Clear old polling and start new one
-                if (chatInterval) clearInterval(chatInterval);
-                chatInterval = setInterval(pollMessages, 3000); // Poll every 3 seconds for now (websockets better)
-
             } catch (e) { console.error('Error loading msgs'); }
         }
 
-        async function pollMessages() {
-            if (!activeChannel) return;
+        function appendMessageToDom(m) {
+            const container = document.getElementById('messages-container');
+            if (!container) return;
+
+            // Remove ghost placeholder if it exists
+            const ghost = container.querySelector('.fa-ghost');
+            if (ghost) container.innerHTML = '';
+
+            const isMe = m.sender._id === currentUser._id;
+
+            // Check if we need to show the header (if last message was from a different user)
+            const lastMsg = container.lastElementChild;
+            let showHeader = true;
+            if (lastMsg) {
+                const lastDataUser = lastMsg.getAttribute('data-user');
+                if (lastDataUser === m.sender._id) showHeader = false;
+            }
+
+            const div = document.createElement('div');
+            div.setAttribute('data-user', m.sender._id);
+            div.className = `flex gap-4 mb-${showHeader ? '6' : '1'} message-box ${isMe ? 'message-mine flex-row-reverse' : 'message-other'} fade-in`;
+
+            div.innerHTML = `
+                ${!isMe && showHeader ? `
+                    <img src="${m.sender.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + m.sender.username}" class="w-8 h-8 rounded-full shadow-md bg-white/5 shrink-0 mt-1 cursor-pointer hover:ring-2 hover:ring-blue-500 transition" onclick="openProfileCard('${m.sender._id}')">
+                ` : `<div class="w-8 shrink-0"></div>`}
+                
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%]">
+                    ${showHeader ? `
+                        <div class="flex items-baseline gap-2 mb-1 px-1">
+                            <span class="font-bold text-xs ${isMe ? 'text-blue-400' : 'text-slate-300'} cursor-pointer hover:text-blue-500 transition" onclick="openProfileCard('${m.sender._id}')">${m.sender.username}</span>
+                            <span class="text-[9px] text-slate-600">${new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${m.type === 'snippet' ? renderSnippetHtml(m) :
+                    m.type === 'image' ? `
+                        <div class="msg-bubble p-1 relative shadow-md rounded-2xl overflow-hidden bg-white/5 border border-white/10 max-w-sm">
+                            <img src="${m.fileUrl}" class="rounded-xl w-full cursor-pointer hover:opacity-90 transition" onclick="window.open('${m.fileUrl}', '_blank')">
+                        </div>
+                      ` :
+                        m.type === 'file' ? `
+                        <a href="${m.fileUrl}" target="_blank" class="msg-bubble flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition group/file">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover/file:bg-orange-500 group-hover/file:text-white transition">
+                                <i class="fas fa-file-alt text-lg"></i>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-sm font-bold text-white truncate max-w-[150px]">${m.content}</div>
+                                <div class="text-[10px] text-slate-500 uppercase font-black tracking-widest">${(m.fileMeta?.size / 1024).toFixed(1)} KB</div>
+                            </div>
+                            <i class="fas fa-download text-slate-600 ml-2 group-hover/file:text-white transition"></i>
+                        </a>
+                      ` : `
+                        <div class="msg-bubble px-4 py-2 text-[15px] leading-relaxed relative shadow-md rounded-2xl ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}">
+                            ${m.content}
+                        </div>
+                    `}
+                </div>
+            `;
+
+            container.appendChild(div);
+
+            // Auto-scroll logic: if user is near bottom, force scroll
+            const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 200;
+            if (isScrolledToBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
+
+            if (m.type === 'snippet') Prism.highlightAllUnder(div);
+        }
+
+        let typingTimeout = null;
+        function emitTyping() {
+            if (!socket || !activeGroup || !activeChannel) return;
+            socket.emit('typing', { groupId: activeGroup._id, channelId: activeChannel, username: currentUser.username });
+        }
+
+        async function openGroupSettings() {
+            document.getElementById('edit-group-name').value = activeGroup.name;
+            document.getElementById('edit-group-desc').value = activeGroup.description || '';
+            document.getElementById('edit-group-icon').value = activeGroup.icon || '';
+            document.getElementById('group-settings-modal').classList.remove('hidden');
+            document.getElementById('group-settings-modal').classList.add('flex');
+        }
+
+        async function updateGroup() {
+            const name = document.getElementById('edit-group-name').value;
+            const description = document.getElementById('edit-group-desc').value;
+            const icon = document.getElementById('edit-group-icon').value;
+
+            ZLoader.show("Committing changes...");
             try {
-                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}/channels/${activeChannel}/messages`, {
+                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ name, description, icon })
+                });
+                if (!res.ok) throw new Error("Failed to update");
+
+                showToast("Configuration Updated", "success");
+                document.getElementById('group-settings-modal').classList.add('hidden');
+                openGroup(activeGroup._id); // Refresh
+            } catch (e) {
+                showToast(e.message, "error");
+            } finally { ZLoader.hide(); }
+        }
+
+        async function deleteGroup() {
+            if (!confirm("CRITICAL WARNING: This will permanently dismantle the entire Tech Club subspace. Proceed?")) return;
+
+            ZLoader.show("Dismantling Subspace...");
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}`, {
+                    method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (res.ok) {
-                    const messages = await res.json();
-                    renderMessages(messages, true); // true = smooth scroll only if already at bottom
+                if (!res.ok) throw new Error("Dismantle aborted by system.");
+
+                showToast("Subspace Nuked", "success");
+                await loadGroups(); // Refresh list
+                renderDiscovery();
+            } catch (e) {
+                showToast(e.message, "error");
+            } finally { ZLoader.hide(); }
+        }
+
+        async function openMemberRoster() {
+            document.getElementById('member-roster-modal').classList.remove('hidden');
+            document.getElementById('member-roster-modal').classList.add('flex');
+            loadMembers();
+        }
+
+        async function loadMembers() {
+            const container = document.getElementById('member-list-container');
+            container.innerHTML = '<div class="flex justify-center p-8"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></div>';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}/members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const members = await res.json();
+
+                let html = '';
+                const isAdmin = activeGroup.currentUserRole === 'admin';
+
+                members.forEach(m => {
+                    html += `
+                        <div class="flex items-center justify-between p-4 mb-2 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                            <div class="flex items-center gap-3 cursor-pointer" onclick="openProfileCard('${m.user._id}')">
+                                <img src="${m.user.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + m.user.username}" class="w-10 h-10 rounded-full border border-white/10">
+                                <div>
+                                    <div class="font-bold text-sm text-white">${m.user.username}</div>
+                                    <div class="text-[9px] font-black uppercase tracking-widest ${m.role === 'admin' ? 'text-blue-500' : 'text-slate-500'}">${m.role}</div>
+                                </div>
+                            </div>
+                            
+                            ${isAdmin && m.user._id !== currentUser._id ? `
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                    <button onclick="kickMember('${m.user._id}')" class="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition flex items-center justify-center text-xs" title="Kick"><i class="fas fa-user-minus"></i></button>
+                                    <button onclick="blockMember('${m.user._id}')" class="w-8 h-8 rounded-lg bg-slate-500/10 hover:bg-slate-700 text-white transition flex items-center justify-center text-xs" title="Block"><i class="fas fa-ban"></i></button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) { container.innerHTML = '<p class="text-center text-red-500 py-8">Failed to sync roster.</p>'; }
+        }
+
+        async function openProfileCard(userId) {
+            ZLoader.show("Syncing Dossier...");
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/auth/profile/${userId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.message || "Failed to fetch dossier");
                 }
-            } catch (e) { }
+                const user = await res.json();
+                console.log('Operative Dossier Received:', user);
+
+                const card = document.getElementById('profile-card-content');
+                const level = Math.floor((user.xp || 0) / 100);
+
+                card.innerHTML = `
+                    <div class="relative h-32 bg-gradient-to-br from-blue-600 to-indigo-900 overflow-hidden">
+                        <div class="absolute inset-0 bg-black/20"></div>
+                        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                        <button onclick="document.getElementById('user-profile-modal').classList.add('hidden')" class="absolute top-4 right-4 z-10 text-white/50 hover:text-white transition"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="px-6 pb-8 -mt-12 relative text-center">
+                        <img src="${user.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.username}" class="w-24 h-24 rounded-full border-4 border-[#020202] mx-auto mb-4 bg-[#0a0a0a] shadow-2xl">
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight">${user.username || 'Unknown Operative'}</h3>
+                        <div class="flex items-center justify-center gap-2 mt-1">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${user.role || 'Member'}</span>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">Level ${level}</span>
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-white/5 rounded-2xl border border-white/5 text-left">
+                            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <i class="fas fa-layer-group text-blue-500"></i> Active Uplinks
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                ${user.groups && user.groups.length > 0 ? user.groups.map(g => `
+                                    <div class="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5 hover:border-white/10 transition">
+                                        ${g.icon ? `<img src="${g.icon}" class="w-4 h-4 rounded">` : `<div class="w-4 h-4 rounded bg-blue-600/20 flex items-center justify-center text-[8px] font-bold text-blue-400">${g.name.charAt(0)}</div>`}
+                                        <span class="text-xs font-bold text-slate-300">${g.name}</span>
+                                    </div>
+                                `).join('') : '<div class="text-xs text-slate-600 font-bold italic">No public uplinks detected.</div>'}
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex gap-3">
+                            <button onclick="showv201Warning()" class="flex-grow bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+                                <i class="fas fa-comments"></i> Dispatch Comm
+                            </button>
+                            <button class="w-12 h-12 bg-white/5 hover:bg-white/10 text-slate-400 rounded-2xl border border-white/5 transition flex items-center justify-center">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('user-profile-modal').classList.remove('hidden');
+                document.getElementById('user-profile-modal').classList.add('flex');
+            } catch (e) { showToast(e.message, "error"); }
+            finally { ZLoader.hide(); }
+        }
+
+        function showv201Warning() {
+            showToast("Message option will be introduced in version 2.01", "info");
+        }
+
+        async function kickMember(userId) {
+            if (!confirm("Kick this operative from the Tech Club?")) return;
+            manageMember(userId, 'kick');
+        }
+
+        async function blockMember(userId) {
+            if (!confirm("CRITICAL: This will ban the operative from ever re-joining. Proceed?")) return;
+            manageMember(userId, 'block');
+        }
+
+        async function manageMember(userId, action) {
+            ZLoader.show("Syncing Roster...");
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}/members/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ action })
+                });
+                if (!res.ok) throw new Error("Command rejected.");
+                showToast("Roster Adjusted", "success");
+                loadMembers();
+                openGroup(activeGroup._id); // Refresh group data
+            } catch (e) { showToast(e.message, "error"); }
+            finally { ZLoader.hide(); }
+        }
+
+        function triggerFileUpload(type) {
+            const input = document.getElementById('chat-file-input');
+            if (type === 'media') input.accept = 'image/*';
+            else input.accept = '.pdf,.doc,.docx,.txt,.zip,.rar,.7z';
+            input.click();
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 10 * 1024 * 1024) return showToast("File exceed 10MB limit.", "error");
+
+            ZLoader.show(`Initializing transmission of ${file.name}...`);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE_URL}/api/groups/${activeGroup._id}/channels/${activeChannel}/messages/upload`);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    ZLoader.show(`Transmitting: ${percent}%`);
+                }
+            };
+
+            xhr.onload = function () {
+                ZLoader.hide();
+                if (xhr.status === 201) {
+                    showToast("Transmission Successful", "success");
+                    loadMessages();
+                } else {
+                    showToast("Upload failed", "error");
+                }
+                event.target.value = '';
+            };
+
+            xhr.onerror = function () {
+                ZLoader.hide();
+                showToast("Uplink lost during transmission", "error");
+                event.target.value = '';
+            };
+
+            xhr.send(formData);
+        }
+
+        let currentMsgId = null;
+        function showMsgMenu(e, msgId, isMine) {
+            e.preventDefault();
+            e.stopPropagation();
+            currentMsgId = msgId;
+            const menu = document.getElementById('msg-context-menu');
+            const delEveryone = document.getElementById('del-everyone-btn');
+
+            delEveryone.style.display = isMine ? 'flex' : 'none';
+
+            menu.style.display = 'flex';
+            menu.style.left = `${e.clientX - 160}px`;
+            menu.style.top = `${e.clientY}px`;
+
+            // Global click to close
+            const close = () => {
+                menu.style.display = 'none';
+                document.removeEventListener('click', close);
+            };
+            setTimeout(() => document.addEventListener('click', close), 10);
+        }
+
+        async function handleMsgDelete(mode) {
+            if (mode === 'me') {
+                const box = document.querySelector(`[data-msg-id="${currentMsgId}"]`);
+                if (box) box.remove();
+                showToast("Message hidden for you", "info");
+                return;
+            }
+
+            // Custom Confirmation Modal
+            const modal = document.getElementById('purge-confirm-modal');
+            const confirmBtn = document.getElementById('purge-confirm-btn');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            confirmBtn.onclick = async () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/groups/${activeGroup._id}/channels/${activeChannel}/messages/${currentMsgId}?mode=everyone`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error("Deletion aborted by system");
+                    showToast("Message purged from network", "success");
+                    loadMessages();
+                } catch (e) { showToast(e.message, "error"); }
+            };
+        }
+
+        function showTypingIndicator(username) {
+            const id = 'typing-indicator';
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = id;
+                el.className = 'absolute bottom-20 left-8 text-[10px] text-slate-500 font-bold uppercase tracking-widest italic animate-pulse';
+                document.querySelector('.chat-area').appendChild(el);
+            }
+            el.innerText = `${username} is typing...`;
+
+            if (typingTimeout) clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => el.remove(), 2000);
         }
 
         function renderMessages(messages, isPoll = false) {
@@ -721,25 +1265,59 @@
                 const isMe = m.sender._id === currentUser._id;
                 const showHeader = prevSender !== m.sender._id;
 
+                if (m.isDeleted) {
+                    html += `
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4 px-8 fade-in opacity-50">
+                            <div class="msg-bubble px-4 py-2 text-[13px] italic font-medium bg-white/5 border border-white/5 text-slate-500 rounded-2xl">
+                                <i class="fas fa-ban mr-2 text-[10px]"></i> This message was deleted
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
                 html += `
-                    <div class="flex gap-4 mb-${showHeader ? '6' : '1'} message-box ${isMe ? 'message-mine flex-row-reverse' : 'message-other'}">
-                        ${!isMe && showHeader ? `
-                            <img src="${m.sender.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + m.sender.username}" class="w-8 h-8 rounded-full shadow-md bg-white/5 shrink-0 mt-1">
-                        ` : `<div class="w-8 shrink-0"></div>`}
+                    <div class="flex gap-4 mb-${showHeader ? '6' : '1'} message-box ${isMe ? 'message-mine flex-row-reverse' : 'message-other'} fade-in group/msg" data-msg-id="${m._id}" data-can-delete="${isMe}">
+                        <div class="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-1 shadow-inner ring-1 ring-white/10 cursor-pointer" onclick="openProfileCard('${m.sender._id}')">
+                            <img src="${m.sender.profile?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + m.sender.username}" class="w-full h-full object-cover">
+                        </div>
                         
-                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%]">
+                        <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] relative">
                             ${showHeader ? `
                                 <div class="flex items-baseline gap-2 mb-1 px-1">
-                                    <span class="font-bold text-xs ${isMe ? 'text-blue-400' : 'text-slate-300'}">${m.sender.username}</span>
+                                    <span class="font-bold text-xs ${isMe ? 'text-blue-400' : 'text-slate-300'} cursor-pointer hover:text-blue-500 transition" onclick="openProfileCard('${m.sender._id}')">${m.sender.username}</span>
                                     <span class="text-[9px] text-slate-600">${new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                             ` : ''}
                             
-                            ${m.type === 'snippet' ? renderSnippetHtml(m) : `
-                                <div class="msg-bubble px-4 py-2 text-[15px] leading-relaxed relative shadow-md rounded-2xl ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}">
-                                    ${m.content}
-                                </div>
-                            `}
+                            <div class="flex items-center gap-2 group/bubble">
+                                ${isMe ? `<i class="fas fa-ellipsis-v msg-more-btn p-2" onclick="showMsgMenu(event, '${m._id}', true)"></i>` : ''}
+                                
+                                ${m.type === 'snippet' ? renderSnippetHtml(m) :
+                        m.type === 'image' ? `
+                                    <div class="msg-bubble p-1 relative shadow-md rounded-2xl overflow-hidden bg-white/5 border border-white/10 max-w-sm">
+                                        <img src="${m.fileUrl}" class="rounded-xl w-full cursor-pointer hover:opacity-90 transition" onclick="window.open('${m.fileUrl}', '_blank')">
+                                    </div>
+                                  ` :
+                            m.type === 'file' ? `
+                                    <a href="${m.fileUrl}" target="_blank" class="msg-bubble flex items-center gap-4 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition group/file">
+                                        <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover/file:bg-orange-500 group-hover/file:text-white transition">
+                                            <i class="fas fa-file-alt text-lg"></i>
+                                        </div>
+                                        <div class="text-left">
+                                            <div class="text-sm font-bold text-white truncate max-w-[150px]">${m.content}</div>
+                                            <div class="text-[10px] text-slate-500 uppercase font-black tracking-widest">${(m.fileMeta?.size / 1024).toFixed(1)} KB</div>
+                                        </div>
+                                        <i class="fas fa-download text-slate-600 ml-2 group-hover/file:text-white transition"></i>
+                                    </a>
+                                  ` : `
+                                    <div class="msg-bubble px-4 py-2 text-[15px] leading-relaxed relative shadow-md rounded-2xl ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}">
+                                        ${m.content}
+                                    </div>
+                                `}
+
+                                ${!isMe ? `<i class="fas fa-ellipsis-v msg-more-btn p-2" onclick="showMsgMenu(event, '${m._id}', false)"></i>` : ''}
+                            </div>
                         </div>
                     </div>
                 `;

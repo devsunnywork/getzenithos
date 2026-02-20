@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     xp: { type: Number, default: 0 },
     enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
     activeCareers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
+    groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
     courseProgress: [{
         courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
         completedLectures: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Lecture' }],

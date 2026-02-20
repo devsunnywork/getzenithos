@@ -207,6 +207,7 @@ const io = require('socket.io')(server, {
 });
 
 // Initialize Socket Handlers
+app.set('io', io);
 require('./socketHandlers')(io);
 
 server.listen(PORT, () => {

@@ -78,6 +78,20 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
+// Get Public User Dossier
+router.get('/profile/:id', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .select('username profile.avatar profile.status xp role groups')
+            .populate('groups', 'name icon');
+
+        if (!user) return res.status(404).json({ message: 'Operative not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Update Profile
 const upload = require('../middleware/uploadMiddleware');
 

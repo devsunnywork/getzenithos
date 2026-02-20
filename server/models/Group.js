@@ -5,6 +5,7 @@ const groupSchema = new mongoose.Schema({
     description: { type: String },
     tags: [{ type: String }],
     visibility: { type: String, enum: ['public', 'private'], default: 'public' },
+    icon: { type: String, default: null }, // URL to group icon
     inviteCode: { type: String, unique: true }, // Deep-link invite code
     creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
@@ -14,6 +15,7 @@ const groupSchema = new mongoose.Schema({
         role: { type: String, enum: ['admin', 'moderator', 'member'], default: 'member' },
         joinedAt: { type: Date, default: Date.now }
     }],
+    bannedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     joinRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // For private groups
 
     // Structure
