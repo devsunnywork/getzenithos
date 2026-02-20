@@ -75,6 +75,7 @@ const userSchema = new mongoose.Schema({
     },
     bonusClaimed: { type: Boolean, default: false },
     usedCheatCodes: [{ type: String }],
+    lastSeen: { type: Date },
     createdAt: { type: Date, default: Date.now }
 });
 

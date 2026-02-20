@@ -583,6 +583,40 @@
             }
         }
 
+        .blink {
+            animation: zenith-blink 1s ease-in-out infinite;
+        }
+
+        @keyframes zenith-blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .pulse {
+            animation: zenith-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes zenith-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(0.95);
+            }
+        }
+
         .glass-card:hover {
             border-color: rgba(0, 112, 255, 0.3);
             background: linear-gradient(135deg, rgba(15, 25, 50, 0.7) 0%, rgba(5, 10, 20, 0.9) 100%);
@@ -634,7 +668,7 @@
 
         /* Fluid Typography */
         #page-title {
-            font-size: clamp(1.5rem, 3vw, 2.5rem) !important;
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem) !important;
             line-height: 1.2;
         }
 
@@ -792,7 +826,7 @@
                             <span id="mobile-balance-display"
                                 style="font-size: 24px; font-weight: 900; color: #0070ff;">₹0.00</span>
                         </div>
-                        <button onclick="loadPage('helpdesk', 'topup'); closeMobileMenu();"
+                        <button onclick="state.supportTab='topup'; loadPage('profile', 'support'); closeMobileMenu();"
                             style="width: 36px; height: 36px; background: #0070ff; border: none; border-radius: 10px; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;">
                             <i class="fas fa-plus"></i>
                         </button>
@@ -863,19 +897,11 @@
                     </button>
 
                     <div class="px-12 mt-12 mb-6 text-[10px] text-slate-600 font-bold tracking-[0.3em] uppercase">System
-                        Support</div>
+                        Management</div>
                     <button onclick="loadPage('store')" class="sidebar-item" id="nav-store">
                         <i class="fas fa-shopping-cart w-5"></i> Resource Store
                     </button>
-                    <button onclick="loadPage('health')" class="sidebar-item" id="nav-health">
-                        <i class="fas fa-heartbeat w-5"></i> Vital Stats
-                    </button>
-                    <button onclick="loadPage('profile')" class="sidebar-item" id="nav-profile">
-                        <i class="fas fa-user-shield w-5"></i> Identity Hub
-                    </button>
-                    <button onclick="loadPage('helpdesk')" class="sidebar-item" id="nav-helpdesk">
-                        <i class="fas fa-headset w-5"></i> Neural Support
-                    </button>
+
                     <button onclick="loadPage('leaderboard')" class="sidebar-item" id="nav-leaderboard">
                         <i class="fas fa-trophy w-5"></i> Global Rankings
                     </button>
@@ -931,7 +957,7 @@
                                 class="flex items-center gap-4 bg-slate-900/40 px-5 py-2.5 rounded-2xl border border-white/5">
                                 <i class="fas fa-wallet text-blue-500 text-sm"></i>
                                 <span id="top-balance-display" class="font-black text-blue-500 text-base">₹0.00</span>
-                                <button onclick="loadPage('helpdesk', 'topup')"
+                                <button onclick="state.supportTab='topup'; loadPage('profile', 'support')"
                                     class="w-6 h-6 bg-blue-600/20 hover:bg-blue-600 rounded-lg text-blue-500 hover:text-white flex items-center justify-center transition">
                                     <i class="fas fa-plus text-[10px]"></i>
                                 </button>
@@ -956,7 +982,7 @@
                     </div>
                 </nav>
 
-                <div id="app-content" class="flex-grow overflow-y-auto px-14 pb-14 transition-all duration-500">
+                <div id="app-content" class="flex-grow overflow-y-auto px-14 pb-14 pt-10 transition-all duration-500">
                     <!-- Dynamic Content -->
                 </div>
             </main>
