@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/public/apple-touch-icon.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <link rel="stylesheet" href="public/css/design-system.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -454,7 +454,7 @@
         async function init() {
             try {
                 // Initialize Socket
-                socket = io({
+                socket = io(API_BASE_URL, {
                     auth: { token: token }
                 });
 
