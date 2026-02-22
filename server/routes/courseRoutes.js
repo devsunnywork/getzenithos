@@ -38,6 +38,37 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Public: View Course Preview (Landing Page Data)
+router.get('/:id/preview', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id).populate({
+            path: 'units',
+            populate: {
+                path: 'lectures',
+                select: '_id title videoUrl duration'
+            }
+        });
+
+        if (!course) return res.status(404).json({ message: 'Module not found.' });
+
+        // Identify free preview video (first lecture of first unit)
+        let previewVideoUrl = null;
+        if (course.units && course.units[0] && course.units[0].lectures && course.units[0].lectures[0]) {
+            previewVideoUrl = course.units[0].lectures[0].videoUrl;
+        }
+
+        const previewData = course.toObject();
+        previewData.previewVideoUrl = previewVideoUrl;
+
+        // Use real features from the model or default to empty
+        previewData.features = course.features || [];
+
+        res.json(previewData);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Private: Enroll/Buy Course
 router.post('/:id/enroll', auth, async (req, res) => {
     try {

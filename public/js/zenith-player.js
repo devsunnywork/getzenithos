@@ -990,20 +990,51 @@ function renderVideo(lec) {
         console.log('Video URL found:', src);
 
         if (src.includes('youtube') || src.includes('youtu.be')) {
-            const id = src.split('v=')[1] || src.split('/').pop().split('?')[0];
-            console.log('YouTube video detected, ID:', id);
-            videoHtml = `<iframe id="video-player" class="w-full h-full" src="https://www.youtube.com/embed/${id}?enablejsapi=1&autoplay=1&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            let id = '';
+            let listId = '';
 
-            // Start tracking immediately for YouTube (can't detect play/pause easily)
-            setTimeout(() => {
-                if (window.startWatchTimeTracking) {
-                    window.startWatchTimeTracking(lectureId, courseId);
-                }
-            }, 1000);
+            // Extract List ID
+            if (src.includes('list=')) {
+                listId = src.split('list=')[1].split('&')[0];
+            }
+
+            // Extract Video ID
+            if (src.includes('v=')) {
+                id = src.split('v=')[1].split('&')[0];
+            } else if (src.includes('youtu.be/')) {
+                id = src.split('youtu.be/')[1].split('?')[0];
+            } else if (src.includes('embed/')) {
+                id = src.split('embed/')[1].split('?')[0];
+            }
+
+            console.log('YouTube detection:', { id, listId });
+
+            let embedUrl = '';
+            if (id) {
+                // Single video (optionally with playlist context)
+                embedUrl = `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&autoplay=1&rel=0&origin=${window.location.origin}`;
+                if (listId) embedUrl += `&list=${listId}`;
+            } else if (listId) {
+                // Playlist only
+                embedUrl = `https://www.youtube-nocookie.com/embed/videoseries?list=${listId}&enablejsapi=1&autoplay=1&rel=0&origin=${window.location.origin}`;
+            }
+
+            if (embedUrl) {
+                videoHtml = `<iframe id="video-player" class="w-full h-full" src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+
+                // Start tracking immediately for YouTube
+                setTimeout(() => {
+                    if (window.startWatchTimeTracking) {
+                        window.startWatchTimeTracking(lectureId, courseId);
+                    }
+                }, 1000);
+            } else {
+                console.error('Failed to parse YouTube URL:', src);
+            }
         } else if (src.includes('strp2p.live') || src.includes('iframe') || src.includes('embed') || src.includes('player') || !src.endsWith('.mp4') && !src.endsWith('.webm') && !src.endsWith('.ogg')) {
             // Streaming URLs or embed links - use iframe
             console.log('Streaming/Embed URL detected, using iframe');
-            videoHtml = `<iframe id="video-player" class="w-full h-full" src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen frameborder="0"></iframe>`;
+            videoHtml = `<iframe id="video-player" class="w-full h-full" src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
 
             setTimeout(() => {
                 if (window.startWatchTimeTracking) {

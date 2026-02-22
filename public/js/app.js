@@ -971,7 +971,7 @@ async function renderStoreCatalog(container) {
             const displayPrice = c.isFree ? 0 : (c.price || 0);
 
             return `
-                <div class="glass-card rounded-[4rem] overflow-hidden group border border-white/5 hover:border-blue-500/30 transition-all duration-700 hover:-translate-y-2">
+                <div class="glass-card rounded-[4rem] overflow-hidden group border border-white/5 hover:border-blue-500/30 transition-all duration-700 hover:-translate-y-2 cursor-pointer" onclick="showCourseLandingPage('${c._id}')">
                     <div class="h-56 bg-gradient-to-br from-slate-900 to-black relative overflow-hidden">
                         <div class="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-all"></div>
                         <div class="absolute bottom-10 left-10 right-10">
@@ -981,7 +981,7 @@ async function renderStoreCatalog(container) {
                     </div>
                     <div class="p-10 flex justify-between items-center">
                         ${isEnrolled ? `<span class="text-green-500 font-black uppercase text-[10px] tracking-widest"><i class="fas fa-check-circle mr-2"></i> SYNCED</span>` : `<span class="text-3xl font-black syne tracking-tighter">₹${displayPrice.toLocaleString()}</span>`}
-                        <button onclick="${isEnrolled ? `openPlayer('${c._id}')` : `promptEnroll('${c._id}', '${c.title}', ${displayPrice})`}" class="px-8 py-4 ${isEnrolled ? 'bg-slate-900 text-slate-400' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30'} rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-110 transition-all">
+                        <button onclick="event.stopPropagation(); ${isEnrolled ? `openPlayer('${c._id}')` : `showCheckout('${c._id}')`}" class="px-8 py-4 ${isEnrolled ? 'bg-slate-900 text-slate-400' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30'} rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-110 transition-all">
                             ${isEnrolled ? 'Launch' : 'Acquire'}
                         </button>
                     </div>
@@ -989,6 +989,384 @@ async function renderStoreCatalog(container) {
             `;
         }).join('');
     } catch (err) { list.innerHTML = `<p class="col-span-3 text-center text-red-500 uppercase font-black text-xs tracking-widest">Access Denied: Database Offline</p>`; }
+}
+
+async function showCourseLandingPage(id) {
+    try {
+        ZLoader.show("Accessing Module Intel...");
+        const res = await fetch(API_BASE_URL + `/api/courses/${id}/preview`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const course = await res.json();
+        ZLoader.hide();
+
+        if (!res.ok) throw new Error(course.message || "Failed to fetch course data");
+
+        const displayPrice = course.isFree ? 0 : (course.price || 0);
+
+        // Open Zenith Modal with premium landing page content
+        const modal = document.getElementById('zenith-modal');
+        const content = document.getElementById('zenith-modal-content');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-10 py-20 pb-40">
+                <!-- Hero Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center mb-32">
+                    <div class="animate-in slide-in-from-left duration-700">
+                        <div class="inline-flex items-center gap-3 px-4 py-2 bg-blue-600/10 rounded-xl border border-blue-500/20 mb-8">
+                            <span class="relative flex h-2 w-2">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                            </span>
+                            <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Available Procurement</span>
+                        </div>
+                        <h1 class="text-7xl font-black syne tracking-tighter text-white leading-none mb-8 uppercase italic">${course.title}</h1>
+                        <p class="text-xl text-slate-400 font-medium leading-relaxed mb-12 max-w-xl">${course.description || "Initialize deep neural synchronization with this advanced tactical module designed for high-performance operatives."}</p>
+                        
+                        <div class="flex items-center gap-10">
+                            <div>
+                                <div class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Procurement Cost</div>
+                                <div class="text-5xl font-black syne text-white tracking-tighter">₹${displayPrice.toLocaleString()}</div>
+                            </div>
+                            <div class="w-px h-16 bg-white/10"></div>
+                            <button onclick="promptEnroll('${course._id}', '${course.title}', ${displayPrice})" 
+                                class="px-12 py-6 bg-blue-600 hover:bg-blue-500 rounded-3xl text-white font-black uppercase text-xs tracking-[0.3em] transition-all active:scale-95 shadow-[0_0_50px_rgba(37,99,235,0.4)]">
+                                Authorize Procurement
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative animate-in zoom-in duration-1000">
+                        <div class="absolute inset-0 bg-blue-600/20 blur-[120px] rounded-full"></div>
+                        <div class="glass-card aspect-video rounded-[4rem] overflow-hidden border-white/10 shadow-2xl relative z-10">
+                            <img src="${course.thumbnail || 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2070&auto=format&fit=crop'}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                            <div class="absolute bottom-10 left-10 flex items-center gap-4">
+                                <div class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                                    <i class="fas fa-play text-white text-xs"></i>
+                                </div>
+                                <span class="text-xs font-black text-white uppercase tracking-widest">Preview Presentation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features & Intelligence Hub -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-32">
+                    <div class="lg:col-span-2">
+                        <h3 class="text-[11px] font-black text-blue-500 uppercase tracking-[0.4em] mb-12 flex items-center gap-4">
+                            <span class="w-12 h-px bg-blue-500/30"></span> Tactical Features
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${(course.zenithFeatures || []).map(feature => {
+            const [title, desc] = feature.split(': ');
+            return `
+                                    <div class="p-8 bg-white/[0.02] border border-white/5 rounded-3xl hover:bg-white/5 transition-all group">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 mt-1.5 group-hover:scale-150 transition-transform"></div>
+                                            <div>
+                                                <h4 class="text-sm font-black text-white uppercase tracking-tight mb-2">${title}</h4>
+                                                <p class="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">${desc || ""}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+        }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="glass-card p-10 rounded-[3rem] border-white/5 sticky top-20 bg-gradient-to-br from-blue-600/5 to-transparent">
+                            <h3 class="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-10">Module Units</h3>
+                            <div class="space-y-6">
+                                ${(course.units || []).map((unit, idx) => `
+                                    <div class="pb-6 border-b border-white/5 last:border-0">
+                                        <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Phase 0${idx + 1}</div>
+                                        <h5 class="text-sm font-black text-white uppercase tracking-tight hover:text-blue-500 cursor-default transition">${unit.title}</h5>
+                                        <div class="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-2">${unit.lectures?.length || 0} Sub-links Total</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curriculum Deep Dive -->
+                <div class="mb-32">
+                     <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em] mb-12 text-center">Curriculum Syllabus</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        ${(course.units || []).map(unit => `
+                            <div class="p-8 bg-white/5 border border-white/10 rounded-3xl hover:border-blue-500/30 transition-all">
+                                <h4 class="text-lg font-black text-white uppercase mb-6 syne tracking-tight border-b border-white/5 pb-4">${unit.title}</h4>
+                                <ul class="space-y-4">
+                                    ${(unit.lectures || []).map(lec => `
+                                        <li class="flex items-center gap-3 group">
+                                            <i class="fas fa-link text-[10px] text-slate-700 group-hover:text-blue-500 transition"></i>
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-white transition line-clamp-1">${lec.title}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                     </div>
+                </div>
+
+                <!-- Footer Acquisition -->
+                <div class="text-center p-20 glass-card rounded-[5rem] border-blue-500/20 bg-blue-600/[0.02]">
+                    <h2 class="text-5xl font-black syne text-white uppercase italic tracking-tighter mb-8 leading-none">Ready for Synchronization?</h2>
+                    <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mb-12 max-w-2xl mx-auto leading-relaxed">Authorization of this module will initialize an immediate link to your tactical HUD. Ensure sufficient neural bandwidth and credits are available.</p>
+                    <button onclick="promptEnroll('${course._id}', '${course.title}', ${displayPrice})" 
+                        class="px-16 py-7 bg-blue-600 hover:bg-blue-500 rounded-full text-white font-black uppercase text-sm tracking-[0.4em] transition-all active:scale-95 shadow-[0_0_80px_rgba(37,99,235,0.4)]">
+                        Initialize Tactical Link
+                    </button>
+                    <div class="mt-8 text-[10px] font-black text-slate-700 uppercase tracking-widest italic">Proceeding indicates acceptance of Zenith command protocols.</div>
+                </div>
+            </div>
+        `;
+
+    } catch (err) {
+        console.error(err);
+        ZLoader.hide();
+        showToast("Access Denied: Could not retrieve module intel", "error");
+    }
+}
+
+function getYouTubeEmbed(url) {
+    if (!url) return '';
+    let id = '';
+    if (url.includes('v=')) id = url.split('v=')[1].split('&')[0];
+    else if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0];
+    else if (url.includes('embed/')) id = url.split('embed/')[1].split('?')[0];
+
+    if (!id) return '';
+    return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1&origin=${window.location.origin}`;
+}
+
+async function showCourseLandingPage(id) {
+    try {
+        ZLoader.show("Accessing Module Intel...");
+        const res = await fetch(API_BASE_URL + `/api/courses/${id}/preview`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const course = await res.json();
+        ZLoader.hide();
+
+        if (!res.ok) throw new Error(course.message || "Failed to fetch course data");
+
+        const displayPrice = course.isFree ? 0 : (course.price || 0);
+        const embedUrl = getYouTubeEmbed(course.previewVideoUrl);
+
+        const modal = document.getElementById('zenith-modal');
+        const content = document.getElementById('zenith-modal-content');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        content.innerHTML = `
+            <div class="max-w-6xl mx-auto px-6 py-10 lg:py-24 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                <!-- Hero Section: Video & Intro -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+                    <div class="lg:col-span-12 mb-10">
+                        <div class="glass-card aspect-video rounded-[4rem] overflow-hidden border-white/10 shadow-[0_0_100px_rgba(37,99,235,0.1)] relative bg-black group">
+                             ${embedUrl ?
+                `<iframe id="preview-player" src="${embedUrl}" class="w-full h-full border-0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>` :
+                `<img src="${course.thumbnail}" class="w-full h-full object-cover">`
+            }
+                             <div id="preview-overlay" class="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center opacity-0 pointer-events-none transition-all duration-1000 scale-110">
+                                <div class="w-20 h-20 bg-blue-600/20 rounded-full flex items-center justify-center mb-8 border border-blue-500/30">
+                                    <i class="fas fa-lock text-3xl text-blue-500"></i>
+                                </div>
+                                <h4 class="text-3xl font-black syne text-white uppercase italic tracking-tighter mb-4">Authorization Expired</h4>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] mb-10 text-center max-w-sm leading-relaxed">Procure full module synchronization to unlock the complete neural linkstream.</p>
+                                <button onclick="showCheckout('${course._id}')" class="px-12 py-5 bg-blue-600 hover:bg-blue-500 rounded-2xl text-white font-black uppercase text-xs tracking-[0.4em] shadow-[0_0_40px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 transition-all">Unlock Full Access</button>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-8">
+                        <div class="inline-flex items-center gap-3 px-4 py-2 bg-blue-600/10 rounded-xl border border-blue-500/20 mb-8">
+                            <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Available Module</span>
+                        </div>
+                        <h1 class="text-7xl font-black syne tracking-tighter text-white leading-none mb-8 uppercase italic">${course.title}</h1>
+                        <p class="text-2xl text-slate-400 font-medium leading-relaxed mb-12 max-w-3xl">${course.description || "Initialize deep neural synchronization with this advanced tactical module designed for high-performance operatives."}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div>
+                                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-6">Phase Structure</h3>
+                                <div class="space-y-4">
+                                    ${(course.units || []).slice(0, 6).map((unit, i) => `
+                                        <div class="flex items-center gap-4 text-[11px] font-black text-white uppercase tracking-tight">
+                                            <span class="text-blue-500 font-mono">0${i + 1}</span>
+                                            <span>${unit.title}</span>
+                                        </div>
+                                    `).join('')}
+                                    ${course.units.length > 6 ? `<div class="text-[9px] font-black text-slate-600 uppercase tracking-widest pt-2">+ ${course.units.length - 6} more phases</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex flex-col justify-end items-start md:items-end">
+                                <div class="text-right mb-8">
+                                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 font-mono">Sync Cost</div>
+                                    <div class="text-6xl font-black syne text-white tracking-tighter italic">₹${displayPrice.toLocaleString()}</div>
+                                </div>
+                                <button onclick="showCheckout('${course._id}')" 
+                                    class="px-12 py-6 bg-blue-600 hover:bg-blue-500 rounded-3xl text-white font-black uppercase text-xs tracking-[0.5em] transition-all active:scale-95 shadow-[0_0_60px_rgba(37,99,235,0.4)]">
+                                    Authorize Procurement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-4 lg:border-l lg:border-white/5 lg:pl-16">
+                        <div class="space-y-10">
+                            <div>
+                                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-6 font-mono">Core Protocol</h3>
+                                <div class="space-y-6">
+                                    <div class="flex gap-4">
+                                        <i class="fas fa-infinity text-blue-500 mt-1"></i>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Lifetime Neural Sync Update Priority Gamma</span>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <i class="fas fa-headset text-blue-500 mt-1"></i>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">24/7 Operative Tactical Support Link</span>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <i class="fas fa-certificate text-blue-500 mt-1"></i>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Cryptographic Mastery Validation Token</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // --- 30 Second Timer for Preview Overlay ---
+        if (embedUrl) {
+            setTimeout(() => {
+                const overlay = document.getElementById('preview-overlay');
+                if (overlay) {
+                    overlay.classList.remove('opacity-0', 'pointer-events-none');
+                    overlay.classList.add('opacity-100', 'pointer-events-auto');
+                    // Stop video by reloading src if needed, or just let overlay cover it
+                    const player = document.getElementById('preview-player');
+                    if (player) player.src = '';
+                }
+            }, 30000); // 30 Seconds
+        }
+
+    } catch (err) {
+        console.error(err);
+        ZLoader.hide();
+        showToast("Access Denied: Could not retrieve module intel", "error");
+    }
+}
+
+async function showCheckout(courseId) {
+    try {
+        ZLoader.show("Initializing Transaction...");
+        const res = await fetch(API_BASE_URL + `/api/courses/${courseId}/preview`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const course = await res.json();
+        ZLoader.hide();
+
+        const currentBalance = state.user.balance || 0;
+        const price = course.isFree ? 0 : (course.price || 0);
+        const balanceAfter = currentBalance - price;
+        const canAfford = balanceAfter >= 0;
+
+        const modal = document.getElementById('zenith-modal');
+        const content = document.getElementById('zenith-modal-content');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        content.innerHTML = `
+            <div class="w-full max-w-xl mx-auto p-12 glass-card rounded-[4rem] border-white/10 shadow-3xl animate-in zoom-in-95 duration-500 relative bg-black/80">
+                <button onclick="closeZenithModal()" class="absolute top-10 right-10 text-slate-500 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                
+                <h2 class="text-3xl font-black syne text-center text-white mb-12 uppercase italic tracking-tighter">Authorize Procurement</h2>
+                
+                <div class="mb-12 p-8 bg-white/5 rounded-3xl border border-white/5">
+                    <div class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2">Module Designation</div>
+                    <div class="text-xl font-black text-white uppercase tracking-tight mb-4">${course.title}</div>
+                    <div class="w-full h-px bg-white/5 mb-6"></div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            <span>Procurement Cost</span>
+                            <span class="text-white">₹${price.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            <span>Current Neural Balance</span>
+                            <span class="text-white">₹${currentBalance.toLocaleString()}</span>
+                        </div>
+                        <div class="w-full h-px bg-white/5 my-2"></div>
+                        <div class="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
+                            <span class="text-slate-400">Balance After Link</span>
+                            <span class="${canAfford ? 'text-emerald-500' : 'text-red-500'}">₹${balanceAfter.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${canAfford ? `
+                    <button onclick="finalizeAcquisition('${course._id}', '${course.title}', ${price})" 
+                        class="w-full py-6 bg-blue-600 hover:bg-blue-500 rounded-3xl text-white font-black uppercase text-sm tracking-[0.4em] transition-all active:scale-95 shadow-[0_0_50px_rgba(37,99,235,0.4)] mb-8">
+                        Confirm Authorization
+                    </button>
+                ` : `
+                    <div class="p-6 bg-red-600/10 border border-red-500/20 rounded-2xl text-center mb-8">
+                        <p class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4 italic">Insufficient Neural Credits Detected</p>
+                        <button onclick="state.supportTab='topup'; loadPage('profile', 'support')" class="text-[9px] font-black text-white hover:underline uppercase tracking-widest">Recharge Wallet Hub</button>
+                    </div>
+                `}
+
+                <p class="text-[9px] text-center text-slate-600 font-bold uppercase tracking-[0.2em] px-10 leading-relaxed">By authorizing, you agree to Zenith Command's procurement protocol and the permanent synchronization of this data link.</p>
+            </div>
+        `;
+    } catch (e) {
+        ZLoader.hide();
+        showToast("Checkout link failed", "error");
+    }
+}
+
+async function finalizeAcquisition(id, title, price) {
+    try {
+        ZLoader.show("Syncing Module...");
+        const res = await fetch(API_BASE_URL + `/api/courses/${id}/enroll`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            await fetchUser();
+            showToast("MODULE SYNC SUCCESSFUL", "success");
+            closeZenithModal();
+            loadPage('store');
+        } else {
+            const d = await res.json();
+            showToast(d.message.toUpperCase(), "error");
+        }
+    } catch (e) {
+        showToast("SYNC FAILURE", "error");
+    } finally {
+        ZLoader.hide();
+    }
+}
+
+function closeZenithModal() {
+    const modal = document.getElementById('zenith-modal');
+    const content = document.getElementById('zenith-modal-content');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    content.innerHTML = '';
+    document.body.style.overflow = 'auto';
 }
 
 async function promptEnroll(id, title, price) {

@@ -102,6 +102,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
         if (!group) return res.status(404).json({ message: 'Group not found' });
 
+        const isMember = group.isMember(req.user._id);
+
         if (group.visibility === 'private' && !isMember && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'This is a private group. You must join to view contents.' });
         }
