@@ -128,7 +128,8 @@ app.use((req, res, next) => {
         "img-src 'self' * data: blob:; " +
         "font-src 'self' * data:; " +
         "style-src 'self' 'unsafe-inline' *; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' *;"
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' *; " +
+        "worker-src 'self' blob:;"
     );
     next();
 });
@@ -160,6 +161,10 @@ app.get('/index.html', (req, res) => {
     }
 });
 
+app.get('/login.html', (req, res) => {
+    res.redirect('/');
+});
+
 app.get('/user.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../user.html'));
 });
@@ -180,6 +185,10 @@ app.get('/invite.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../invite.html'));
 });
 
+app.get('/code-nexus.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../code-nexus.html'));
+});
+
 // Define Routes
 app.use(require('./middleware/activityMiddleware')); // Track global activity
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -196,6 +205,7 @@ app.use('/api/support', require('./routes/supportRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/explore', require('./routes/exploreRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
+app.use('/api/code', require('./routes/codeRoutes'));
 
 const PORT = process.env.PORT || 5000;
 const server = require('http').createServer(app);

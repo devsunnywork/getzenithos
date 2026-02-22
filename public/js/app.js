@@ -848,6 +848,31 @@ function renderOverview(container) {
                 <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Neural Grid Ranking</div>
             </div>
         </div>
+
+        <!-- Neural Code Nexus Entry -->
+        <div class="mb-16 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div onclick="window.location.href='/code-nexus.html'" class="glass-card p-12 rounded-[4rem] border-blue-500/20 bg-gradient-to-r from-blue-600/10 to-transparent flex flex-col md:flex-row items-center justify-between group cursor-pointer hover:border-blue-500/40 hover:bg-blue-600/5 transition-all relative overflow-hidden">
+                <div class="absolute inset-0 bg-blue-600/[0.02] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="flex items-center gap-8 relative z-10">
+                    <div class="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-transform">
+                        <i class="fas fa-terminal text-3xl text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-black syne italic text-white uppercase tracking-tighter mb-2">Neural Code Nexus</h3>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">Advanced Multi-Language Execution Environment</p>
+                    </div>
+                </div>
+                <div class="mt-8 md:mt-0 flex items-center gap-6 relative z-10">
+                    <div class="flex -space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-blue-500">JS</div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-blue-500">PY</div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-blue-500">JV</div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-blue-500">C++</div>
+                    </div>
+                    <button class="px-8 py-4 bg-blue-600 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl group-hover:bg-blue-500 transition-all">Launch Nexus</button>
+                </div>
+            </div>
+        </div>
     `;
     renderRecentDashboard();
 }

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="/public/js/config.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/index.html';
+</script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Code Nexus - Zenith OS</title>
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/public/css/design-system.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <!-- Socket.io for Interactive Terminal -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        body {
+            background: #020202;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .nexus-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 64px);
+        }
+
+        .explorer-sidebar {
+            background: #050505;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            background: #020202;
+            height: 100%;
+        }
+
+        #monaco-editor {
+            width: 100%;
+            height: 100%;
+        }
+
+        .terminal-console {
+            background: #050505;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            color: #ccc;
+        }
+
+        .file-item {
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+            border-left-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .file-item.active {
+            background: rgba(59, 130, 246, 0.05);
+            border-left-color: #3b82f6;
+            color: #fff;
+        }
+
+        .tab-bar {
+            background: #0a0a0a;
+            height: 40px;
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-item {
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: #050505;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .tab-item.active {
+            background: #020202;
+            color: #fff;
+            border-bottom: 2px solid #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="syne-font">
+    <!-- Top Nav -->
+    <nav class="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-[#050505] z-50">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                    <i class="fas fa-code text-white text-sm"></i>
+                </div>
+                <span class="text-sm font-black uppercase tracking-widest text-white italic">NEURAL CODE NEXUS
+                    v1.0</span>
+            </div>
+            <div class="h-6 w-px bg-white/10"></div>
+            <div id="project-meta" class="text-[10px] font-bold text-blue-500 tracking-widest uppercase">
+                MASTER_WORKSPACE</div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <button onclick="runCode()"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95">
+                <i class="fas fa-play mr-2"></i> Execute Protocol
+            </button>
+            <button onclick="toggleSettingsModal(true)"
+                class="p-2 w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all text-slate-400 hover:text-white tooltip-trigger"
+                title="Editor Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button onclick="saveProject()"
+                class="p-2 w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all text-slate-400 hover:text-white tooltip-trigger"
+                title="Save Workspace">
+                <i class="fas fa-save"></i>
+            </button>
+            <button onclick="window.location.href='/user.html'"
+                class="p-2 w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:text-white transition-all text-slate-400">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="nexus-layout">
+        <!-- Explorer -->
+        <div class="explorer-sidebar flex flex-col h-full">
+            <div class="p-4 bg-[#080808] border-b border-white/5 flex flex-col gap-3 shrink-0">
+                <div class="flex justify-between items-center w-full">
+                    <span
+                        class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">OPERATIVE_EXPLORER</span>
+                    <div class="flex gap-1">
+                        <button onclick="createNewFile()"
+                            class="p-1.5 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition tooltip-trigger"
+                            title="New File"><i class="fas fa-file-circle-plus text-[10px]"></i></button>
+                        <button onclick="createNewFolder()"
+                            class="p-1.5 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition tooltip-trigger"
+                            title="New Folder"><i class="fas fa-folder-plus text-[10px]"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></div>
+                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Workspace
+                        Linked</span>
+                </div>
+            </div>
+
+            <div id="file-explorer" class="flex-grow overflow-y-auto py-2 custom-scrollbar">
+                <!-- Dynamic File Tree -->
+            </div>
+        </div>
+
+        <!-- Editor & Console -->
+        <div class="editor-container flex flex-col h-full overflow-hidden">
+            <!-- Editor Section -->
+            <div class="flex flex-col flex-grow min-h-0 border-b border-white/5">
+                <div id="tab-bar" class="tab-bar shrink-0 hidden">
+                    <!-- Dynamic Tabs -->
+                </div>
+                <!-- Empty State -->
+                <div id="empty-state" class="flex flex-col items-center justify-center flex-grow bg-[#020202]">
+                    <div
+                        class="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner border border-white/5">
+                        <i class="fas fa-satellite-dish text-4xl text-slate-700"></i>
+                    </div>
+                    <h2 class="text-xl font-black syne uppercase tracking-widest text-slate-500 mb-2">Editor Offline
+                    </h2>
+                    <p class="text-xs text-slate-600 font-bold tracking-widest uppercase text-center max-w-sm">Select a
+                        file from the Operative Explorer and choose "Open in Editor" to establish a neural link.</p>
+                </div>
+                <!-- Monaco needs a relative parent with explicit bounds to resize correctly -->
+                <div id="editor-wrapper" class="relative flex-grow h-full w-full hidden">
+                    <div id="monaco-editor" class="absolute inset-0"></div>
+                </div>
+            </div>
+
+            <!-- Terminal Section -->
+            <div class="terminal-container flex flex-col h-64 shrink-0 bg-[#050505] z-10 box-border">
+                <div class="h-10 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-[#080808]">
+                    <span
+                        class="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><i
+                            class="fas fa-terminal leading-none text-blue-500"></i> SYSTEM_TERMINAL</span>
+                    <button onclick="clearTerminal()"
+                        class="text-[9px] font-black text-slate-600 hover:text-white transition uppercase"><i
+                            class="fas fa-trash-alt mr-1"></i> Clear</button>
+                </div>
+                <div id="terminal"
+                    class="terminal-console flex-grow overflow-y-auto p-4 custom-scrollbar pb-4 relative cursor-text outline-none focus:ring-1 focus:ring-blue-500/30"
+                    tabindex="0">
+                    <div class="text-slate-600 mb-2">// Initializing neural terminal...</div>
+                    <div class="text-blue-500 mb-4 font-black">ZENITH-OS INTERACTIVE EXECUTION ENGINE v5.0 [READY]</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu for Files (Hidden by default) -->
+    <div id="file-context-menu"
+        class="hidden absolute bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl py-2 w-48 z-[200]">
+        <button onclick="openInEditor()"
+            class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition flex items-center gap-3">
+            <i class="fas fa-external-link-alt w-4 text-blue-500"></i> Open in Editor
+        </button>
+        <button onclick="renameActiveNode()"
+            class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/5 hover:text-white transition flex items-center gap-3">
+            <i class="fas fa-edit w-4 text-slate-500"></i> Rename
+        </button>
+        <button onclick="deleteActiveNode()"
+            class="w-full text-left px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/20 hover:text-red-400 transition flex items-center gap-3 border-t border-white/5 mt-1 pt-3">
+            <i class="fas fa-trash-alt w-4"></i> Delete
+        </button>
+    </div>
+
+    <!-- Editor Settings Modal (Hidden by default) -->
+    <div id="settings-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[300] hidden">
+        <div class="w-full max-w-md bg-[#0a0a0a] rounded-2xl p-8 border border-white/10 shadow-2xl">
+            <h2 class="text-xl font-black syne uppercase tracking-widest text-white mb-6 flex items-center gap-3">
+                <i class="fas fa-cog text-blue-500"></i> Editor Properties
+            </h2>
+
+            <div class="space-y-4 mb-8">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Font Size</label>
+                    <input type="number" id="setting-font-size"
+                        class="w-20 bg-black border border-white/10 rounded px-2 py-1 text-white text-sm" value="14"
+                        min="8" max="32">
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Word Wrap</label>
+                    <input type="checkbox" id="setting-word-wrap" class="w-5 h-5 accent-blue-500">
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Minimap</label>
+                    <input type="checkbox" id="setting-minimap" class="w-5 h-5 accent-blue-500">
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest"
+                        title="Auto-complete & IntelliSense">Type Suggestions</label>
+                    <input type="checkbox" id="setting-suggestions" class="w-5 h-5 accent-blue-500" checked>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Cursor Style</label>
+                    <select id="setting-cursor"
+                        class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs uppercase tracking-widest outline-none">
+                        <option value="smooth">Smooth</option>
+                        <option value="blink">Blink</option>
+                        <option value="solid">Solid</option>
+                        <option value="phase">Phase</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-white/5 pt-6">
+                <button onclick="toggleSettingsModal(false)"
+                    class="px-6 py-2 rounded-xl text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Cancel</button>
+                <button onclick="applySettings()"
+                    class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition shadow-lg">Apply</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/public/js/code-nexus.js"></script>
+</body>
+
+</html>
