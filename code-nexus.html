@@ -14,10 +14,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/public/css/design-system.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Socket.io for Interactive Terminal (MUST BE BEFORE MONACO TO PREVENT AMD HIJACKING) -->
+    <script src="/public/js/socket.io.min.js"></script>
     <!-- Monaco Editor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-    <!-- Socket.io for Interactive Terminal -->
-    <script src="/socket.io/socket.io.js"></script>
 
     <style>
         body {
@@ -45,6 +45,7 @@
             flex-direction: column;
             background: #020202;
             height: 100%;
+            min-height: 0;
         }
 
         #monaco-editor {
@@ -54,12 +55,52 @@
 
         .terminal-console {
             background: #050505;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
             padding: 1rem;
             font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 12px;
+            font-size: 13px;
             overflow-y: auto;
             color: #ccc;
+        }
+
+        .terminal-container {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 40px;
+        }
+
+        .terminal-resizer {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: ns-resize;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .terminal-resizer:hover,
+        .terminal-resizer:active {
+            background: rgba(59, 130, 246, 0.5);
+        }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 6px;
+            height: 12px;
+            background-color: white;
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+            margin-left: 2px;
+            margin-bottom: -1px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
         }
 
         .file-item {
@@ -204,7 +245,9 @@
             </div>
 
             <!-- Terminal Section -->
-            <div class="terminal-container flex flex-col h-64 shrink-0 bg-[#050505] z-10 box-border">
+            <div class="terminal-resizer" id="terminal-resizer"></div>
+            <div class="terminal-container flex flex-col h-64 shrink-0 bg-[#050505] z-10 box-border"
+                id="terminal-container">
                 <div class="h-10 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-[#080808]">
                     <span
                         class="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><i
@@ -218,6 +261,7 @@
                     tabindex="0">
                     <div class="text-slate-600 mb-2">// Initializing neural terminal...</div>
                     <div class="text-blue-500 mb-4 font-black">ZENITH-OS INTERACTIVE EXECUTION ENGINE v5.0 [READY]</div>
+                    <!-- The active line will have the cursor appended to it dynamically -->
                 </div>
             </div>
         </div>
@@ -244,7 +288,8 @@
     <div id="settings-modal"
         class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[300] hidden">
         <div class="w-full max-w-md bg-[#0a0a0a] rounded-2xl p-8 border border-white/10 shadow-2xl">
-            <h2 class="text-xl font-black syne uppercase tracking-widest text-white mb-6 flex items-center gap-3">
+            <h2
+                class="text-xl font-black syne uppercase tracking-widest text-white mb-6 flex items-center gap-3 shrink-0">
                 <i class="fas fa-cog text-blue-500"></i> Editor Properties
             </h2>
 
@@ -255,27 +300,22 @@
                         class="w-20 bg-black border border-white/10 rounded px-2 py-1 text-white text-sm" value="14"
                         min="8" max="32">
                 </div>
-
                 <div class="flex justify-between items-center">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Word Wrap</label>
                     <input type="checkbox" id="setting-word-wrap" class="w-5 h-5 accent-blue-500">
                 </div>
-
                 <div class="flex justify-between items-center">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Minimap</label>
                     <input type="checkbox" id="setting-minimap" class="w-5 h-5 accent-blue-500">
                 </div>
-
                 <div class="flex justify-between items-center">
-                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest"
-                        title="Auto-complete & IntelliSense">Type Suggestions</label>
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Type Suggestions</label>
                     <input type="checkbox" id="setting-suggestions" class="w-5 h-5 accent-blue-500" checked>
                 </div>
-
                 <div class="flex justify-between items-center">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Cursor Style</label>
                     <select id="setting-cursor"
-                        class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs uppercase tracking-widest outline-none">
+                        class="bg-black border border-white/10 rounded px-2 py-1 text-white text-xs uppercase tracking-widest outline-none w-24">
                         <option value="smooth">Smooth</option>
                         <option value="blink">Blink</option>
                         <option value="solid">Solid</option>
@@ -295,6 +335,44 @@
 
 
     <script src="/public/js/code-nexus.js"></script>
+    <script>
+        // Terminal Resizer Logic
+        const resizer = document.getElementById('terminal-resizer');
+        const terminalContainer = document.getElementById('terminal-container');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'ns-resize';
+            // Disable text selection during drag
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            // Calculate new height based on window bottom minus mouse Y position
+            const newHeight = window.innerHeight - e.clientY;
+
+            // Constrain heights
+            if (newHeight >= 40 && newHeight <= window.innerHeight - 150) {
+                terminalContainer.style.height = newHeight + 'px';
+                if (editor) editor.layout(); // Force monaco to resize
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+        });
+
+        // Window resize forces monaco to resize
+        window.addEventListener('resize', () => {
+            if (editor) editor.layout();
+        });
+    </script>
 </body>
 
 </html>

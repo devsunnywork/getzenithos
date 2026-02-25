@@ -1,4 +1,15 @@
 // Neural Code Nexus - File Manager First IDE Controller v2.0
+
+// Set up Monaco Environment to bypass CSP Worker Blob blocks
+window.MonacoEnvironment = {
+    getWorkerUrl: function (workerId, label) {
+        return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+            self.MonacoEnvironment = { baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/' };
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/base/worker/workerMain.js');
+        `)}`;
+    }
+};
+
 let editor;
 let workspace = null;
 let activeFile = null;
@@ -36,8 +47,12 @@ require(['vs/editor/editor.main'], function () {
     // Auto-save buffer to active file on change
     editor.onDidChangeModelContent(() => {
         if (activeFile) {
+            const oldContent = activeFile.content;
             activeFile.content = editor.getValue();
-            // Optional: debounce saveWorkspace() here if aggressive auto-sync is needed
+            if (oldContent !== activeFile.content) {
+                activeFile.isDirty = true;
+                renderTabs();
+            }
         }
     });
 
@@ -74,12 +89,26 @@ async function loadWorkspace() {
 
 function renderFileExplorer() {
     const explorer = document.getElementById('file-explorer');
-    explorer.innerHTML = workspace.files.map(f => `
-        <div onclick="openFileById('${f._id}')" oncontextmenu="handleContextMenu(event, '${f._id}')" class="file-item ${activeFile?._id === f._id ? 'active' : ''}">
-            <i class="fas ${getFileIcon(f.language)} ${activeFile?._id === f._id ? 'text-blue-500' : 'text-slate-500'}"></i>
-            <span class="font-bold tracking-tight uppercase">${f.name}</span>
-        </div>
-    `).join('');
+    explorer.innerHTML = workspace.files.map(f => {
+        const isEditing = f._isRenaming;
+        const nameDisplay = isEditing
+            ? `<input type="text" id="rename-input-${f._id}" value="${f.name}" class="bg-transparent border-b border-blue-500 text-white outline-none w-full ml-2" onblur="commitRename('${f._id}')" onkeydown="handleRenameKey(event, '${f._id}')">`
+            : `<span class="font-bold tracking-tight uppercase ml-2">${f.name}</span>`;
+
+        return `
+            <div onclick="if(!${isEditing}) openFileById('${f._id}')" oncontextmenu="handleContextMenu(event, '${f._id}')" class="file-item ${activeFile?._id === f._id ? 'active' : ''}">
+                <i class="fas ${getFileIcon(f.language)} ${activeFile?._id === f._id ? 'text-blue-500' : 'text-slate-500'}"></i>
+                ${nameDisplay}
+            </div>
+        `;
+    }).join('');
+
+    // Auto-focus input if one exists
+    const input = document.querySelector('input[id^="rename-input-"]');
+    if (input) {
+        input.focus();
+        input.select();
+    }
 }
 
 function getFileIcon(lang) {
@@ -123,10 +152,12 @@ function openFile(file) {
 function renderTabs() {
     const bar = document.getElementById('tab-bar');
     if (!activeFile) { bar.innerHTML = ''; return; }
+    const dirtyDot = activeFile.isDirty ? `<div class="w-2 h-2 rounded-full bg-white ml-2"></div>` : '';
     bar.innerHTML = `
-        <div class="tab-item active">
+        <div class="tab-item active flex items-center">
             <i class="fas ${getFileIcon(activeFile.language)} text-[10px] text-blue-500"></i>
             <span>${activeFile.name.toUpperCase()}</span>
+            ${dirtyDot}
         </div>
     `;
 }
@@ -136,41 +167,23 @@ function renderTabs() {
 // ----------------------------------------------------
 
 async function createNewFile() {
-    const name = prompt("Enter file name (e.g., Script.js, Main.java):");
-    if (!name) return;
+    // Generate temporary ID
+    const tempId = 'temp_' + Date.now();
 
-    // Determine basic lang from extension
-    const ext = name.split('.').pop().toLowerCase();
-
-    // Generate Template Boilerplate
-    let defaultContent = `// New ${ext.toUpperCase()} Source File\n`;
-    if (ext === 'java') {
-        const className = name.split('.')[0];
-        defaultContent = `public class ${className} {\n    public static void main(String[] args) {\n        System.out.println("Neural Link Established: Java Module active!");\n    }\n}`;
-    } else if (ext === 'c') {
-        defaultContent = `#include <stdio.h>\n\nint main() {\n    printf("Neural Link Established: C Module active!\\n");\n    return 0;\n}`;
-    } else if (ext === 'cpp') {
-        defaultContent = `#include <iostream>\n\nint main() {\n    std::cout << "Neural Link Established: C++ Module active!" << std::endl;\n    return 0;\n}`;
-    } else if (ext === 'py') {
-        defaultContent = `print("Neural Link Established: Python Module active!")`;
-    } else if (ext === 'html') {
-        defaultContent = `<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>`;
-    } else if (ext === 'js') {
-        defaultContent = `console.log("Neural Link Established: JS Module active!");`;
-    }
-
-    // Create new file object
+    // Create new file object in renaming state
     const newFile = {
-        name: name,
-        content: defaultContent,
-        language: ext,
-        path: name
+        _id: tempId,
+        name: 'Untitled.js',
+        content: '// New file\n',
+        language: 'js',
+        path: 'Untitled.js',
+        _isRenaming: true,
+        _isNew: true
     };
 
     workspace.files.push(newFile);
-    await saveWorkspace();
+    renderFileExplorer();
 
-    // Automatically open the new file (which now has an _id from the server)
     // Hide context menu automatically
     document.getElementById('file-context-menu').classList.add('hidden');
 }
@@ -205,20 +218,87 @@ async function renameActiveNode() {
     const f = workspace.files.find(file => file._id === contextNodeId);
     if (!f) return;
 
-    const newName = prompt(`Rename ${f.name} to:`, f.name);
-    if (newName && newName !== f.name) {
-        f.name = newName;
-        f.path = newName;
-        f.language = newName.split('.').pop().toLowerCase();
+    f._isRenaming = true;
+    renderFileExplorer();
+    document.getElementById('file-context-menu').classList.add('hidden');
+}
 
-        // If active file is renamed, force re-open to trigger language syntax update
-        if (activeFile && activeFile._id === f._id) {
-            openFile(f);
-        } else {
-            renderFileExplorer();
-        }
-        await saveWorkspace();
+function handleRenameKey(e, id) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        commitRename(id);
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelRename(id);
     }
+}
+
+function cancelRename(id) {
+    const f = workspace.files.find(file => file._id === id);
+    if (!f) return;
+
+    if (f._isNew) {
+        // Cancel creating new file
+        workspace.files = workspace.files.filter(file => file._id !== id);
+    } else {
+        f._isRenaming = false;
+    }
+    renderFileExplorer();
+}
+
+async function commitRename(id) {
+    const f = workspace.files.find(file => file._id === id);
+    if (!f) return;
+
+    const input = document.getElementById(`rename-input-${id}`);
+    if (!input) return;
+
+    const newName = input.value.trim();
+    if (!newName) {
+        cancelRename(id);
+        return;
+    }
+
+    const oldName = f.name;
+    f.name = newName;
+    f.path = newName;
+
+    const ext = newName.split('.').pop().toLowerCase();
+    f.language = ext;
+    f._isRenaming = false;
+
+    // Expand boilerplate if it's a new file
+    if (f._isNew) {
+        delete f._isNew;
+        delete f._id; // Remove temp ID so server assigns a real one
+
+        let defaultContent = `// New ${ext.toUpperCase()} Source File\n`;
+        if (ext === 'java') {
+            const className = newName.split('.')[0];
+            defaultContent = `public class ${className} {\n    public static void main(String[] args) {\n        System.out.println("Neural Link Established: Java Module active!");\n    }\n}`;
+        } else if (ext === 'c') {
+            defaultContent = `#include <stdio.h>\n\nint main() {\n    printf("Neural Link Established: C Module active!\\n");\n    return 0;\n}`;
+        } else if (ext === 'cpp') {
+            defaultContent = `#include <iostream>\n\nint main() {\n    std::cout << "Neural Link Established: C++ Module active!" << std::endl;\n    return 0;\n}`;
+        } else if (ext === 'py') {
+            defaultContent = `print("Neural Link Established: Python Module active!")`;
+        } else if (ext === 'html') {
+            defaultContent = `<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>`;
+        } else if (ext === 'js') {
+            defaultContent = `console.log("Neural Link Established: JS Module active!");`;
+        }
+        f.content = defaultContent;
+    }
+
+    // Refresh editor language if active
+    if (activeFile && activeFile.name === oldName) {
+        openFile(f);
+    } else {
+        renderFileExplorer();
+    }
+
+    await saveWorkspace();
+    if (f.content) openFile(workspace.files.find(file => file.name === f.name));
 }
 
 async function deleteActiveNode() {
@@ -246,6 +326,15 @@ async function deleteActiveNode() {
 async function saveWorkspace() {
     if (!workspace) return;
     try {
+        // Strip out any UI-only flags before sending
+        const payloadFiles = workspace.files.map(f => {
+            const copy = { ...f };
+            delete copy._isRenaming;
+            delete copy._isNew;
+            delete copy.isDirty;
+            return copy;
+        });
+
         const res = await fetch(`${API_BASE_URL}/api/code/projects/${workspace._id}`, {
             method: 'PUT',
             headers: {
@@ -253,13 +342,21 @@ async function saveWorkspace() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                files: workspace.files,
+                files: payloadFiles,
                 folders: workspace.folders || []
             })
         });
         if (res.ok) {
             workspace = await res.json(); // refresh to get new _ids if any
+
+            // Re-bind activeFile to new object and clear dirty flag
+            if (activeFile) {
+                activeFile = workspace.files.find(f => f.name === activeFile.name);
+                if (activeFile) activeFile.isDirty = false;
+            }
+
             renderFileExplorer();
+            renderTabs();
         } else {
             showToast("Sync Failure", "error");
         }
@@ -274,53 +371,119 @@ async function saveWorkspace() {
 
 let currentTerminalInput = '';
 let terminalActive = false;
-const socket = io();
+
+// Ensure Socket connects across origins if UI is hosted on a Live Server (5500)
+// This will naturally throw a ReferenceError if the library maliciously fails to load,
+// which is much better than silently keeping socket = null forever.
+// token is already declared globally
+const socket = io(typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:5000', {
+    auth: {
+        token: token
+    }
+});
+
+let currentTerminalLineDiv = null;
 
 // Receive output from server
 socket.on('terminal-output', (payload) => {
     if (payload.type === 'stderr') {
-        appendTerminal(payload.data, 'red-500');
+        appendTerminal(payload.data, 'red-500', true);
+        currentTerminalLineDiv = null;
     } else if (payload.type === 'system') {
-        appendTerminal(payload.data, 'slate-500 font-bold');
+        appendTerminal(payload.data, 'text-slate-500 font-bold', true);
         terminalActive = false;
         flushTerminalInput();
+        currentTerminalLineDiv = null;
+        updateTerminalCursor(false);
     } else {
-        appendTerminal(payload.data, 'white');
+        // stdout output
+        if (!currentTerminalLineDiv || currentTerminalLineDiv.querySelector('.typed-input')) {
+            currentTerminalLineDiv = appendTerminal(payload.data, 'white', false);
+        } else {
+            const term = document.getElementById('terminal');
+            const cursor = term.querySelector('.terminal-cursor');
+            if (cursor) term.removeChild(cursor);
+
+            currentTerminalLineDiv.innerText += payload.data;
+
+            if (terminalActive) updateTerminalCursor(true);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        // Always ensure cursor is visible at the end of output if terminal is active
+        if (terminalActive) updateTerminalCursor(true);
     }
 });
 
 // Handle inline terminal keystrokes
 document.getElementById('terminal').addEventListener('keydown', (e) => {
-    if (!terminalActive) return;
+    if (!terminalActive || !socket) return;
 
     if (e.key === 'Enter') {
         e.preventDefault();
         const val = currentTerminalInput;
-        // The characters are already rendered via standard echo, just submit
+        // Submit the input
         socket.emit('terminal-input', { input: val });
         currentTerminalInput = ''; // Reset buffer
-        appendTerminal('', 'white'); // visual newline
+
+        // Finalize typed input so it can't be modified
+        if (currentTerminalLineDiv) {
+            let typedSpan = currentTerminalLineDiv.querySelector('.typed-input');
+            if (typedSpan) typedSpan.classList.remove('typed-input');
+        }
+
+        appendTerminal('', 'white', true); // New line after enter
+        currentTerminalLineDiv = null;
+        updateTerminalCursor(false);
     } else if (e.key === 'Backspace') {
         if (currentTerminalInput.length > 0) {
             e.preventDefault();
             currentTerminalInput = currentTerminalInput.slice(0, -1);
-            // Replace the last line visually
-            const term = document.getElementById('terminal');
-            if (term.lastElementChild) term.lastElementChild.innerText = currentTerminalInput;
+            updateTerminalInputLine();
         }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         currentTerminalInput += e.key;
-
-        // Either append to existing inline, or create new block
-        const term = document.getElementById('terminal');
-        if (currentTerminalInput.length === 1 || !term.lastElementChild) {
-            appendTerminal(e.key, 'blue-400');
-        } else {
-            term.lastElementChild.innerText = currentTerminalInput;
-        }
+        updateTerminalInputLine();
     }
 });
+
+function updateTerminalInputLine() {
+    const term = document.getElementById('terminal');
+
+    if (!currentTerminalLineDiv || !currentTerminalLineDiv.querySelector('.typed-input')) {
+        currentTerminalLineDiv = appendTerminal('', 'blue-400 font-bold', false);
+    }
+
+    let typedSpan = currentTerminalLineDiv.querySelector('.typed-input');
+    if (typedSpan) {
+        typedSpan.innerText = currentTerminalInput;
+    }
+
+    updateTerminalCursor(true);
+    term.scrollTop = term.scrollHeight;
+}
+
+function updateTerminalCursor(show) {
+    const term = document.getElementById('terminal');
+    let cursor = term.querySelector('.terminal-cursor');
+
+    // Create cursor if it doesn't exist and needs to be shown
+    if (!cursor && show) {
+        cursor = document.createElement('span');
+        cursor.className = 'terminal-cursor text-white';
+    }
+
+    // Always append cursor to the very end of the terminal container
+    if (cursor) {
+        if (show) {
+            term.appendChild(cursor);
+            cursor.style.display = 'inline-block';
+        } else {
+            cursor.style.display = 'none';
+        }
+    }
+}
 
 function flushTerminalInput() {
     currentTerminalInput = '';
@@ -353,9 +516,13 @@ async function runCode() {
     // Enable inline terminal processing
     terminalActive = true;
     currentTerminalInput = '';
-    document.getElementById('terminal').focus();
+    currentTerminalLineDiv = null;
 
-    const langAlias = getPistonLanguageAlias(activeFile.language);
+    document.getElementById('terminal').focus();
+    updateTerminalCursor(true);
+
+    const ext = activeFile.name.split('.').pop().toLowerCase();
+    const langAlias = getPistonLanguageAlias(ext);
 
     // Stream execution via Socket.io instead of static Fetch
     socket.emit('execute-code', {
@@ -414,21 +581,32 @@ function applySettings() {
     }
 
     toggleSettingsModal(false);
-    // showToast("Editor Settings Updated", "success"); // Removed toast so it is quiet and slick
 }
 
-function appendTerminal(text, colorClass) {
+function appendTerminal(text, colorClass, block = true) {
     const term = document.getElementById('terminal');
-    const div = document.createElement('div');
-    if (colorClass === 'blue-400') {
-        // user input lines shouldn't break visually in a weird way, force inline behavior
-        div.className = `text-${colorClass} whitespace-pre-wrap font-bold break-all inline-block w-full`;
+
+    // Temporarily remove cursor to append before it
+    const cursor = term.querySelector('.terminal-cursor');
+    if (cursor) term.removeChild(cursor);
+
+    const el = document.createElement(block ? 'div' : 'span');
+
+    if (colorClass.includes('blue-400')) {
+        el.className = `text-blue-400 whitespace-pre-wrap font-bold break-words inline`;
+        el.innerHTML = '<span class="typed-input text-blue-400"></span>';
     } else {
-        div.className = `text-${colorClass} mb-1 whitespace-pre-wrap break-all`;
+        el.className = `text-${colorClass} whitespace-pre-wrap break-words`;
+        if (!block) el.className += ' inline';
+        else el.className += ' block mb-1';
+        el.innerText = text;
     }
-    div.innerText = text;
-    term.appendChild(div);
+
+    term.appendChild(el);
+    if (cursor) term.appendChild(cursor); // Put cursor back at the end
+
     term.scrollTop = term.scrollHeight;
+    return el;
 }
 
 function clearTerminal() {

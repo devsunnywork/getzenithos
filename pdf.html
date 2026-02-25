@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Lab File Index - Sunny Rajput</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS to hide browser headers/footers and force single page */
+        @page {
+            size: A4;
+            margin: 0 !important;
+            /* Critical: This removes browser's default header/footer */
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            html,
+            body {
+                height: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden;
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .page-container {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                padding: 15mm !important;
+                /* Internal spacing for content */
+                display: block !important;
+            }
+        }
+
+        /* Styling for the dotted lines in student info */
+        .dotted-line {
+            border-bottom: 2px dotted #000;
+            display: inline-block;
+            flex-grow: 1;
+            margin-left: 10px;
+            min-height: 24px;
+            padding-left: 5px;
+            text-transform: uppercase;
+        }
+
+        table,
+        th,
+        td {
+            border: 2px solid black !important;
+            border-collapse: collapse;
+        }
+
+        .table-cell {
+            padding: 6px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-serif">
+
+    <!-- Floating Action Button for Download -->
+    <div class="no-print fixed top-5 right-5 z-50">
+        <button onclick="downloadPDF()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center transition-all">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Download as PDF
+        </button>
+    </div>
+
+    <!-- Main Index Content -->
+    <div
+        class="page-container bg-white w-[210mm] h-[297mm] mx-auto my-0 p-[15mm] shadow-2xl text-black box-border overflow-hidden">
+
+        <!-- Title Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold uppercase tracking-widest mb-2">Index</h1>
+            <h2 class="text-2xl font-semibold uppercase border-b-4 border-double border-black pb-2 inline-block">
+                OOPS With Java Programming Laboratory
+            </h2>
+        </div>
+
+        <!-- Student Info Section -->
+        <div class="grid grid-cols-2 gap-x-12 gap-y-5 mb-6 text-lg font-bold">
+            <div class="flex items-end">
+                <span>NAME:</span>
+                <span class="dotted-line">Sunny Rajput</span>
+            </div>
+            <div class="flex items-end">
+                <span>ROLL NO:</span>
+                <span class="dotted-line">2401270100104</span>
+            </div>
+            <div class="flex items-end">
+                <span>SEMESTER:</span>
+                <span class="dotted-line">IV</span>
+            </div>
+            <div class="flex items-end">
+                <span>SECTION:</span>
+                <span class="dotted-line">B</span>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-50 uppercase">
+                    <th class="table-cell w-[10%]">S.No.</th>
+                    <th class="table-cell w-[15%]">Date</th>
+                    <th class="table-cell w-[45%]">Title of Experiment / Program</th>
+                    <th class="table-cell w-[15%]">Page No.</th>
+                    <th class="table-cell w-[15%]">Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                <script>
+                    for (let i = 1; i <= 15; i++) {
+                        document.write(`
+                            <tr style="height: 42px;">
+                                <td class="table-cell font-bold">${i}</td>
+                                <td class="table-cell"></td>
+                                <td class="table-cell"></td>
+                                <td class="table-cell"></td>
+                                <td class="table-cell"></td>
+                            </tr>
+                        `);
+                    }
+                </script>
+            </tbody>
+        </table>
+
+        <!-- Hidden from PDF message -->
+        <div class="no-print mt-6 text-center text-gray-500 italic text-sm">
+            Click the download button above. Ensure "Headers and Footers" is unchecked in print settings if they still
+            appear.
+        </div>
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const btn = document.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "Opening Print Dialog...";
+
+            setTimeout(() => {
+                window.print();
+                btn.innerHTML = originalText;
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,12 +1,22 @@
 const jwt = require('jsonwebtoken');
 const Group = require('./models/Group');
 const User = require('./models/User');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 // Store active processes per socket ID
 const activeProcesses = {};
+
+const killProcessTree = (child) => {
+    try {
+        if (process.platform === 'win32') {
+            exec(`taskkill /pid ${child.pid} /T /F`, () => { });
+        } else {
+            child.kill('SIGKILL');
+        }
+    } catch (err) { }
+};
 
 module.exports = (io) => {
     // Middleware to authenticate socket connections
@@ -64,7 +74,7 @@ module.exports = (io) => {
         socket.on('execute-code', ({ language, file }) => {
             if (activeProcesses[socket.id]) {
                 // Kill existing if re-running
-                activeProcesses[socket.id].kill();
+                killProcessTree(activeProcesses[socket.id]);
                 delete activeProcesses[socket.id];
             }
 
@@ -80,32 +90,49 @@ module.exports = (io) => {
 
                 if (lang === 'java') {
                     const className = file.name.replace('.java', '');
-                    command = 'cmd.exe';
-                    args = ['/c', `javac "${file.name}" && java "${className}"`];
+                    command = `javac "${file.name}" && java "${className}"`;
+                    args = [];
                 } else if (lang === 'python' || lang === 'py') {
-                    command = 'python';
-                    args = [`${file.name}`];
+                    command = `python -u "${file.name}"`; // Force unbuffered output
+                    args = [];
                 } else if (lang === 'javascript' || lang === 'js') {
-                    command = 'node';
-                    args = [`${file.name}`];
+                    command = `node "${file.name}"`;
+                    args = [];
                 } else if (lang === 'cpp') {
-                    command = 'cmd.exe';
-                    args = ['/c', `g++ "${file.name}" -o out.exe && out.exe`];
+                    const regex = /(int|void)\s+main\s*\([^)]*\)\s*\{/;
+                    if (regex.test(file.content)) fs.writeFileSync(filePath, file.content.replace(regex, `$& setvbuf(stdout, NULL, _IONBF, 0);`));
+                    command = `g++ "${file.name}" -o out.exe && out.exe`;
+                    args = [];
                 } else if (lang === 'c') {
-                    command = 'cmd.exe';
-                    args = ['/c', `gcc "${file.name}" -o out.exe && out.exe`];
+                    const regex = /(int|void)\s+main\s*\([^)]*\)\s*\{/;
+                    if (regex.test(file.content)) fs.writeFileSync(filePath, file.content.replace(regex, `$& setvbuf(stdout, NULL, _IONBF, 0);`));
+                    command = `gcc "${file.name}" -o out.exe && out.exe`;
+                    args = [];
                 }
 
-                const child = spawn(command, args, { cwd: tempDir });
+                // Explicitly spawn with shell: true for correct parsing of chained operators (&&) and quotes
+                const child = spawn(command, args, {
+                    cwd: tempDir,
+                    shell: true,
+                    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+                });
                 activeProcesses[socket.id] = child;
 
-                child.stdout.on('data', (data) => {
-                    socket.emit('terminal-output', { type: 'stdout', data: data.toString() });
+                child.on('error', (err) => {
+                    socket.emit('terminal-output', { type: 'stderr', data: `\n[Execution Engine Failed to Start]: ${err.message}` });
                 });
 
-                child.stderr.on('data', (data) => {
-                    socket.emit('terminal-output', { type: 'stderr', data: data.toString() });
-                });
+                if (child.stdout) {
+                    child.stdout.on('data', (data) => {
+                        socket.emit('terminal-output', { type: 'stdout', data: data.toString() });
+                    });
+                }
+
+                if (child.stderr) {
+                    child.stderr.on('data', (data) => {
+                        socket.emit('terminal-output', { type: 'stderr', data: data.toString() });
+                    });
+                }
 
                 child.on('close', (code) => {
                     socket.emit('terminal-output', { type: 'system', data: `\n[Process exited with code ${code}]` });
@@ -129,7 +156,7 @@ module.exports = (io) => {
         socket.on('disconnect', () => {
             console.log(`User disconnected WS: ${socket.user.id}`);
             if (activeProcesses[socket.id]) {
-                activeProcesses[socket.id].kill();
+                killProcessTree(activeProcesses[socket.id]);
                 delete activeProcesses[socket.id];
             }
         });
