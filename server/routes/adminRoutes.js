@@ -60,10 +60,15 @@ router.get('/users/:id/deep', async (req, res) => {
         const user = await User.findById(req.params.id)
             .select('-password')
             .populate('enrolledCourses')
-            .populate('courseProgress.courseId');
+            .populate('courseProgress.courseId')
+            .populate('groups', 'name description');
 
         const transactions = await Transaction.find({ user: req.params.id }).sort({ createdAt: -1 });
-        res.json({ user, transactions });
+        const messages = await Message.find({
+            $or: [{ sender: req.params.id }, { receiver: req.params.id }]
+        }).sort({ createdAt: -1 }).limit(50);
+
+        res.json({ user, transactions, messages });
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

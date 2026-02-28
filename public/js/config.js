@@ -4,7 +4,7 @@
 // Auto-detects environment and switches between local and production
 // ========================================
 
-const API_BASE_URL = (() => {
+var API_BASE_URL = (() => {
     const hostname = window.location.hostname;
 
     // Production environment
@@ -19,7 +19,7 @@ const API_BASE_URL = (() => {
 // console.log('🌐 API Environment:', API_BASE_URL);
 
 // Z-LOADER SYSTEM v1.0
-const ZLoader = {
+var ZLoader = {
     show: (msg = "Syncing Intelligence...") => {
         const loader = document.getElementById('zenith-loader');
         if (loader) {

@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     balance: { type: Number, default: 1000 },
     xp: { type: Number, default: 0 },
+    dsaHP: { type: Number, default: 0 },
     enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
     activeCareers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
     groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
@@ -36,6 +37,20 @@ const userSchema = new mongoose.Schema({
         lastSolvedDate: { type: Date }
     },
     dsaSolved: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Problem' }],
+    savedProblems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Problem' }],
+    dsaActivity: [{
+        date: { type: String }, // Format: YYYY-MM-DD
+        count: { type: Number, default: 0 }
+    }],
+    dsaSubmissions: [{
+        problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
+        code: { type: String },
+        language: { type: String },
+        runtimeMs: { type: Number },
+        memoryMb: { type: Number },
+        status: { type: String, enum: ['success', 'fail'] },
+        date: { type: Date, default: Date.now }
+    }],
     careerChangeMeta: {
         lastResetDate: { type: Date, default: Date.now },
         changesThisMonth: { type: Number, default: 0 },

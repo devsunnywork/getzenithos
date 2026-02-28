@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile | Zenith OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/public/css/design-system.css">
+    <style>
+        body {
+            background: #020202;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .profile-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, #111, #080808);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .activity-day {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.2s;
+        }
+
+        .activity-day:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .solved-item {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.2s;
+        }
+
+        .solved-item:hover {
+            background: rgba(255, 255, 255, 0.01);
+        }
+    </style>
+</head>
+
+<body class="syne-font">
+    <nav
+        class="h-20 flex items-center justify-between px-12 border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="flex items-center gap-4 cursor-pointer" onclick="window.location.href='/arena.html'">
+            <i class="fas fa-chevron-left text-zinc-500"></i>
+            <span class="text-zinc-400 font-bold uppercase tracking-widest text-xs">Back to Arena</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div
+                class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <i class="fas fa-user-shield text-white text-sm"></i>
+            </div>
+            <span class="text-sm font-black uppercase tracking-[0.3em] text-white">Identity Hub</span>
+        </div>
+        <div class="w-32"></div>
+    </nav>
+
+    <div class="profile-container">
+        <!-- Header Info -->
+        <div class="flex flex-col md:flex-row gap-8 items-center md:items-start mb-12">
+            <div class="relative">
+                <div
+                    class="w-40 h-40 rounded-[32px] bg-zinc-900 border-2 border-zinc-800 overflow-hidden flex items-center justify-center shadow-2xl">
+                    <img id="profile-pfp" src="" class="hidden w-full h-full object-cover">
+                    <i id="profile-icon" class="fas fa-user text-zinc-700 text-6xl"></i>
+                </div>
+                <div
+                    class="absolute -bottom-3 -right-3 w-12 h-12 bg-emerald-500 rounded-2xl border-4 border-[#020202] flex items-center justify-center shadow-xl">
+                    <i class="fas fa-check text-black"></i>
+                </div>
+            </div>
+
+            <div class="flex flex-1 flex-col md:flex-row items-center md:items-end justify-between gap-6">
+                <div class="text-center md:text-left">
+                    <h1 id="profile-username" class="text-5xl font-black syne tracking-tight mb-2">Scanning Identity...
+                    </h1>
+                    <p class="text-zinc-500 font-bold uppercase tracking-[0.2em] text-xs mb-6">DSA Proficiency Protocol
+                        v5.0
+                    </p>
+
+                    <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                        <span
+                            class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-500">
+                            <i class="fas fa-shield-halved mr-2"></i> Verified Operative
+                        </span>
+                        <span
+                            class="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-500">
+                            <i class="fas fa-medal mr-2"></i> Rank: <span id="identity-rank">#--</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Preview -->
+                <div class="glass-panel py-4 px-6 shrink-0 w-full md:w-80">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Global Top
+                            Solvers</span>
+                        <i class="fas fa-crown text-amber-500 text-[10px]"></i>
+                    </div>
+                    <div id="leaderboard-list" class="space-y-3">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div class="stat-card">
+                <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Cumulative
+                    XP</span>
+                <div class="text-3xl font-black syne text-emerald-400" id="stat-xp">0</div>
+            </div>
+            <div class="stat-card">
+                <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Current
+                    Streak</span>
+                <div class="text-3xl font-black syne text-amber-500" id="stat-streak">0</div>
+            </div>
+            <div class="stat-card">
+                <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Longest
+                    Streak</span>
+                <div class="text-3xl font-black syne text-zinc-300" id="stat-longest">0</div>
+            </div>
+            <div class="stat-card">
+                <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Total
+                    Solved</span>
+                <div class="text-3xl font-black syne text-blue-400" id="stat-solved">0</div>
+            </div>
+        </div>
+
+        <!-- Activity & Solved List -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Left: Activity Heatmap -->
+            <div class="lg:col-span-2 space-y-8">
+                <div class="glass-panel">
+                    <div class="flex items-center justify-between mb-8">
+                        <h4 class="text-xs font-black text-white uppercase tracking-[0.2em]">Solving Frequency
+                            Information Architecture</h4>
+                        <div id="calendar-header" class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                            March 2026</div>
+                    </div>
+
+                    <div id="full-calendar" class="grid grid-cols-7 gap-3 mb-8">
+                        <!-- Calendar injected here -->
+                    </div>
+
+                    <div
+                        class="flex items-center justify-between text-[10px] font-black text-zinc-600 uppercase tracking-widest border-t border-white/5 pt-6">
+                        <span>Low Intensity</span>
+                        <div class="flex gap-2 items-center">
+                            <div class="w-3 h-3 bg-zinc-900 rounded-[3px]"></div>
+                            <div class="w-3 h-3 bg-emerald-900/40 rounded-[3px]"></div>
+                            <div class="w-3 h-3 bg-emerald-700/60 rounded-[3px]"></div>
+                            <div class="w-3 h-3 bg-emerald-500 rounded-[3px]"></div>
+                            <div class="w-3 h-3 bg-emerald-400 rounded-[3px] shadow-[0_0_10px_#34d399]"></div>
+                        </div>
+                        <span>High Intensity</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Submission Timeline -->
+            <div class="space-y-6">
+                <div class="glass-panel h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="text-xs font-black text-white uppercase tracking-[0.2em]">Submission Timeline</h4>
+                        <i class="fas fa-history text-zinc-700 text-[10px]"></i>
+                    </div>
+                    <div id="submission-list"
+                        class="flex-1 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar space-y-3">
+                        <div class="text-center py-12 text-zinc-800 font-bold uppercase text-[9px] tracking-widest">
+                            Awaiting system sync...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Viewer Modal -->
+    <div id="code-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
+        <div class="glass-panel w-full max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b border-white/5">
+                <div>
+                    <h3 id="modal-title" class="text-lg font-bold text-white uppercase tracking-tight">Analytical Source
+                        Code</h3>
+                    <p id="modal-subtitle" class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                        Submission Logic Protocol</p>
+                </div>
+                <button onclick="closeCodeModal()"
+                    class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition">
+                    <i class="fas fa-times text-zinc-400"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-hidden p-6 bg-[#050505]">
+                <pre id="modal-code"
+                    class="text-xs font-mono text-emerald-400/90 leading-relaxed overflow-auto h-full custom-scrollbar"></pre>
+            </div>
+            <div class="p-6 border-t border-white/5 bg-zinc-900/20 flex items-center justify-between">
+                <div class="flex gap-6">
+                    <div>
+                        <p class="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Runtime</p>
+                        <p id="modal-runtime" class="text-xs font-bold text-white">-- ms</p>
+                    </div>
+                    <div>
+                        <p class="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Memory</p>
+                        <p id="modal-memory" class="text-xs font-bold text-white">-- MB</p>
+                    </div>
+                    <div>
+                        <p class="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Language</p>
+                        <p id="modal-lang" class="text-xs font-bold text-white uppercase">--</p>
+                    </div>
+                </div>
+                <button id="modal-copy" onclick="copyModalProtocol()"
+                    class="px-4 py-2 bg-emerald-500 rounded-lg text-[10px] font-black text-black uppercase hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">
+                    <i class="fas fa-copy mr-2"></i> Copy Protocol
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userData = null;
+        async function loadFullProfile() {
+            const token = localStorage.getItem('token');
+            if (!token) return window.location.href = '/index.html';
+
+            try {
+                const res = await fetch('/api/user/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                userData = await res.json();
+
+                // Populate Stats
+                document.getElementById('profile-username').innerText = userData.username;
+                document.getElementById('stat-xp').innerText = userData.xp || 0;
+                document.getElementById('stat-streak').innerText = userData.dsaStreak?.current || 0;
+                document.getElementById('stat-longest').innerText = userData.dsaStreak?.longest || 0;
+                document.getElementById('stat-solved').innerText = userData.dsaSolved?.length || 0;
+
+                if (userData.avatarUrl) {
+                    const img = document.getElementById('profile-pfp');
+                    img.src = userData.avatarUrl;
+                    img.classList.remove('hidden');
+                    document.getElementById('profile-icon').classList.add('hidden');
+                }
+
+                renderFullCalendar(userData.dsaActivity || []);
+                loadSubmissions(userData.dsaSubmissions || []);
+                fetchGlobalLeaderboard();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchGlobalLeaderboard() {
+            try {
+                const res = await fetch('/api/user/leaderboard', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const leaders = await res.json();
+                const container = document.getElementById('leaderboard-list');
+
+                // Find our rank
+                const myRank = leaders.findIndex(u => u.username === userData.username) + 1;
+                if (myRank > 0) document.getElementById('identity-rank').innerText = `#${myRank}`;
+
+                container.innerHTML = leaders.slice(0, 3).map((u, i) => `
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black text-emerald-500/50 w-4">#${i + 1}</span>
+                            <div class="w-8 h-8 rounded-lg bg-zinc-800 overflow-hidden flex items-center justify-center border border-white/5">
+                                ${u.avatar ? `<img src="${u.avatar}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-zinc-600 text-[10px]"></i>`}
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-white truncate w-24">${u.username}</p>
+                                <p class="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">${u.highestStreak} Day Streak</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                             <p class="text-[10px] font-black text-emerald-400">${u.xp}</p>
+                             <p class="text-[7px] font-bold text-zinc-700 uppercase">XP Pool</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadSubmissions(submissions) {
+            const container = document.getElementById('submission-list');
+            if (!submissions || submissions.length === 0) {
+                container.innerHTML = '<div class="text-center py-12 text-zinc-800 font-bold uppercase text-[9px] tracking-widest">No analytical history found</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/problems', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const allProblems = await res.json();
+                const probMap = {};
+                allProblems.forEach(p => probMap[p._id] = p.title);
+
+                container.innerHTML = submissions.slice().reverse().map((s, idx) => {
+                    const statusColor = s.status === 'success' ? 'text-emerald-500' : 'text-red-500';
+                    return `
+                        <div class="p-3 rounded-xl bg-zinc-900/50 border border-white/[0.05] hover:border-emerald-500/30 transition-all cursor-pointer group" onclick="viewSubmission(${submissions.length - 1 - idx})">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold text-zinc-300 group-hover:text-emerald-400 transition">${probMap[s.problemId] || 'Unknown Problem'}</span>
+                                <span class="text-[8px] font-black uppercase tracking-tighter ${statusColor}">${s.status}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex gap-3 items-center">
+                                    <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">${s.language}</span>
+                                    <span class="text-[8px] text-zinc-800">•</span>
+                                    <span class="text-[8px] font-mono text-zinc-500">${new Date(s.date).toLocaleDateString()}</span>
+                                </div>
+                                <div class="flex gap-2 text-zinc-600 font-bold text-[8px]">
+                                    <span>${s.runtimeMs}ms</span>
+                                    <span>${s.memoryMb}MB</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        window.viewSubmission = function (index) {
+            const sub = userData.dsaSubmissions[index];
+            if (!sub) return;
+
+            document.getElementById('modal-code').textContent = sub.code;
+            document.getElementById('modal-runtime').innerText = `${sub.runtimeMs} ms`;
+            document.getElementById('modal-memory').innerText = `${sub.memoryMb} MB`;
+            document.getElementById('modal-lang').innerText = sub.language;
+
+            document.getElementById('code-modal').classList.remove('hidden');
+        };
+
+        window.closeCodeModal = function () {
+            document.getElementById('code-modal').classList.add('hidden');
+        };
+
+        window.copyModalProtocol = function () {
+            const code = document.getElementById('modal-code').textContent;
+            navigator.clipboard.writeText(code);
+            const btn = document.getElementById('modal-copy');
+            const old = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i> Synced!';
+            setTimeout(() => btn.innerHTML = old, 2000);
+        };
+
+        function renderFullCalendar(activity) {
+            const calendar = document.getElementById('full-calendar');
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const activityMap = {};
+            activity.forEach(a => activityMap[a.date] = a.count);
+
+            calendar.innerHTML = '';
+            for (let i = 1; i <= daysInMonth; i++) {
+                const pad = (n) => String(n).padStart(2, '0');
+                const dateKey = `${year}-${pad(month + 1)}-${pad(i)}`;
+                const count = activityMap[dateKey] || 0;
+
+                let colorClass = 'bg-zinc-900';
+                if (count > 0 && count <= 2) colorClass = 'bg-emerald-900/60';
+                else if (count >= 3 && count <= 4) colorClass = 'bg-emerald-800/80';
+                else if (count >= 5 && count <= 7) colorClass = 'bg-emerald-700';
+                else if (count >= 8 && count <= 10) colorClass = 'bg-emerald-500';
+                else if (count > 10) colorClass = 'bg-emerald-400 shadow-[0_0_10px_#34d399]';
+
+                const day = document.createElement('div');
+                day.className = `activity-day ${colorClass} relative group border border-white/[0.02]`;
+                day.title = `${i} March: ${count} solves`;
+                day.innerHTML = `<div class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white/5 group-hover:text-white/60 transition">${i}</div>`;
+                calendar.appendChild(day);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadFullProfile);
+    </script>
+</body>
+
+</html>

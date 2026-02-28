@@ -108,6 +108,9 @@ module.exports = (io) => {
                     if (regex.test(file.content)) fs.writeFileSync(filePath, file.content.replace(regex, `$& setvbuf(stdout, NULL, _IONBF, 0);`));
                     command = `gcc "${file.name}" -o out.exe && out.exe`;
                     args = [];
+                } else if (lang === 'csharp' || lang === 'cs') {
+                    command = `csc /out:program.exe "${file.name}" && program.exe`;
+                    args = [];
                 }
 
                 // Explicitly spawn with shell: true for correct parsing of chained operators (&&) and quotes

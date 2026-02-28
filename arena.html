@@ -314,9 +314,9 @@
                 class="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
                 <span id="header-solved-count">0</span>/<span id="header-total-count">0</span> Solved
             </div>
-            <!-- Avatar -->
-            <div
-                class="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center cursor-pointer">
+            <!-- Header Identity Sync -->
+            <div onclick="window.location.href='/profile.html'"
+                class="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center cursor-pointer hover:border-emerald-500/50 transition-all">
                 <img id="header-avatar" src="" alt="" class="hidden w-full h-full object-cover">
                 <i id="header-avatar-icon" class="fas fa-user text-zinc-400 text-xs"></i>
             </div>
@@ -331,9 +331,6 @@
             <div class="px-6 mb-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">My Space</div>
             <a href="#" class="sidebar-link active" id="sb-all" onclick="filterByList('all', event)">
                 <i class="fas fa-list-ul"></i> All Problems
-            </a>
-            <a href="#" class="sidebar-link" id="sb-saved" onclick="filterByList('saved', event)">
-                <i class="fas fa-star"></i> Favorites
             </a>
             <a href="#" class="sidebar-link" id="sb-solved" onclick="filterByList('solved', event)">
                 <i class="fas fa-check-circle"></i> Solved
@@ -366,11 +363,12 @@
         <!-- CENTER CONTENT -->
         <div class="flex flex-col overflow-hidden bg-[#0d0d0d]">
             <!-- Promo Banner Row -->
-            <div id="promo-row" class="px-6 pt-5 pb-2 flex gap-4 overflow-x-auto shrink-0" style="overflow-x:auto;">
+            <div id="promo-row" class="px-6 pt-5 pb-2 flex gap-4 shrink-0">
                 <!-- Populated by JS -->
-                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
-                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
-                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
+                <div class="promo-card flex-1 animate-pulse"
+                    style="background:#1a1a1a; height:220px; border-radius:16px;"></div>
+                <div class="promo-card flex-1 animate-pulse"
+                    style="background:#1a1a1a; height:220px; border-radius:16px;"></div>
             </div>
 
             <!-- Topics Filter Bar -->
@@ -417,7 +415,7 @@
                         <tr>
                             <td colspan="5" class="py-16 text-center text-zinc-500">
                                 <i class="fas fa-circle-notch fa-spin text-2xl text-emerald-500 mb-3 block"></i>
-                                <p class="text-xs font-mono uppercase tracking-widest">Scanning Neural Matrix...</p>
+                                <p class="text-xs font-mono uppercase tracking-widest">Syncing Problem Registry...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -431,7 +429,7 @@
             <!-- User Progress Card -->
             <div style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px;">
                 <div class="flex items-center justify-between mb-4">
-                    <p class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Your Progress</p>
+                    <p class="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Problem Analytics</p>
                 </div>
 
                 <!-- Progress circles -->
@@ -491,15 +489,42 @@
                 <p class="text-[10px] text-zinc-600 uppercase tracking-widest">Days</p>
             </div>
 
-            <!-- Saved Problems -->
+            <!-- Solving Frequency Section -->
             <div
                 style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px; flex:1; min-height:0; display:flex; flex-direction:column;">
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Favorites</p>
-                    <i class="fas fa-star text-amber-400 text-xs"></i>
+                <div class="mb-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">Solving
+                            Frequency</h4>
+                        <span id="current-month-label"
+                            class="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">March 2026</span>
+                    </div>
+                    <div id="activity-calendar" class="grid grid-cols-7 gap-1.5 px-0.5">
+                        <!-- Activity blocks injected here -->
+                    </div>
+                    <div
+                        class="mt-4 flex items-center justify-between text-[8px] text-zinc-600 uppercase font-bold tracking-widest px-1">
+                        <span>Low</span>
+                        <div class="flex gap-1 items-center">
+                            <div class="w-2 h-2 bg-zinc-900 rounded-[2px]" title="0 Solves"></div>
+                            <div class="w-2 h-2 bg-emerald-900/60 rounded-[2px]" title="1-2 Solves"></div>
+                            <div class="w-2 h-2 bg-emerald-800/80 rounded-[2px]" title="3-4 Solves"></div>
+                            <div class="w-2 h-2 bg-emerald-700 rounded-[2px]" title="5-7 Solves"></div>
+                            <div class="w-2 h-2 bg-emerald-500 rounded-[2px]" title="8-10 Solves"></div>
+                            <div class="w-2 h-2 bg-emerald-400 rounded-[2px] shadow-[0_0_8px_#34d399]"
+                                title="10+ Solves"></div>
+                        </div>
+                        <span>High</span>
+                    </div>
                 </div>
-                <div id="saved-list" style="flex:1; overflow-y:auto;" class="space-y-2">
-                    <p class="text-[12px] text-zinc-600 text-center py-4">Star problems to add here</p>
+
+                <div class="mt-auto pt-6 border-t border-white/[0.03]">
+                    <div class="p-3 bg-zinc-900/40 rounded-xl border border-white/[0.02]">
+                        <p
+                            class="text-[9px] text-zinc-500 leading-relaxed font-semibold uppercase tracking-tight text-center">
+                            Consistency is the primary metric for proficiency development. Maintain your streak.
+                        </p>
+                    </div>
                 </div>
             </div>
         </aside>
