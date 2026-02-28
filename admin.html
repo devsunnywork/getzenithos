@@ -725,27 +725,196 @@
         }
 
         async function viewUserDetail(id) {
-            openModal();
-            document.getElementById('modal-content').innerHTML = `
-                <div class="flex flex-col items-center justify-center h-[70vh]">
+            // Create full-screen overlay immediately with loader
+            let overlay = document.getElementById('user-detail-overlay');
+            if (overlay) overlay.remove();
+            overlay = document.createElement('div');
+            overlay.id = 'user-detail-overlay';
+            overlay.className = 'fixed inset-0 z-[500] bg-[#020202] overflow-y-auto custom-scrollbar';
+            overlay.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-screen">
                     <div class="w-20 h-20 border-4 border-red-600/10 border-t-red-600 rounded-full animate-spin mb-8"></div>
                     <div class="text-xs font-black text-slate-500 uppercase tracking-[1em] animate-pulse">Establishing Neural Uplink...</div>
                 </div>
             `;
+            document.body.appendChild(overlay);
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) throw new Error(`Failed to fetch user details: ${res.status}`);
-                const { user, transactions } = await res.json();
+                const [detailRes, coursesRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/api/admin/courses`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
 
-                const coursesRes = await fetch(`${API_BASE_URL}/api/admin/courses`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!coursesRes.ok) throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
-                const allCourses = await coursesRes.json();
+                if (!detailRes.ok) throw new Error(`Failed to fetch user details: ${detailRes.status}`);
+                const { user, transactions } = await detailRes.json();
+                const allCourses = coursesRes.ok ? await coursesRes.json() : [];
 
                 window.currentOperative = user;
                 window.allModules = allCourses;
 
-                document.getElementById('modal-content').innerHTML = `
+                // Safely normalize all optional fields
+                const status = user.status || 'active';
+                const balance = user.balance ?? 0;
+                const xp = user.xp ?? 0;
+                const watchTime = user.totalWatchTime ?? 0;
+
+                overlay.innerHTML = `
+                <div class="p-10 md:p-16 max-w-7xl mx-auto">
+                    <!-- TOP NAV BAR -->
+                    <div class="flex items-center justify-between mb-16 sticky top-6 z-10 bg-[#020202]/80 backdrop-blur-xl py-4 px-6 rounded-[2rem] border border-white/5">
+                        <button onclick="document.getElementById('user-detail-overlay').remove()" class="flex items-center gap-3 text-slate-400 hover:text-white transition font-black text-xs uppercase tracking-widest">
+                            <i class="fas fa-arrow-left"></i> Back to Roster
+                        </button>
+                        <div class="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">Operative Deep Scan // ${user._id}</div>
+                        <div class="flex gap-3">
+                            <button onclick="toggleUserLock('${user._id}', '${status}')" class="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition">
+                                ${status === 'active' ? '<i class="fas fa-lock mr-2"></i>Lock' : '<i class="fas fa-lock-open mr-2"></i>Unseal'}
+                            </button>
+                            <button onclick="confirmDeleteUser('${user._id}', '${user.username}', '${user.role}')" class="px-6 py-2.5 bg-red-600/20 text-red-500 border border-red-600/20 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition">
+                                <i class="fas fa-trash mr-2"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HEADER PROFILE -->
+                    <div class="flex flex-col md:flex-row gap-12 items-start mb-16 pb-16 border-b border-white/5">
+                        <div class="w-40 h-40 rounded-[3rem] overflow-hidden bg-white/5 border-2 border-white/10 shadow-[0_0_60px_rgba(239,68,68,0.15)] shrink-0">
+                            <img src="${(user.profile && user.profile.avatar) ? user.profile.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(user.username || 'user')}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-4 mb-5">
+                                <span class="bg-red-600/20 text-red-400 border border-red-600/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.4em]">Operative Profile</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full ${status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}"></div>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">${String(status).toUpperCase()}</span>
+                                </div>
+                                <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-red-600/20 text-red-500' : 'bg-blue-600/20 text-blue-500'}">${user.role || 'user'}</span>
+                            </div>
+                            <h1 class="text-6xl md:text-8xl font-black tracking-tighter uppercase syne mb-3">${user.username || 'Unknown'}</h1>
+                            <p class="text-sm text-slate-500 font-bold mb-6">${user.email || 'No email'}</p>
+                            <div class="flex flex-wrap gap-4">
+                                <div class="bg-white/5 border border-white/5 rounded-2xl px-5 py-3">
+                                    <div class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-1">Balance</div>
+                                    <div class="text-xl font-black text-green-400">₹${balance.toLocaleString()}</div>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 rounded-2xl px-5 py-3">
+                                    <div class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-1">XP</div>
+                                    <div class="text-xl font-black text-blue-400">${xp}</div>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 rounded-2xl px-5 py-3">
+                                    <div class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-1">Watch Time</div>
+                                    <div class="text-xl font-black text-yellow-400">${(watchTime / 60).toFixed(1)} min</div>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 rounded-2xl px-5 py-3">
+                                    <div class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-1">Member Since</div>
+                                    <div class="text-sm font-black text-slate-300">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTION CARDS GRID -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+                        <!-- Fiscal -->
+                        <div class="glass-card p-10 rounded-[3rem] border border-green-600/10 hover:border-green-600/30 transition flex flex-col justify-between">
+                            <div>
+                                <div class="w-14 h-14 bg-green-600/10 rounded-2xl flex items-center justify-center text-green-500 text-xl mb-8"><i class="fas fa-wallet"></i></div>
+                                <h3 class="text-xl font-black uppercase syne tracking-tight mb-2">Fiscal Correction</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed">Adjust operative balance and log transactions manually.</p>
+                            </div>
+                            <button onclick="launchFiscalModal()" class="mt-8 w-full py-5 bg-green-600 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-600/20">Access Terminal</button>
+                        </div>
+                        <!-- Access -->
+                        <div class="glass-card p-10 rounded-[3rem] border border-blue-600/10 hover:border-blue-600/30 transition flex flex-col justify-between">
+                            <div>
+                                <div class="w-14 h-14 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl mb-8"><i class="fas fa-shield-halved"></i></div>
+                                <h3 class="text-xl font-black uppercase syne tracking-tight mb-2">Neural Override</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed">Restrict or authorize core subsystems and feature nodes.</p>
+                            </div>
+                            <button onclick="launchAccessModal()" class="mt-8 w-full py-5 bg-blue-600 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-600/20">Manage Subsystems</button>
+                        </div>
+                        <!-- Deployment -->
+                        <div class="glass-card p-10 rounded-[3rem] border border-purple-600/10 hover:border-purple-600/30 transition flex flex-col justify-between">
+                            <div>
+                                <div class="w-14 h-14 bg-purple-600/10 rounded-2xl flex items-center justify-center text-purple-500 text-xl mb-8"><i class="fas fa-rocket"></i></div>
+                                <h3 class="text-xl font-black uppercase syne tracking-tight mb-2">Module Granting</h3>
+                                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed">Authorize training modules and monitor sync status.</p>
+                            </div>
+                            <button onclick="launchDeploymentModal()" class="mt-8 w-full py-5 bg-purple-600 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-purple-700 transition shadow-lg shadow-purple-600/20">Open Deployment</button>
+                        </div>
+                    </div>
+
+                    <!-- TRANSACTION HISTORY -->
+                    <div class="glass-card rounded-[3rem] overflow-hidden border border-white/5">
+                        <div class="p-10 border-b border-white/5 flex items-center justify-between">
+                            <h3 class="text-xl font-black uppercase syne tracking-tight">Fiscal Ledger</h3>
+                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">${(transactions || []).length} Records</span>
+                        </div>
+                        ${(transactions && transactions.length) ? `
+                        <table class="w-full">
+                            <thead class="bg-white/5">
+                                <tr>
+                                    <th class="p-6 pl-10 text-[10px] font-black uppercase text-slate-600 tracking-widest text-left">Description</th>
+                                    <th class="p-6 text-[10px] font-black uppercase text-slate-600 tracking-widest text-left">Type</th>
+                                    <th class="p-6 pr-10 text-[10px] font-black uppercase text-slate-600 tracking-widest text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                ${transactions.map(t => `
+                                <tr class="hover:bg-white/5 transition">
+                                    <td class="p-6 pl-10">
+                                        <div class="text-xs font-black uppercase text-white">${t.item || 'System Correction'}</div>
+                                        <div class="text-[9px] font-bold text-slate-600 uppercase">${new Date(t.createdAt).toLocaleString()}</div>
+                                    </td>
+                                    <td class="p-6">
+                                        <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${t.type === 'recharge' ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}">${t.type}</span>
+                                    </td>
+                                    <td class="p-6 pr-10 text-right">
+                                        <div class="text-lg font-black ${t.type === 'recharge' ? 'text-green-400' : 'text-red-400'} syne">₹${t.amount}</div>
+                                    </td>
+                                </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<div class="p-16 text-center text-slate-700 uppercase text-[10px] font-black tracking-widest">No transaction history found.</div>`}
+                    </div>
+                </div>
+                `;
+
+            } catch (err) {
+                console.error("Deep Telemetry Error", err);
+                overlay.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-screen text-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-6"></i>
+                        <h2 class="text-2xl font-black uppercase mb-3">Neural Link Failed</h2>
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-8">${err.message}</p>
+                        <button onclick="document.getElementById('user-detail-overlay').remove()" class="px-8 py-4 bg-white/5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to Roster
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/deep`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!res.ok) throw new Error(`Failed to fetch user details: ${res.status}`);
+            const { user, transactions } = await res.json();
+
+            const coursesRes = await fetch(`${API_BASE_URL}/api/admin/courses`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!coursesRes.ok) throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
+            const allCourses = await coursesRes.json();
+
+            window.currentOperative = user;
+            window.allModules = allCourses;
+
+            // Safely guard optional fields that may not exist
+            const fa = user.featureAccess || {};
+            // enrolledCourses may be populated objects or raw ObjectIds — normalize
+            const enrolledList = (user.enrolledCourses || []).filter(c => typeof c === 'object' && c !== null && c.title);
+
+            document.getElementById('modal-content').innerHTML = `
                 <div class="p-12 md:p-20 text-left">
                     <!-- HEADER -->
                     <div class="flex flex-col md:flex-row justify-between items-end gap-12 mb-32 border-b border-white/5 pb-20">
@@ -848,7 +1017,7 @@
                             <button onclick="launchLedgerModal()" class="w-full py-6 bg-white/5 border border-white/10 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition">View Ledger</button>
                         </div>
 
-                        <!-- LIFECYCLE -->
+                         <!-- LIFECYCLE -->
                         <div class="glass-card p-12 rounded-[4rem] border-red-600/5 group hover:border-red-600/20 transition-all duration-500 flex flex-col justify-between">
                             <div>
                                 <div class="flex justify-between items-start mb-12">
@@ -859,22 +1028,16 @@
                                 <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-12 leading-relaxed">Execute permanent termination or suspension protocols.</p>
                             </div>
                             <div class="flex gap-4">
-                                <button onclick="toggleUserLock('${user._id}', '${user.status}')" class="flex-grow py-5 bg-white/5 border border-red-600/10 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-red-600/20 transition">${user.status === 'active' ? 'Lock' : 'Unseal'}</button>
-                                <button onclick="purgeUser('${user._id}')" class="px-8 py-5 bg-red-600/20 text-red-500 rounded-3xl font-black hover:bg-red-600 hover:text-white transition"><i class="fas fa-trash"></i></button>
+                                <button onclick="toggleUserLock('${user._id}', '${user.status || 'active'}')" class="flex-grow py-5 bg-white/5 border border-red-600/10 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-red-600/20 transition">${(user.status || 'active') === 'active' ? 'Lock' : 'Unseal'}</button>
+                                <button onclick="confirmDeleteUser('${user._id}', '${user.username}', '${user.role}')" class="px-8 py-5 bg-red-600/20 text-red-500 rounded-3xl font-black hover:bg-red-600 hover:text-white transition"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
 
                     </div>
                 </div>
-            `;
-
-            } catch (err) {
-                console.error("Deep Telemetry Error", err);
-                showToast("COULD NOT ESTABLISH LINK", "error");
-            }
-        }
 
         // --- SUB-MODAL LAUNCHERS ---
+
 
         function launchFiscalModal() {
             const user = window.currentOperative;
@@ -882,7 +1045,7 @@
                 title: 'Financial Terminal',
                 subtitle: 'Adjust Operative Credits',
                 contentHtml: `
-                    <div class="space-y-10">
+                < div class="space-y-10" >
                         <div class="bg-white/5 p-10 rounded-[3rem] border border-white/5 flex justify-between items-center">
                             <span class="text-xs font-black uppercase tracking-widest text-slate-500">Current Balance</span>
                             <span class="text-4xl font-black text-green-500 syne">₹${user.balance}</span>
@@ -904,7 +1067,7 @@
                             <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Authorization Reason</label>
                             <input id="f-reason" type="text" class="input-zenith py-5" placeholder="Description for global ledger...">
                         </div>
-                    </div>
+                    </div >
                 `,
                 onConfirm: async () => {
                     const amount = document.getElementById('f-amount').value;
@@ -914,17 +1077,17 @@
 
                     try {
                         ZLoader.show("Syncing Fiscal Data...");
-                        const res = await fetch(`${API_BASE_URL}/api/admin/users/${user._id}/balance`, {
-                            method: 'PATCH',
-                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ amount, type, reason })
-                        });
-                        ZLoader.hide();
-                        if (res.ok) {
-                            showToast("FISCAL PROTOCOL SYNCED", "success");
-                            viewUserDetail(user._id);
-                            return true;
-                        }
+                        const res = await fetch(`${ API_BASE_URL } /api/admin / users / ${ user._id }/balance`, {
+            method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, type, reason })
+        });
+        ZLoader.hide();
+        if (res.ok) {
+            showToast("FISCAL PROTOCOL SYNCED", "success");
+            viewUserDetail(user._id);
+            return true;
+        }
                     } catch (e) { ZLoader.hide(); showToast("LINK ERROR", "error"); return false; }
                 }
             });
@@ -958,7 +1121,9 @@
 
         function launchDeploymentModal() {
             const user = window.currentOperative;
-            const allModules = window.allModules;
+            const allModules = window.allModules || [];
+            // enrolledCourses may be populated objects or raw ObjectIds — filter to only objects with titles
+            const enrolledCourses = (user.enrolledCourses || []).filter(c => typeof c === 'object' && c !== null && c.title);
             openActionModal({
                 title: 'Deployment Hub',
                 subtitle: 'Neural Module Granting',
@@ -974,12 +1139,12 @@
                         <div class="bg-white/5 p-2 rounded-[3.5rem] border border-white/5">
                             <div class="p-8 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Subsystems</div>
                             <div class="max-h-60 overflow-y-auto custom-scrollbar p-6 space-y-3">
-                                ${user.enrolledCourses.map(c => `
+                                ${enrolledCourses.length ? enrolledCourses.map(c => `
                                     <div class="p-5 bg-white/5 rounded-3xl border border-white/5 flex justify-between items-center">
                                         <div class="text-[10px] font-black uppercase tracking-tight truncate max-w-[200px]">${c.title}</div>
                                         <button onclick="revokeCourse('${user._id}', '${c._id}')" class="text-red-500 hover:text-red-400 transition ml-4"><i class="fas fa-trash-alt"></i></button>
                                     </div>
-                                `).join('') || '<div class="p-10 text-center text-slate-700 italic text-xs uppercase tracking-widest font-black">No Manual Grants</div>'}
+                                `).join('') : '<div class="p-10 text-center text-slate-700 italic text-xs uppercase tracking-widest font-black">No Manual Grants</div>'}
                             </div>
                         </div>
                     </div>
@@ -1040,7 +1205,6 @@
             await grantCourse(uId, cId);
         }
 
-        // --- USERS ---
         function renderUsers() {
             document.getElementById('content-area').innerHTML = `
                 <div class="glass-card rounded-[4rem] overflow-hidden">
@@ -1050,7 +1214,7 @@
                                 <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Operative Hub</th>
                                 <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Fiscal Status</th>
                                 <th class="p-10 text-[10px] uppercase font-black text-slate-500 tracking-widest">Access Level</th>
-                                <th class="p-10 text-right pr-20 text-[10px] uppercase font-black text-slate-500 tracking-widest">Terminal</th>
+                                <th class="p-10 text-right pr-20 text-[10px] uppercase font-black text-slate-500 tracking-widest">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-white/5">
@@ -1061,7 +1225,7 @@
                                     <div class="text-xs text-slate-500 font-bold">${u.email}</div>
                                 </td>
                                 <td class="p-10">
-                                    <div class="text-xl font-black text-green-500">₹${(u.balance || 0).toLocaleString()}</div>
+                                    <div class="text-xl font-black text-green-500">&#8377;${(u.balance || 0).toLocaleString()}</div>
                                     <div class="text-[9px] text-slate-600 uppercase font-black">Credits Available</div>
                                 </td>
                                 <td class="p-10">
@@ -1073,9 +1237,15 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="p-10 text-right pr-20 space-x-8">
-                                    <button onclick="viewUserDetail('${u._id}')" class="text-[10px] font-black uppercase text-blue-500 hover:tracking-widest transition-all">Inspect detail</button>
-                                    <button onclick="moderateUser('${u._id}')" class="text-[10px] font-black uppercase text-red-500 hover:tracking-widest transition-all">Moderate</button>
+                                <td class="p-10 text-right pr-20">
+                                    <div class="flex items-center justify-end gap-6">
+                                        <button onclick="viewUserDetail('${u._id}')" class="text-[10px] font-black uppercase text-blue-400 hover:text-blue-300 hover:tracking-widest transition-all px-4 py-2 rounded-lg hover:bg-blue-600/10">
+                                            <i class="fas fa-search mr-1"></i> Inspect
+                                        </button>
+                                        <button onclick="confirmDeleteUser('${u._id}', '${u.username}', '${u.role}')" class="text-[10px] font-black uppercase text-red-500 hover:text-white hover:tracking-widest transition-all px-4 py-2 rounded-lg hover:bg-red-600">
+                                            <i class="fas fa-trash mr-1"></i> Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `).join('')}
@@ -1225,6 +1395,44 @@
                     launchDeploymentModal();
                 }
             } catch (e) { ZLoader.hide(); showToast("Module Revocation Failed.", "error"); }
+        }
+
+        // Confirm then delete a user with a modal
+        function confirmDeleteUser(id, username, role) {
+            if (role === 'admin') {
+                showToast('CANNOT TERMINATE ANOTHER ADMIN', 'error');
+                return;
+            }
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 z-[400] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-8';
+            overlay.innerHTML = `
+                <div class="glass-card p-16 rounded-[4rem] border border-red-600/20 text-center max-w-xl w-full animate-in zoom-in-95 duration-300 shadow-[0_0_80px_rgba(239,68,68,0.15)]">
+                    <div class="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-10 border border-red-600/20">
+                        <i class="fas fa-skull text-red-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-xs font-black text-red-500 uppercase tracking-[0.5em] mb-4">Termination Protocol</h3>
+                    <p class="text-3xl font-black uppercase syne tracking-tight text-white mb-3">Delete Operative?</p>
+                    <p class="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-12 leading-loose">
+                        You are about to permanently delete<br>
+                        <span class="text-white font-black text-sm">${String(username).toUpperCase()}</span><br>
+                        All data, records and fiscal history will be wiped. This cannot be undone.
+                    </p>
+                    <div class="flex gap-6">
+                        <button id="del-confirm" class="flex-grow py-6 bg-red-600 hover:bg-red-700 rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] transition shadow-2xl shadow-red-600/20">
+                            <i class="fas fa-trash mr-2"></i> Confirm Delete
+                        </button>
+                        <button id="del-cancel" class="px-10 py-6 bg-white/5 hover:bg-white/10 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] transition">
+                            Abort
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#del-cancel').onclick = () => overlay.remove();
+            overlay.querySelector('#del-confirm').onclick = async () => {
+                overlay.remove();
+                await purgeUser(id);
+            };
         }
 
         async function purgeUser(id) {

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Arena – Zenith OS</title>
+    <meta name="description" content="Solve algorithmic challenges and level up your DSA skills on Zenith OS.">
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/css/design-system.css">
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0d0d0d;
+            color: #e4e4e7;
+        }
+
+        .syne {
+            font-family: 'Syne', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d2d;
+            border-radius: 4px;
+        }
+
+        /* Layout */
+        .arena-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr 300px;
+            grid-template-rows: 1fr;
+            height: calc(100vh - 52px);
+            overflow: hidden;
+        }
+
+        @media (max-width:1100px) {
+            .arena-layout {
+                grid-template-columns: 220px 1fr;
+            }
+
+            .right-aside {
+                display: none !important;
+            }
+        }
+
+        @media (max-width:768px) {
+            .arena-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .left-aside {
+                display: none !important;
+            }
+        }
+
+        /* Left Sidebar */
+        .left-aside {
+            border-right: 1px solid #1f1f1f;
+            background: #0d0d0d;
+            overflow-y: auto;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #71717a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin: 1px 8px;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover {
+            color: #e4e4e7;
+            background: #1a1a1a;
+        }
+
+        .sidebar-link.active {
+            color: #fff;
+            background: #262626;
+        }
+
+        .sidebar-link i {
+            width: 18px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* Problem Table */
+        .problem-row {
+            transition: background 0.12s;
+            border-bottom: 1px solid #1a1a1a;
+            cursor: pointer;
+        }
+
+        .problem-row:last-child {
+            border-bottom: none;
+        }
+
+        .problem-row:hover {
+            background: #161616;
+        }
+
+        .problem-row td {
+            padding: 12px 16px;
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        .problem-row td:first-child {
+            padding-left: 20px;
+            width: 48px;
+        }
+
+        .problem-row td:last-child {
+            padding-right: 20px;
+            width: 48px;
+            text-align: right;
+        }
+
+        /* Tag filters */
+        .tag-chip {
+            padding: 4px 12px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #a1a1aa;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .tag-chip:hover {
+            background: #252525;
+            color: #e4e4e7;
+            border-color: #3a3a3a;
+        }
+
+        .tag-chip.active {
+            background: #059669;
+            border-color: #059669;
+            color: #fff;
+        }
+
+        /* Promo cards */
+        .promo-card {
+            border-radius: 14px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .promo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Right sidebar */
+        .right-aside {
+            border-left: 1px solid #1f1f1f;
+            background: #0d0d0d;
+            overflow-y: auto;
+            padding: 20px 16px;
+        }
+
+        /* Streak ring */
+        .stat-ring {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: conic-gradient(#10b981 var(--pct, 0%), #1f2937 0%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 3px #0d0d0d inset;
+        }
+
+        .stat-ring-inner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Difficulty chip */
+        .diff-easy {
+            color: #10b981;
+        }
+
+        .diff-medium {
+            color: #f59e0b;
+        }
+
+        .diff-hard {
+            color: #ef4444;
+        }
+
+        .solved-check {
+            color: #10b981;
+        }
+
+        /* Search */
+        .search-box {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 7px 12px 7px 36px;
+            font-size: 13px;
+            color: #e4e4e7;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 220px;
+        }
+
+        .search-box:focus {
+            border-color: #10b981;
+        }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .filter-bar::-webkit-scrollbar {
+            height: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Nav -->
+    <nav style="height:52px; background:#0d0d0d; border-bottom:1px solid #1f1f1f;"
+        class="flex items-center justify-between px-4 shrink-0 z-50 sticky top-0">
+        <div class="flex items-center gap-4">
+            <button onclick="window.location.href='/user.html'"
+                class="text-zinc-500 hover:text-white transition w-8 h-8 rounded flex items-center justify-center hover:bg-white/5">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div class="h-5 w-px bg-white/10"></div>
+            <!-- Zenith Logo / Wordmark -->
+            <div class="flex items-center gap-2 select-none">
+                <div class="w-6 h-6 rounded bg-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-gavel text-white text-[10px]"></i>
+                </div>
+                <span class="syne font-black text-white text-sm tracking-tight">DSA<span
+                        class="text-emerald-500">_ARENA</span></span>
+            </div>
+
+            <!-- Nav links -->
+            <div class="hidden md:flex items-center gap-1 ml-2">
+                <a class="text-white text-[13px] font-semibold px-3 py-1.5 rounded hover:bg-white/5 transition border-b-2 border-emerald-500 pb-[4px]"
+                    href="#">Problems</a>
+                <a class="text-zinc-400 text-[13px] font-medium px-3 py-1.5 rounded hover:bg-white/5 hover:text-white transition"
+                    href="#">Leaderboard</a>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Streak badge -->
+            <div
+                class="flex items-center gap-1.5 text-[12px] font-semibold text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                <i class="fas fa-fire text-[11px]"></i>
+                <span id="header-streak">0</span>
+            </div>
+            <!-- XP badge -->
+            <div
+                class="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                <i class="fas fa-bolt text-[11px]"></i>
+                <span id="header-xp">0 XP</span>
+            </div>
+            <!-- Solved Badge -->
+            <div
+                class="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+                <span id="header-solved-count">0</span>/<span id="header-total-count">0</span> Solved
+            </div>
+            <!-- Avatar -->
+            <div
+                class="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center cursor-pointer">
+                <img id="header-avatar" src="" alt="" class="hidden w-full h-full object-cover">
+                <i id="header-avatar-icon" class="fas fa-user text-zinc-400 text-xs"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Body Layout -->
+    <div class="arena-layout">
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="left-aside py-4">
+            <div class="px-6 mb-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">My Space</div>
+            <a href="#" class="sidebar-link active" id="sb-all" onclick="filterByList('all', event)">
+                <i class="fas fa-list-ul"></i> All Problems
+            </a>
+            <a href="#" class="sidebar-link" id="sb-saved" onclick="filterByList('saved', event)">
+                <i class="fas fa-star"></i> Favorites
+            </a>
+            <a href="#" class="sidebar-link" id="sb-solved" onclick="filterByList('solved', event)">
+                <i class="fas fa-check-circle"></i> Solved
+            </a>
+            <a href="#" class="sidebar-link" id="sb-unsolved" onclick="filterByList('unsolved', event)">
+                <i class="far fa-circle"></i> Unsolved
+            </a>
+
+            <div class="h-px bg-zinc-800 my-4 mx-4"></div>
+
+            <div class="px-6 mb-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Difficulty</div>
+            <a href="#" class="sidebar-link" id="sb-easy" onclick="filterByDiff('Easy', event)">
+                <i class="fas fa-circle text-[8px] text-emerald-500"></i> Easy
+            </a>
+            <a href="#" class="sidebar-link" id="sb-medium" onclick="filterByDiff('Medium', event)">
+                <i class="fas fa-circle text-[8px] text-amber-500"></i> Medium
+            </a>
+            <a href="#" class="sidebar-link" id="sb-hard" onclick="filterByDiff('Hard', event)">
+                <i class="fas fa-circle text-[8px] text-red-500"></i> Hard
+            </a>
+
+            <div class="h-px bg-zinc-800 my-4 mx-4"></div>
+
+            <div class="px-6 mb-3 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Quick Start</div>
+            <a href="#" class="sidebar-link" onclick="seedDummyProblem()">
+                <i class="fas fa-magic text-purple-400"></i> <span class="text-purple-400">Seed Demo</span>
+            </a>
+        </aside>
+
+        <!-- CENTER CONTENT -->
+        <div class="flex flex-col overflow-hidden bg-[#0d0d0d]">
+            <!-- Promo Banner Row -->
+            <div id="promo-row" class="px-6 pt-5 pb-2 flex gap-4 overflow-x-auto shrink-0" style="overflow-x:auto;">
+                <!-- Populated by JS -->
+                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
+                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
+                <div class="promo-card shrink-0 w-56 animate-pulse" style="background:#1a1a1a; height:110px;"></div>
+            </div>
+
+            <!-- Topics Filter Bar -->
+            <div class="px-6 py-3 shrink-0">
+                <div class="filter-bar" id="tag-filter-bar">
+                    <button class="tag-chip active" onclick="filterByTag('', this)">All Topics</button>
+                    <!-- More tags injected via JS -->
+                </div>
+            </div>
+
+            <!-- Table Controls -->
+            <div class="px-6 pb-3 shrink-0 flex items-center justify-between gap-4">
+                <div class="relative flex-shrink-0">
+                    <i
+                        class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"></i>
+                    <input id="search-input" type="text" placeholder="Search questions" class="search-box"
+                        oninput="applyFilters()">
+                </div>
+                <div class="text-[12px] text-zinc-500 ml-auto whitespace-nowrap">
+                    <span id="solved-count-label">0</span>/<span id="total-count-label">0</span> Solved
+                </div>
+            </div>
+
+            <!-- Problem Table -->
+            <div class="flex-1 overflow-y-auto" id="table-scroll-wrapper">
+                <table class="w-full border-collapse">
+                    <colgroup>
+                        <col style="width:48px">
+                        <col>
+                        <col style="width:100px">
+                        <col style="width:160px">
+                        <col style="width:48px">
+                    </colgroup>
+                    <thead class="sticky top-0 bg-[#111] z-10">
+                        <tr style="border-bottom:1px solid #1f1f1f;">
+                            <th class="pl-5 py-3 text-[11px] font-semibold text-zinc-500 text-center"></th>
+                            <th class="py-3 text-[11px] font-semibold text-zinc-500 text-left">Title</th>
+                            <th class="py-3 text-[11px] font-semibold text-zinc-500">Difficulty</th>
+                            <th class="py-3 text-[11px] font-semibold text-zinc-500">Tags</th>
+                            <th class="pr-5 py-3 text-[11px] font-semibold text-zinc-500 text-right"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="problem-table-body">
+                        <tr>
+                            <td colspan="5" class="py-16 text-center text-zinc-500">
+                                <i class="fas fa-circle-notch fa-spin text-2xl text-emerald-500 mb-3 block"></i>
+                                <p class="text-xs font-mono uppercase tracking-widest">Scanning Neural Matrix...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="right-aside" style="display:flex; flex-direction:column; gap:16px;">
+
+            <!-- User Progress Card -->
+            <div style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px;">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Your Progress</p>
+                </div>
+
+                <!-- Progress circles -->
+                <div class="flex justify-around items-center mb-4">
+                    <div class="text-center">
+                        <div class="stat-ring mx-auto mb-1" style="--pct:0%" id="ring-easy">
+                            <div class="stat-ring-inner">
+                                <span class="text-[11px] font-black text-emerald-400" id="stat-easy">0</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-zinc-600 font-bold uppercase tracking-wider">Easy</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="stat-ring mx-auto mb-1"
+                            style="--pct:0%; background: conic-gradient(#f59e0b var(--pct, 0%), #1f2937 0%);"
+                            id="ring-medium">
+                            <div class="stat-ring-inner">
+                                <span class="text-[11px] font-black text-amber-400" id="stat-medium">0</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-zinc-600 font-bold uppercase tracking-wider">Med.</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="stat-ring mx-auto mb-1"
+                            style="--pct:0%; background: conic-gradient(#ef4444 var(--pct, 0%), #1f2937 0%);"
+                            id="ring-hard">
+                            <div class="stat-ring-inner">
+                                <span class="text-[11px] font-black text-red-400" id="stat-hard">0</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-zinc-600 font-bold uppercase tracking-wider">Hard</p>
+                    </div>
+                </div>
+
+                <!-- Total bar -->
+                <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                        <span class="text-zinc-400 font-medium"><span id="total-solved-num"
+                                class="text-white font-black">0</span> Solved</span>
+                        <span class="text-zinc-600" id="total-avail-num">of 0</span>
+                    </div>
+                    <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                        <div id="total-bar"
+                            class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-700"
+                            style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Streak Card -->
+            <div style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px;"
+                class="text-center">
+                <p class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">DSA Streak</p>
+                <div class="text-4xl font-black syne text-amber-500 mb-1">
+                    <i class="fas fa-fire text-3xl mr-1"></i><span id="streak-big">0</span>
+                </div>
+                <p class="text-[10px] text-zinc-600 uppercase tracking-widest">Days</p>
+            </div>
+
+            <!-- Saved Problems -->
+            <div
+                style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px; flex:1; min-height:0; display:flex; flex-direction:column;">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Favorites</p>
+                    <i class="fas fa-star text-amber-400 text-xs"></i>
+                </div>
+                <div id="saved-list" style="flex:1; overflow-y:auto;" class="space-y-2">
+                    <p class="text-[12px] text-zinc-600 text-center py-4">Star problems to add here</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="public/js/arena-list.js"></script>
+</body>
+
+</html>

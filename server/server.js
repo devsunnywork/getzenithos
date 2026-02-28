@@ -189,6 +189,14 @@ app.get('/code-nexus.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../code-nexus.html'));
 });
 
+app.get('/arena-solver.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../arena-solver.html'));
+});
+
+app.get('/arena.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../arena.html'));
+});
+
 // Define Routes
 app.use(require('./middleware/activityMiddleware')); // Track global activity
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -206,6 +214,7 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/explore', require('./routes/exploreRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
 app.use('/api/code', require('./routes/codeRoutes'));
+app.use('/api/problems', require('./routes/problemRoutes'));
 
 const PORT = process.env.PORT || 5000;
 const server = require('http').createServer(app);

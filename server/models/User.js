@@ -30,6 +30,12 @@ const userSchema = new mongoose.Schema({
         longest: { type: Number, default: 0 },
         lastActiveDate: { type: Date }
     },
+    dsaStreak: {
+        current: { type: Number, default: 0 },
+        longest: { type: Number, default: 0 },
+        lastSolvedDate: { type: Date }
+    },
+    dsaSolved: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Problem' }],
     careerChangeMeta: {
         lastResetDate: { type: Date, default: Date.now },
         changesThisMonth: { type: Number, default: 0 },

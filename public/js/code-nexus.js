@@ -615,8 +615,169 @@ function clearTerminal() {
 
 function showToast(msg, type) {
     const toast = document.createElement('div');
-    toast.className = `fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 ${type === 'success' ? 'bg-emerald-600' : 'bg-red-600'} rounded-2xl text-white font-black uppercase text-[10px] tracking-widest z-[200] animate-in slide-in-from-bottom-10 shadow-2xl`;
+    toast.className = `fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 ${type === 'success' ? 'bg-blue-600' : 'bg-red-600'} rounded-2xl text-white font-black uppercase text-[10px] tracking-widest z-[400] transition-all shadow-2xl backdrop-blur-md`;
+    toast.style.animation = 'slideUp 0.3s ease-out forwards';
     toast.innerText = msg;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+
+    // Add keyframes if not exists
+    if (!document.getElementById('toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.innerHTML = `@keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }`;
+        document.head.appendChild(style);
+    }
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%, 20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ----------------------------------------------------
+// Send to Group Integration
+// ----------------------------------------------------
+
+async function openSendToGroupModal() {
+    if (!contextNodeId) return;
+    const file = workspace.files.find(f => f._id === contextNodeId);
+    if (!file) return;
+
+    // Hide context menu
+    document.getElementById('file-context-menu').classList.add('hidden');
+
+    // Show Modal
+    const modal = document.getElementById('send-group-modal');
+    modal.classList.remove('hidden');
+    // small delay for transition
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.querySelector('.w-full').classList.remove('scale-95');
+    }, 10);
+
+    document.getElementById('send-file-name-display').innerText = file.name;
+    document.getElementById('send-group-message').value = '';
+
+    const listContainer = document.getElementById('group-selection-list');
+    listContainer.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs flex flex-col items-center"><i class="fas fa-circle-notch animate-spin mb-2 text-purple-500"></i> Scanning Neural Nodes...</div>`;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/groups`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to load groups");
+
+        const groups = await res.json();
+
+        if (groups.length === 0) {
+            listContainer.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">No active nodes (groups) found. Join a group first.</div>`;
+            return;
+        }
+
+        listContainer.innerHTML = groups.map(g => `
+            <label class="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-white/10 group">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-purple-600/10 text-purple-500 flex items-center justify-center shrink-0">
+                        ${g.icon ? `<img src="${g.icon}" class="w-full h-full rounded-lg object-cover">` : `<i class="fas fa-users text-xs"></i>`}
+                    </div>
+                    <div class="truncate">
+                        <h4 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors truncate">${g.name}</h4>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest truncate">${g.memberCount} operatives</p>
+                    </div>
+                </div>
+                <!-- Store the default channel _id in the checkbox value -->
+                <input type="checkbox" name="selected_groups" value="${g._id}|${g.channels && g.channels.length > 0 ? g.channels[0]._id : ''}" class="w-4 h-4 accent-purple-500 shrink-0">
+            </label>
+        `).join('');
+
+    } catch (e) {
+        listContainer.innerHTML = `<div class="text-center py-4 text-red-500 text-xs">Failed to establish node connection.</div>`;
+    }
+}
+
+function closeSendGroupModal() {
+    const modal = document.getElementById('send-group-modal');
+    modal.classList.add('opacity-0');
+    modal.querySelector('.w-full').classList.add('scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+async function submitSendToGroup() {
+    if (!contextNodeId) return;
+    const file = workspace.files.find(f => f._id === contextNodeId);
+    if (!file) return;
+
+    // Ensure we fetch the latest unsaved keystrokes if they are sending the currently open file
+    if (activeFile && activeFile._id === file._id) {
+        file.content = editor.getValue();
+    }
+
+    const selectedCheckboxes = document.querySelectorAll('input[name="selected_groups"]:checked');
+    if (selectedCheckboxes.length === 0) {
+        showToast("Select at least one group", "error");
+        return;
+    }
+
+    const messageText = document.getElementById('send-group-message').value.trim();
+
+    const btn = document.getElementById('btn-submit-send-group');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-circle-notch animate-spin"></i> Sending...`;
+    btn.disabled = true;
+
+    try {
+        let successCount = 0;
+        let errorMessage = '';
+
+        for (const cb of selectedCheckboxes) {
+            const [groupId, channelId] = cb.value.split('|');
+            if (!groupId || !channelId) continue;
+
+            const payload = {
+                type: 'snippet',
+                content: messageText ? messageText : `Snippet shared from Zenith OS: ${file.name}`,
+                snippetMeta: {
+                    language: file.language || 'plaintext',
+                    filename: file.name
+                }
+            };
+
+            // In actual Message Model, we need to embed the actual raw code as well depending on how frontend renders it.
+            // For this design, we'll embed the raw code using a markdown block in the content if there's no dedicated 'code' field.
+            payload.content += `\n\n\`\`\`${file.language || 'plaintext'}\n${file.content}\n\`\`\``;
+
+            const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}/channels/${channelId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                successCount++;
+            } else {
+                const errData = await res.json();
+                errorMessage = errData.message || 'Unknown error';
+                console.error("Transmission failed for group", groupId, errData);
+            }
+        }
+
+        if (successCount > 0) {
+            showToast(`Sent to ${successCount} group(s)`, "success");
+            closeSendGroupModal();
+        } else {
+            showToast(`Send failed: ${errorMessage}`, "error");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Send error", "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }

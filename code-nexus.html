@@ -274,8 +274,12 @@
             class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-blue-600/20 hover:text-blue-400 transition flex items-center gap-3">
             <i class="fas fa-external-link-alt w-4 text-blue-500"></i> Open in Editor
         </button>
+        <button onclick="openSendToGroupModal()"
+            class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-purple-600/20 hover:text-purple-400 transition flex items-center gap-3">
+            <i class="fas fa-paper-plane w-4 text-purple-500"></i> Send to Group
+        </button>
         <button onclick="renameActiveNode()"
-            class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/5 hover:text-white transition flex items-center gap-3">
+            class="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/5 hover:text-white transition flex items-center gap-3 border-t border-white/5 mt-1 pt-3">
             <i class="fas fa-edit w-4 text-slate-500"></i> Rename
         </button>
         <button onclick="deleteActiveNode()"
@@ -329,6 +333,52 @@
                     class="px-6 py-2 rounded-xl text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Cancel</button>
                 <button onclick="applySettings()"
                     class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition shadow-lg">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send to Group Modal (Hidden by default) -->
+    <div id="send-group-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[300] hidden opacity-0 transition-opacity duration-300">
+        <div
+            class="w-full max-w-md scale-95 transition-transform duration-300 bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-3xl p-8 border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden group">
+            <div
+                class="absolute -top-32 -right-32 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl group-hover:bg-purple-600/20 transition-all duration-700">
+            </div>
+
+            <h2
+                class="text-xl font-black syne uppercase tracking-widest text-white mb-2 flex items-center gap-3 relative z-10">
+                <i class="fas fa-paper-plane text-purple-500"></i> Send to Group
+            </h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 relative z-10">Select nodes to
+                broadcast <span class="text-blue-400" id="send-file-name-display">file.js</span></p>
+
+            <div class="space-y-4 mb-6 relative z-10">
+                <div class="bg-black/50 border border-white/5 rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar"
+                    id="group-selection-list">
+                    <!-- Groups loaded dynamically -->
+                    <div class="text-center py-4 text-slate-500 text-xs flex flex-col items-center">
+                        <i class="fas fa-circle-notch animate-spin mb-2 text-purple-500"></i> Scanning Neural Nodes...
+                    </div>
+                </div>
+
+                <div>
+                    <textarea id="send-group-message" rows="3" placeholder="Add an optional message..."
+                        class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white resize-none outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder:text-slate-600"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-white/5 pt-6 relative z-10">
+                <button onclick="closeSendGroupModal()"
+                    class="px-6 py-2.5 rounded-xl text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Cancel</button>
+                <button onclick="submitSendToGroup()" id="btn-submit-send-group"
+                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-purple-600/20 relative overflow-hidden group/btn active:scale-95">
+                    <span class="relative z-10 flex items-center gap-2"><i class="fas fa-satellite-dish"></i>
+                        Transmit</span>
+                    <div
+                        class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700">
+                    </div>
+                </button>
             </div>
         </div>
     </div>

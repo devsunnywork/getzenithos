@@ -50,6 +50,8 @@ const requireRole = (roles) => {
             const isMember = group.isMember(req.user._id);
             const userRole = group.getRole(req.user._id);
 
+            console.log(`[AUTH CHECK] User: ${req.user._id}, Group: ${group._id}, isMember: ${isMember}, Role: ${userRole}, Required Roles: ${roles}`);
+
             if (!isMember || !roles.includes(userRole)) {
                 return res.status(403).json({ message: 'Insufficient group permissions' });
             }
