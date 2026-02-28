@@ -303,11 +303,11 @@
                 <i class="fas fa-fire text-[11px]"></i>
                 <span id="header-streak">0</span>
             </div>
-            <!-- XP badge -->
+            <!-- HP badge -->
             <div
                 class="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
                 <i class="fas fa-bolt text-[11px]"></i>
-                <span id="header-xp">0 XP</span>
+                <span id="header-hp">0 HP</span>
             </div>
             <!-- Solved Badge -->
             <div
@@ -477,6 +477,22 @@
                             style="width:0%"></div>
                     </div>
                 </div>
+            </div>
+            <!-- Global Leaderboard Mini -->
+            <div style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px; cursor:pointer;"
+                class="hover:border-emerald-500/20 transition group" onclick="window.location.href='/profile.html'">
+                <div class="flex items-center justify-between mb-3">
+                    <p
+                        class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-emerald-500 transition">
+                        Global Rank</p>
+                    <i
+                        class="fas fa-chevron-right text-[10px] text-zinc-600 group-hover:text-emerald-500 transition"></i>
+                </div>
+                <!-- Mini Leaderboard Row Container -->
+                <div id="leaderboard-preview-row" class="flex flex-wrap gap-1 mb-2">
+                    <!-- Javascript populates avatars -->
+                </div>
+                <p class="text-[10px] text-zinc-500 italic mt-1 font-mono">Top HP Operatives</p>
             </div>
 
             <!-- Streak Card -->

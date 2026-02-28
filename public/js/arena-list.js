@@ -26,7 +26,7 @@ async function loadUserProfile() {
 
             // Sync Specialized DSA Profile
             if (document.getElementById('dsa-profile-username')) document.getElementById('dsa-profile-username').innerText = data.username || 'Operative';
-            if (document.getElementById('dsa-profile-xp')) document.getElementById('dsa-profile-xp').innerText = data.xp || 0;
+            if (document.getElementById('dsa-profile-hp')) document.getElementById('dsa-profile-hp').innerText = data.hp || 0;
 
             if (data.avatarUrl) {
                 const pImg = document.getElementById('dsa-profile-avatar');
@@ -42,7 +42,7 @@ async function loadUserProfile() {
             const streakCount = data.dsaStreak?.current || 0;
             if (document.getElementById('header-streak')) document.getElementById('header-streak').innerText = streakCount;
             if (document.getElementById('streak-big')) document.getElementById('streak-big').innerText = streakCount;
-            if (document.getElementById('header-xp')) document.getElementById('header-xp').innerText = `${data.xp || 0} XP`;
+            if (document.getElementById('header-hp')) document.getElementById('header-hp').innerText = `${data.hp || 0} HP`;
 
             if (data.avatarUrl) {
                 const img = document.getElementById('header-avatar');
@@ -199,10 +199,10 @@ async function fetchLeaderboard() {
             const previewRow = document.getElementById('leaderboard-preview-row');
             if (previewRow) {
                 previewRow.innerHTML = leaders.slice(0, 5).map(u => `
-                <div class="w-6 h-6 rounded-full border border-black overflow-hidden bg-zinc-800" title="${u.username} - ${u.xp} XP">
-                    ${u.avatar ? `<img src="${u.avatar}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[7px] font-bold text-white uppercase">${u.username.charAt(0)}</div>`}
+                <div class="w-8 h-8 rounded-full border border-black overflow-hidden bg-zinc-800" title="${u.username} - ${u.hp} HP">
+                    ${u.avatar ? `<img src="${u.avatar}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[9px] font-bold text-white uppercase">${u.username.charAt(0)}</div>`}
                 </div>
-                `).join('') + (leaders.length > 5 ? `<div class="w-6 h-6 rounded-full bg-zinc-900 border border-black flex items-center justify-center text-[7px] font-bold text-zinc-500">+${leaders.length - 5}</div>` : '');
+                `).join('') + (leaders.length > 5 ? `<div class="w-8 h-8 rounded-full bg-zinc-900 border border-black flex items-center justify-center text-[9px] font-bold text-zinc-500">+${leaders.length - 5}</div>` : '');
             }
         }
     } catch (err) {

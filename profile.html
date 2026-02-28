@@ -142,8 +142,8 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
             <div class="stat-card">
                 <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Cumulative
-                    XP</span>
-                <div class="text-3xl font-black syne text-emerald-400" id="stat-xp">0</div>
+                    HP</span>
+                <div class="text-3xl font-black syne text-emerald-400" id="stat-hp">0</div>
             </div>
             <div class="stat-card">
                 <span class="text-[10px] font-black text-zinc-600 uppercase tracking-widest block mb-2">Current
@@ -267,7 +267,7 @@
 
                 // Populate Stats
                 document.getElementById('profile-username').innerText = userData.username;
-                document.getElementById('stat-xp').innerText = userData.xp || 0;
+                document.getElementById('stat-hp').innerText = userData.hp || 0;
                 document.getElementById('stat-streak').innerText = userData.dsaStreak?.current || 0;
                 document.getElementById('stat-longest').innerText = userData.dsaStreak?.longest || 0;
                 document.getElementById('stat-solved').innerText = userData.dsaSolved?.length || 0;
@@ -312,8 +312,8 @@
                             </div>
                         </div>
                         <div class="text-right">
-                             <p class="text-[10px] font-black text-emerald-400">${u.xp}</p>
-                             <p class="text-[7px] font-bold text-zinc-700 uppercase">XP Pool</p>
+                             <p class="text-[10px] font-black text-emerald-400">${u.hp || 0}</p>
+                             <p class="text-[7px] font-bold text-zinc-700 uppercase">HP Pool</p>
                         </div>
                     </div>
                 `).join('');
