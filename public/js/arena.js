@@ -148,11 +148,51 @@ async function loadProblemData() {
             document.getElementById('language-selector').value = 'javascript';
         }
 
+        if (data.submissions && data.submissions.length > 0) {
+            const panel = document.getElementById('submissions-panel');
+            const list = document.getElementById('problem-submissions');
+            if (panel && list) {
+                panel.classList.remove('hidden');
+                window.problemSubmissions = data.submissions.reverse();
+                list.innerHTML = window.problemSubmissions.map((s, idx) => {
+                    const statusColor = s.status === 'success' ? 'text-emerald-500' : 'text-red-500';
+                    const dateObj = s.date ? new Date(s.date) : new Date();
+                    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return `
+                        <div class="p-3 bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 rounded-lg cursor-pointer transition flex items-center justify-between group" onclick="loadSubmissionIntoEditor(${idx})">
+                            <div>
+                                <div class="text-[10px] font-bold text-zinc-300 group-hover:text-emerald-400 transition">${s.language.toUpperCase()}</div>
+                                <div class="text-[8px] text-zinc-500 mt-1">${dateStr}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[9px] font-black uppercase tracking-widest ${statusColor}">${s.status}</div>
+                                <div class="text-[8px] text-zinc-500 mt-1">${s.runtimeMs || 0}ms • ${s.memoryMb || 0}MB</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
     } catch (e) {
         console.error(e);
         if (document.getElementById('problem-title')) {
             document.getElementById('problem-title').innerText = "System Failure";
         }
+    }
+}
+
+window.loadSubmissionIntoEditor = function (idx) {
+    if (!window.problemSubmissions || !window.problemSubmissions[idx]) return;
+    const s = window.problemSubmissions[idx];
+    const langSelect = document.getElementById('language-selector');
+    if (langSelect) langSelect.value = s.language;
+    if (editor) {
+        let monacoLang = s.language;
+        if (monacoLang === 'c' || monacoLang === 'cpp') monacoLang = 'cpp';
+        monaco.editor.setModelLanguage(editor.getModel(), monacoLang);
+        editor.setValue(s.code);
+        appendTerminal(`\n[SYSTEM] Loaded past submission (${s.language.toUpperCase()}) from history.`, 'blue-400');
     }
 }
 

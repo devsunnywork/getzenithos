@@ -7,7 +7,7 @@ const { auth } = require('../middleware/authMiddleware');
 router.get('/profile', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user._id)
-            .select('username xp dsaHP dsaStreak dsaSolved savedProblems dsaActivity profile.avatar');
+            .select('username xp dsaHP dsaStreak dsaSolved savedProblems dsaActivity profile.avatar dsaSubmissions');
 
         if (!user) return res.status(404).json({ message: 'User not found' });
 

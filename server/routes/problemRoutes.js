@@ -78,6 +78,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
         doc.isSolved = (req.user.dsaSolved || []).some(id => id.toString() === problem._id.toString());
         doc.isSaved = (req.user.savedProblems || []).some(id => id.toString() === problem._id.toString());
+        doc.submissions = (req.user.dsaSubmissions || []).filter(s => s.problemId.toString() === problem._id.toString());
         res.json(doc);
     } catch (e) {
         res.status(500).json({ message: e.message });
