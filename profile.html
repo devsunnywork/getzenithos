@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile | Zenith OS</title>
+    <script src="/public/js/config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/public/css/design-system.css">
@@ -260,7 +261,7 @@
             if (!token) return window.location.href = '/index.html';
 
             try {
-                const res = await fetch('/api/user/profile', {
+                const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 userData = await res.json();
@@ -289,7 +290,7 @@
 
         async function fetchGlobalLeaderboard() {
             try {
-                const res = await fetch('/api/user/leaderboard', {
+                const res = await fetch(`${API_BASE_URL}/api/user/leaderboard`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 const leaders = await res.json();
@@ -330,7 +331,7 @@
             }
 
             try {
-                const res = await fetch('/api/problems', {
+                const res = await fetch(`${API_BASE_URL}/api/problems`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 const allProblems = await res.json();
