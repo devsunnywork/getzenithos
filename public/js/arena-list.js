@@ -16,7 +16,7 @@ async function loadUserProfile() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const res = await fetch('/api/user/profile', {
+        const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -169,7 +169,7 @@ async function fetchDailyProblem() {
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/problems/daily', {
+        const res = await fetch(`${API_BASE_URL}/api/problems/daily`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -191,7 +191,7 @@ async function fetchDailyProblem() {
 async function fetchLeaderboard() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/user/leaderboard', {
+        const res = await fetch(`${API_BASE_URL}/api/user/leaderboard`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -215,7 +215,7 @@ async function fetchProblems() {
     if (!tbody) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/problems', {
+        const res = await fetch(`${API_BASE_URL}/api/problems`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -390,7 +390,7 @@ window.toggleBookmark = async function (problemId, event) {
     if (event) event.stopPropagation();
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`/api/problems/${problemId}/bookmark`, {
+        const res = await fetch(`${API_BASE_URL}/api/problems/${problemId}/bookmark`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -413,7 +413,7 @@ window.toggleBookmark = async function (problemId, event) {
 window.seedDummyProblem = async function () {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/problems/seed', {
+        const res = await fetch(`${API_BASE_URL}/api/problems/seed`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
