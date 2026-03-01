@@ -78,13 +78,15 @@ router.post('/run', auth, async (req, res) => {
             const className = file.name.replace('.java', '');
             execCommand = `javac "${file.name}" && java "${className}"`;
         } else if (lang === 'python' || lang === 'py') {
-            execCommand = `python "${file.name}"`;
+            execCommand = `python3 "${file.name}"`;
         } else if (lang === 'javascript' || lang === 'js') {
             execCommand = `node "${file.name}"`;
         } else if (lang === 'cpp') {
-            execCommand = `g++ "${file.name}" -o out.exe && out.exe`;
+            execCommand = `g++ "${file.name}" -o out && ./out`;
         } else if (lang === 'c') {
-            execCommand = `gcc "${file.name}" -o out.exe && out.exe`;
+            execCommand = `gcc "${file.name}" -o out && ./out`;
+        } else if (lang === 'csharp' || lang === 'cs') {
+            execCommand = `mcs "${file.name}" && mono "${file.name.replace('.cs', '.exe')}"`;
         } else {
             return res.status(400).json({ error: 'Unsupported local execution language' });
         }

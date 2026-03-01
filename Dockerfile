@@ -7,7 +7,10 @@ RUN apt-get update && \
     g++ \
     gcc \
     python3 \
-    golang && \
+    python-is-python3 \
+    golang \
+    mono-mcs \
+    mono-runtime && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # Set the working directory
