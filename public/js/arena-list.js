@@ -246,11 +246,12 @@ function renderTags() {
     const tagBar = document.getElementById('tag-filter-bar');
     if (!tagBar) return;
 
-    const tags = [
-        'All Topics', 'Array', 'BFS', 'Backtracking', 'Binary Search', 'DFS', 'Divide and Conquer',
-        'Dynamic Programming', 'Hash Table', 'Heap', 'Linked List', 'Math', 'Matrix',
-        'Prefix Sum', 'Sliding Window', 'Stack', 'String', 'Tree', 'Two Pointers', 'Union Find'
-    ];
+    const uniqueTags = new Set();
+    allProblems.forEach(p => {
+        if (p.tags) p.tags.forEach(t => uniqueTags.add(t));
+    });
+
+    const tags = ['All Topics', ...Array.from(uniqueTags).sort()];
 
     tagBar.innerHTML = tags.map(tag => {
         const filterTag = tag === 'All Topics' ? '' : tag;
