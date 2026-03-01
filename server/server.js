@@ -229,6 +229,10 @@ app.get('/arena.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../arena.html'));
 });
 
+app.get('/arena-leaderboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../arena-leaderboard.html'));
+});
+
 app.get('/profile.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../profile.html'));
 });
