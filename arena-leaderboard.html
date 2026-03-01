@@ -301,9 +301,9 @@
             </div>
 
             <div class="hidden md:flex items-center gap-1 ml-2">
-                <a class="text-white text-[13px] font-semibold px-3 py-1.5 rounded hover:bg-white/5 transition border-b-2 border-emerald-500 pb-[4px]"
-                    href="/arena.html">Problems</a>
                 <a class="text-zinc-400 text-[13px] font-medium px-3 py-1.5 rounded hover:bg-white/5 hover:text-white transition"
+                    href="/arena.html">Problems</a>
+                <a class="text-white text-[13px] font-semibold px-3 py-1.5 rounded hover:bg-white/5 transition border-b-2 border-emerald-500 pb-[4px]"
                     href="/arena-leaderboard.html">Leaderboard</a>
             </div>
         </div>
@@ -374,60 +374,48 @@
 
         <!-- CENTER CONTENT -->
         <div class="flex flex-col overflow-hidden bg-[#0d0d0d]">
-            <!-- Promo Banner Row -->
-            <div id="promo-row" class="px-6 pt-5 pb-2 flex gap-4 shrink-0">
-                <!-- Populated by JS -->
-                <div class="promo-card flex-1 animate-pulse"
-                    style="background:#1a1a1a; height:220px; border-radius:16px;"></div>
-                <div class="promo-card flex-1 animate-pulse"
-                    style="background:#1a1a1a; height:220px; border-radius:16px;"></div>
-            </div>
-
-            <!-- Topics Filter Bar -->
-            <div class="px-6 py-3 shrink-0">
-                <div class="filter-bar" id="tag-filter-bar">
-                    <button class="tag-chip active" onclick="filterByTag('', this)">All Topics</button>
-                    <!-- More tags injected via JS -->
-                </div>
+            <div class="px-8 py-8 shrink-0 border-b border-[#1f1f1f]">
+                <h1 class="text-3xl font-black syne text-white tracking-tight mb-2">Global <span
+                        class="text-emerald-500">Leaderboard</span></h1>
+                <p class="text-zinc-500 text-sm">Top Operatives ranked by their algorithmic competence (HP).</p>
             </div>
 
             <!-- Table Controls -->
-            <div class="px-6 pb-3 shrink-0 flex items-center justify-between gap-4">
-                <div class="relative flex-shrink-0">
-                    <i
-                        class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"></i>
-                    <input id="search-input" type="text" placeholder="Search questions" class="search-box"
-                        oninput="applyFilters()">
-                </div>
-                <div class="text-[12px] text-zinc-500 ml-auto whitespace-nowrap">
-                    <span id="solved-count-label">0</span>/<span id="total-count-label">0</span> Solved
+            <div class="px-6 py-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#1f1f1f]">
+                <div class="text-[12px] text-zinc-400 uppercase tracking-widest font-bold">
+                    Top 50 Rank
                 </div>
             </div>
 
-            <!-- Problem Table -->
+            <!-- Leaderboard Table -->
             <div class="flex-1 overflow-y-auto" id="table-scroll-wrapper">
                 <table class="w-full border-collapse">
                     <colgroup>
-                        <col style="width:48px">
+                        <col style="width:80px">
                         <col>
-                        <col style="width:100px">
-                        <col style="width:160px">
-                        <col style="width:48px">
+                        <col style="width:120px">
+                        <col style="width:120px">
                     </colgroup>
-                    <thead class="sticky top-0 bg-[#111] z-10">
+                    <thead class="sticky top-0 bg-[#0d0d0d] z-10">
                         <tr style="border-bottom:1px solid #1f1f1f;">
-                            <th class="pl-5 py-3 text-[11px] font-semibold text-zinc-500 text-center"></th>
-                            <th class="py-3 text-[11px] font-semibold text-zinc-500 text-left">Title</th>
-                            <th class="py-3 text-[11px] font-semibold text-zinc-500">Difficulty</th>
-                            <th class="py-3 text-[11px] font-semibold text-zinc-500">Tags</th>
-                            <th class="pr-5 py-3 text-[11px] font-semibold text-zinc-500 text-right"></th>
+                            <th
+                                class="pl-8 py-3 text-[11px] font-semibold text-zinc-500 text-left uppercase tracking-wider">
+                                Rank</th>
+                            <th class="py-3 text-[11px] font-semibold text-zinc-500 text-left uppercase tracking-wider">
+                                Operative</th>
+                            <th
+                                class="py-3 text-[11px] font-semibold text-zinc-500 text-right uppercase tracking-wider">
+                                Max Streak</th>
+                            <th
+                                class="pr-8 py-3 text-[11px] font-semibold text-zinc-500 text-right uppercase tracking-wider">
+                                Total HP</th>
                         </tr>
                     </thead>
-                    <tbody id="problem-table-body">
+                    <tbody id="leaderboard-table-body">
                         <tr>
-                            <td colspan="5" class="py-16 text-center text-zinc-500">
+                            <td colspan="4" class="py-16 text-center text-zinc-500">
                                 <i class="fas fa-circle-notch fa-spin text-2xl text-emerald-500 mb-3 block"></i>
-                                <p class="text-xs font-mono uppercase tracking-widest">Syncing Problem Registry...</p>
+                                <p class="text-xs font-mono uppercase tracking-widest">Compiling rankings...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -492,8 +480,7 @@
             </div>
             <!-- Global Leaderboard Mini -->
             <div style="background:#111; border:1px solid #1f1f1f; border-radius:12px; padding:16px; cursor:pointer;"
-                class="hover:border-emerald-500/20 transition group"
-                onclick="window.location.href='/arena-leaderboard.html'">
+                class="hover:border-emerald-500/20 transition group" onclick="window.location.href='/profile.html'">
                 <div class="flex items-center justify-between mb-3">
                     <p
                         class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-emerald-500 transition">
@@ -560,7 +547,7 @@
     </div>
 
     <script src="public/js/config.js"></script>
-    <script src="public/js/arena-list.js"></script>
+    <script src="public/js/arena-leaderboard.js"></script>
 </body>
 
 </html>
