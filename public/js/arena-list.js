@@ -340,6 +340,8 @@ function renderProblems(problems) {
             ? `<i class="fas fa-star text-amber-500"></i>`
             : `<i class="far fa-star text-zinc-600 hover:text-amber-500 transition"></i>`;
 
+        const pIndex = allProblems.indexOf(p) + 1;
+
         const tr = document.createElement('tr');
         tr.className = "problem-row";
         tr.onclick = (e) => {
@@ -349,7 +351,10 @@ function renderProblems(problems) {
 
         tr.innerHTML = `
             <td class="text-center">${statusHtml}</td>
-            <td class="font-bold text-zinc-200 group-hover:text-emerald-400 transition">${p.title}</td>
+            <td class="font-bold text-zinc-200 group-hover:text-emerald-400 transition">
+                <span class="text-zinc-500 text-[10px] uppercase font-mono mr-2 leading-none">${pIndex}.</span>
+                ${p.title}
+            </td>
             <td class="${diffColor} font-bold text-[11px] uppercase tracking-wider">${p.difficulty}</td>
             <td>
                 <div class="flex flex-wrap gap-1">
