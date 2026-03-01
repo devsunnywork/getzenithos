@@ -32,7 +32,7 @@ router.get('/daily', authMiddleware, async (req, res) => {
 
         const problem = await Problem.findById(dailyProblemId);
         const doc = problem.toObject();
-        doc.isSolved = req.user.dsaSolved.some(id => id.toString() === problem._id.toString());
+        doc.isSolved = (req.user.dsaSolved || []).some(id => id.toString() === problem._id.toString());
         res.json(doc);
     } catch (e) {
         res.status(500).json({ message: "Daily Protocol Error: " + e.message });
@@ -46,7 +46,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const problems = await Problem.find().select('-testCases -createdAt');
 
         // Attach solved status
-        const solvedSet = new Set(req.user.dsaSolved.map(id => id.toString()));
+        const solvedSet = new Set((req.user.dsaSolved || []).map(id => id.toString()));
         const savedSet = new Set((req.user.savedProblems || []).map(id => id.toString()));
         const mapped = problems.map(p => {
             const doc = p.toObject();
@@ -76,7 +76,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
             return tc;
         });
 
-        doc.isSolved = req.user.dsaSolved.some(id => id.toString() === problem._id.toString());
+        doc.isSolved = (req.user.dsaSolved || []).some(id => id.toString() === problem._id.toString());
         doc.isSaved = (req.user.savedProblems || []).some(id => id.toString() === problem._id.toString());
         res.json(doc);
     } catch (e) {
